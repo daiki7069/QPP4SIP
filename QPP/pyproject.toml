@@ -4,4 +4,10 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "faiss-cpu>=1.11.0.post1",
+    "gdown>=5.2.0",
+    "numpy>=2.2.6",
+    "pyserini>=1.2.0",
+    "sentence-transformers>=5.0.0",
+]
