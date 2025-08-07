@@ -7,6 +7,7 @@ requires-python = ">=3.10"
 dependencies = [
     "faiss-cpu>=1.11.0.post1",
     "gdown>=5.2.0",
+    "injector>=0.22.0",
     "numpy>=2.2.6",
     "pyserini>=1.2.0",
     "sentence-transformers>=5.0.0",

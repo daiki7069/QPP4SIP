@@ -1,0 +1,10 @@
+test dataset label distribution:
+Total samples: 4549
+SIP=0 (no initiative): 4000
+SIP=1 (initiative): 549
+Response type distribution:
+response_type
+directAnswer               3330
+noAnswerButRelevantInfo     581
+clarification               549
+noAnswerNoRelevantInfo       89

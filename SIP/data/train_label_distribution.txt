@@ -1,0 +1,10 @@
+train dataset label distribution:
+Total samples: 2666
+SIP=0 (no initiative): 2309
+SIP=1 (initiative): 357
+Response type distribution:
+response_type
+directAnswer               1844
+noAnswerButRelevantInfo     360
+clarification               357
+noAnswerNoRelevantInfo      105

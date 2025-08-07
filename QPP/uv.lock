@@ -454,6 +454,15 @@ wheels = [
 ]
 
 [[package]]
+name = "injector"
+version = "0.22.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/b5/f6/3a74e4b983b92eebb77b2f27ee526aa7eaf0e62a5913847d59361b4bae5f/injector-0.22.0.tar.gz", hash = "sha256:79b2d4a0874c75d3aa735f11c5b32b89d9542711ca07071161882c5e9cc15ed6", size = 86166, upload-time = "2024-07-07T23:02:23.275Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/37/37fee65c78ae3f9675e6190bfd12304e5d8d99564f0ec91716bf2bfbbb5f/injector-0.22.0-py2.py3-none-any.whl", hash = "sha256:74379ccef3b893bc7d0b7d504c255b5160c5a55e97dc7bdcc73cb33cc7dce3a1", size = 20461, upload-time = "2024-07-07T23:02:21.103Z" },
+]
+
+[[package]]
 name = "itsdangerous"
 version = "2.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1489,6 +1498,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "faiss-cpu" },
     { name = "gdown" },
+    { name = "injector" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.3.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pyserini" },
@@ -1499,6 +1509,7 @@ dependencies = [
 requires-dist = [
     { name = "faiss-cpu", specifier = ">=1.11.0.post1" },
     { name = "gdown", specifier = ">=5.2.0" },
+    { name = "injector", specifier = ">=0.22.0" },
     { name = "numpy", specifier = ">=2.2.6" },
     { name = "pyserini", specifier = ">=1.2.0" },
     { name = "sentence-transformers", specifier = ">=5.0.0" },
