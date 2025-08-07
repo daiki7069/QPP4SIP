@@ -1,0 +1,52 @@
+nohup: ignoring input
+WARNING: Using incubator modules: jdk.incubator.vector
+2025-07-22 06:38:56,190 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:205) - Setting log level to INFO
+2025-07-22 06:38:56,193 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:208) - ============ Loading Index Configuration ============
+2025-07-22 06:38:56,193 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:209) - AbstractIndexer settings:
+2025-07-22 06:38:56,193 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:210) -  + DocumentCollection path: /mnt/disk6/daiki/Datasets/INSCIT/models/DPR/retrieval_data/wikipedia/wiki/
+2025-07-22 06:38:56,193 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:211) -  + CollectionClass: JsonCollection
+2025-07-22 06:38:56,194 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:212) -  + Index path: /mnt/disk6/daiki/Datasets/INSCIT/models/DPR/retrieval_data/wikipedia/index/
+2025-07-22 06:38:56,194 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:213) -  + Threads: 8
+2025-07-22 06:38:56,194 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:214) -  + Optimize (merge segments)? false
+Jul 22, 2025 6:38:56 AM org.apache.lucene.store.MemorySegmentIndexInputProvider <init>
+INFO: Using MemorySegmentIndexInput with Java 21; to disable start with -Dorg.apache.lucene.store.MMapDirectory.enableMemorySegments=false
+2025-07-22 06:38:56,221 INFO  [main] index.IndexCollection (IndexCollection.java:246) - Using DefaultEnglishAnalyzer
+2025-07-22 06:38:56,222 INFO  [main] index.IndexCollection (IndexCollection.java:247) - Stemmer: porter
+2025-07-22 06:38:56,222 INFO  [main] index.IndexCollection (IndexCollection.java:248) - Keep stopwords? false
+2025-07-22 06:38:56,222 INFO  [main] index.IndexCollection (IndexCollection.java:249) - Stopwords file: null
+2025-07-22 06:38:56,324 INFO  [main] index.IndexCollection (IndexCollection.java:197) - IndexCollection settings:
+2025-07-22 06:38:56,324 INFO  [main] index.IndexCollection (IndexCollection.java:198) -  + Generator: DefaultLuceneDocumentGenerator
+2025-07-22 06:38:56,324 INFO  [main] index.IndexCollection (IndexCollection.java:199) -  + Language: en
+2025-07-22 06:38:56,324 INFO  [main] index.IndexCollection (IndexCollection.java:200) -  + Stemmer: porter
+2025-07-22 06:38:56,325 INFO  [main] index.IndexCollection (IndexCollection.java:201) -  + Keep stopwords? false
+2025-07-22 06:38:56,325 INFO  [main] index.IndexCollection (IndexCollection.java:202) -  + Stopwords: null
+2025-07-22 06:38:56,325 INFO  [main] index.IndexCollection (IndexCollection.java:203) -  + Store positions? true
+2025-07-22 06:38:56,326 INFO  [main] index.IndexCollection (IndexCollection.java:204) -  + Store docvectors? true
+2025-07-22 06:38:56,326 INFO  [main] index.IndexCollection (IndexCollection.java:205) -  + Store document "contents" field? false
+2025-07-22 06:38:56,326 INFO  [main] index.IndexCollection (IndexCollection.java:206) -  + Store document "raw" field? true
+2025-07-22 06:38:56,326 INFO  [main] index.IndexCollection (IndexCollection.java:207) -  + Additional fields to index: []
+2025-07-22 06:38:56,327 INFO  [main] index.IndexCollection (IndexCollection.java:208) -  + Whitelist: null
+2025-07-22 06:38:56,327 INFO  [main] index.IndexCollection (IndexCollection.java:209) -  + Pretokenized?: false
+2025-07-22 06:38:56,327 INFO  [main] index.IndexCollection (IndexCollection.java:210) -  + Codec: Lucene99
+2025-07-22 06:38:56,327 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:238) - ============ Indexing Collection ============
+2025-07-22 06:38:56,381 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:247) - Thread pool with 8 threads initialized.
+2025-07-22 06:38:56,382 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:248) - 4,922 files found in /mnt/disk6/daiki/Datasets/INSCIT/models/DPR/retrieval_data/wikipedia/wiki
+2025-07-22 06:38:56,382 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:249) - Starting to index...
+2025-07-22 06:39:56,423 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 10.04% of files completed, 4,282,476 documents indexed
+2025-07-22 06:40:56,425 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 20.17% of files completed, 8,632,518 documents indexed
+2025-07-22 06:41:56,428 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 30.37% of files completed, 12,996,902 documents indexed
+2025-07-22 06:42:56,433 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 40.53% of files completed, 17,344,804 documents indexed
+2025-07-22 06:43:56,435 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 49.80% of files completed, 21,308,674 documents indexed
+2025-07-22 06:44:56,437 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 59.24% of files completed, 25,356,269 documents indexed
+2025-07-22 06:45:56,439 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 68.61% of files completed, 29,368,477 documents indexed
+2025-07-22 06:46:56,441 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 77.55% of files completed, 33,213,446 documents indexed
+2025-07-22 06:47:56,444 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 86.47% of files completed, 37,043,394 documents indexed
+2025-07-22 06:48:56,445 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:261) - 95.18% of files completed, 40,788,411 documents indexed
+2025-07-22 06:51:27,070 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:307) - Indexing Complete! 42,858,048 documents indexed
+2025-07-22 06:51:27,071 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:308) - ============ Final Counter Values ============
+2025-07-22 06:51:27,072 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:309) - indexed:       42,858,048
+2025-07-22 06:51:27,072 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:310) - unindexable:            0
+2025-07-22 06:51:27,072 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:311) - empty:                  0
+2025-07-22 06:51:27,073 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:312) - skipped:                0
+2025-07-22 06:51:27,073 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:313) - errors:                 0
+2025-07-22 06:51:27,088 INFO  [main] index.AbstractIndexer (AbstractIndexer.java:316) - Total 42,858,048 documents indexed in 00:12:30

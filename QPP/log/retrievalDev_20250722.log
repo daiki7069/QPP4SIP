@@ -1,0 +1,15 @@
+nohup: ignoring input
+WARNING: Using incubator modules: jdk.incubator.vector
+Jul 22, 2025 6:55:59 AM org.apache.lucene.store.MemorySegmentIndexInputProvider <init>
+INFO: Using MemorySegmentIndexInput with Java 21; to disable start with -Dorg.apache.lucene.store.MMapDirectory.enableMemorySegments=false
+処理完了: /mnt/disk6/daiki/Datasets/INSCIT/data/dev_resolved_retrieved.json
+nDCG@1: 平均=0.0000, 最大=0.0000
+nDCG@3: 平均=0.0000, 最大=0.0000
+nDCG@5: 平均=0.0000, 最大=0.0000
+Precision@1: 平均=0.0000, 最大=0.0000
+Precision@3: 平均=0.0000, 最大=0.0000
+Precision@5: 平均=0.0000, 最大=0.0000
+Recall@1: 平均=0.0000, 最大=0.0000
+Recall@3: 平均=0.0000, 最大=0.0000
+Recall@5: 平均=0.0000, 最大=0.0000
+評価クエリ数: 0
