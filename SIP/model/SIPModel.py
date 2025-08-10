@@ -5,7 +5,7 @@ from transformers import BertModel, BertTokenizer
 class SIPRecognizer(nn.Module):
     """
     SIP (System Initiative Prediction) Recognizer for binary classification.
-    - Dialogue Encoder: BERT encoding of concatenated input S = [K; history]
+    - Dialogue Encoder: BERT encoding of dialogue history
     - Initiative Recognizer: Multi-head attention over learned prefix queries
     - Output: Binary classification (SIP=0 or SIP=1)
     """
@@ -48,7 +48,7 @@ class SIPRecognizer(nn.Module):
         )
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor):
-        # Encode dialogue history + knowledge K
+        # Encode dialogue history (not including future context)
         # H: [batch_size, seq_len, hidden_size]
         outputs = self.encoder(input_ids=input_ids,
                                attention_mask=attention_mask)
@@ -109,7 +109,7 @@ def smoke_test():
     batch_size = 4
     seq_length = 128
     
-    # ダミーの入力データ
+    # ダミーの入力データ（dialogue_history）
     input_ids = torch.randint(0, 1000, (batch_size, seq_length)).to(device)
     attention_mask = torch.ones(batch_size, seq_length).to(device)
     
@@ -167,8 +167,9 @@ if __name__ == "__main__":
     
     # データ準備
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-    texts = ['[Knowledge] ... [SEP] User: ... System: ... [SEP] User: ...']
-    enc = tokenizer(texts, return_tensors='pt', padding=True)
+    # dialogue_historyを使用（未来の情報は含まない）
+    dialogue_histories = ['User: Hello [SEP] System: Hi there', 'User: How are you?']
+    enc = tokenizer(dialogue_histories, return_tensors='pt', padding=True)
     
     # モデル初期化
     num_initiatives = 2

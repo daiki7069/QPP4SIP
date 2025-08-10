@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Tuple
 class SIPDataset(Dataset):
     """
     SIP予測タスク用のデータセットクラス
+    dialogue_historyを入力として使用し、SIPラベルを予測
     """
     def __init__(self, csv_file: str, tokenizer: BertTokenizer, max_length: int = 512):
         """
@@ -25,12 +26,17 @@ class SIPDataset(Dataset):
     def __getitem__(self, idx):
         row = self.data.iloc[idx]
         
-        # コンテキストテキストを取得
-        context = row['context']
+        # dialogue_historyを取得（未来の情報は含まない）
+        dialogue_history = row['dialogue_history']
+        
+        # 対話の初めでdialogue_historyが空の場合の処理
+        if pd.isna(dialogue_history) or dialogue_history == '' or dialogue_history.strip() == '':
+            # 空の場合は特殊トークンを使用
+            dialogue_history = '[EMPTY]'
         
         # トークナイゼーション
         encoding = self.tokenizer(
-            context,
+            dialogue_history,
             truncation=True,
             padding='max_length',
             max_length=self.max_length,
@@ -48,7 +54,8 @@ class SIPDataset(Dataset):
             'turn_index': row['turn_index'],
             'query': row['query'],
             'response': row['response'],
-            'response_type': row['response_type']
+            'response_type': row['response_type'],
+            'dialogue_history': dialogue_history  # 元のテキストも保持
         }
 
 def create_data_loaders(train_csv: str, dev_csv: str, test_csv: str, 

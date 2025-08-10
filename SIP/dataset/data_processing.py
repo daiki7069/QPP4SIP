@@ -56,7 +56,7 @@ def load_inscit_data(file_path: str) -> List[Dict[str, Any]]:
                 
                 # 対話履歴と知識を結合
                 history_text = ' '.join(dialogue_history)
-                full_context = f"[Knowledge] {knowledge_text} [SEP] {history_text} [SEP] User: {current_query}"
+                full_context = f"{history_text} [SEP] User: {current_query}"
                 
                 processed_data.append({
                     'dialogue_id': dialogue_id,
@@ -126,9 +126,9 @@ def create_sip_dataset(train_path: str, dev_path: str, test_path: str, output_di
 def main():
     """メイン関数"""
     # データファイルのパス
-    train_path = "/mnt/disk6/daiki/Datasets/INSCIT/data/train_resolved_retrieved.json"
-    dev_path = "/mnt/disk6/daiki/Datasets/INSCIT/data/dev_resolved_retrieved.json"
-    test_path = "/mnt/disk6/daiki/Datasets/INSCIT/data/test_resolved_retrieved.json"
+    train_path = "/mnt/disk6/daiki/QPP4SIP/Datasets/dialogue/train_resolved_retrieved.json"
+    dev_path = "/mnt/disk6/daiki/QPP4SIP/Datasets/dialogue/dev_resolved_retrieved.json"
+    test_path = "/mnt/disk6/daiki/QPP4SIP/Datasets/dialogue/test_resolved_retrieved.json"
     
     # 出力ディレクトリ
     output_dir = "data"
@@ -139,4 +139,4 @@ def main():
     print("SIP dataset creation completed!")
 
 if __name__ == "__main__":
-    main() 
+    main()
