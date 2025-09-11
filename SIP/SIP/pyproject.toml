@@ -1,0 +1,37 @@
+[project]
+name = "qpp4sip"
+version = "0.1.0"
+description = "Query Performance Prediction for System Initiative Prediction"
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    {name = "QPP4SIP Team"}
+]
+keywords = ["nlp", "conversation", "query-performance", "system-initiative"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "numpy>=2.3.2",
+    "scikit-learn>=1.7.1",
+    "tensorboard>=2.20.0",
+    "torch>=2.8.0",
+    "transformers>=4.55.4",
+]
+
+[project.scripts]
+qpp4sip-train = "model.run:main"
+qpp4sip-inference = "model.run:main"
+qpp4sip-evaluate = "evaluation.evaluation:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["model*", "evaluation*"]
+
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"

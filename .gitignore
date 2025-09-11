@@ -1,4 +1,10 @@
 .cursor
+.DS_Store
+log
+logs
+checkpoints
+output
+*.pkl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

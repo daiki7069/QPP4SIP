@@ -1,0 +1,20 @@
+nohup: ignoring input
+=== QPP4SIP GPU実験開始 ===
+開始時刻: Thu Sep 11 10:37:42 AM UTC 2025
+利用可能GPU: 0, 1, 2, 3, 4, 5
+パターン別GPU割り当て:
+  feature_fusion: GPU 0
+  policy_gating: GPU 2
+  auxiliary_head: GPU 1
+
+==========================================
+パターン: feature_fusion をGPU 0で開始
+開始時刻: Thu Sep 11 10:37:42 AM UTC 2025
+==========================================
+--- 学習開始: feature_fusion (GPU 0) ---
+学習プロセス開始 (PID: 202676, GPU: 0)
+✓ 学習完了: feature_fusion
+--- 開発データ推論開始: feature_fusion (GPU 0) ---
+開発データ推論プロセス開始 (PID: 209133, GPU: 0)
+--- テストデータ推論開始: feature_fusion (GPU 0) ---
+テストデータ推論プロセス開始 (PID: 209134, GPU: 0)
