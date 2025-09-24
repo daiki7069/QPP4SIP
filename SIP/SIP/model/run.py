@@ -172,6 +172,10 @@ if __name__ == "__main__":
     # その他
     parser.add_argument("--random_seed", type=int, default=42, help="ランダムシード")
     
+    # Focal Loss パラメータ
+    parser.add_argument("--class_imbalance_ratio", type=float, default=6.5, help="クラス不均衡比 (non-initiative:initiative)")
+    parser.add_argument("--focal_gamma", type=float, default=2.0, help="Focal Lossのgammaパラメータ")
+    
     args = parser.parse_args()
     
     # ランダムシードの設定

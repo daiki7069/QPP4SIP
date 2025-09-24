@@ -22,7 +22,7 @@ class Dataset(Dataset):
         for conversation_index, conversation in enumerate(self.conversations):
             conversation_content = {"turn_id": [], "user_utterance": [], "user_I_label": [], "system_utterance": [],
                                     "system_I_label": [], "context": [], "system_action_label": [],
-                                    "system_action_sequence": [],"system_I_prediction":[], "qpp_features": []}
+                                    "system_action_sequence": [],"system_I_prediction":[], "qpp_features": [], "resolved_query": []}
 
             context_list = []
 
@@ -39,6 +39,10 @@ class Dataset(Dataset):
                 qpp_feature_names = ['ndcg@1', 'ndcg@3', 'ndcg@5', 'precision@1', 'precision@3', 'precision@5', 'recall@1', 'recall@3', 'recall@5']
                 qpp_tensor = torch.tensor([qpp_features.get(name, 0.0) for name in qpp_feature_names], dtype=torch.float32)
                 conversation_content["qpp_features"].append(qpp_tensor)
+                
+                # resolvedQueryを処理
+                resolved_query = turn.get("resolved_query", "")
+                conversation_content["resolved_query"].append(resolved_query)
                 
                 # コンテキストを更新
                 context_list.append(turn["user_utterance"])
@@ -80,7 +84,8 @@ class Dataset(Dataset):
                     system_utterance_conversation,
                     system_I_label_conversation,
                     context_conversation,
-                    qpp_features_conversation
+                    qpp_features_conversation,
+                    conversation_content["resolved_query"]  # resolved_queryを追加
                 ]
             )
             self.len = conversation_index + 1
@@ -90,10 +95,10 @@ class Dataset(Dataset):
 
     def __getitem__(self, idx):
         conversation_tensor = self.conversations_tensor[idx]
-        return [conversation_tensor[0], conversation_tensor[1], conversation_tensor[2], conversation_tensor[3], conversation_tensor[4], conversation_tensor[5], conversation_tensor[6]]
+        return [conversation_tensor[0], conversation_tensor[1], conversation_tensor[2], conversation_tensor[3], conversation_tensor[4], conversation_tensor[5], conversation_tensor[6], conversation_tensor[7]]
 
 def collate_fn(data):
-    turn_id, user_utterance_conversations, user_I_label_conversations, system_utterance_conversations, system_I_label_conversations, context_conversations, qpp_features_conversations = zip(*data)
+    turn_id, user_utterance_conversations, user_I_label_conversations, system_utterance_conversations, system_I_label_conversations, context_conversations, qpp_features_conversations, resolved_query_conversations = zip(*data)
     return {
         "turn_id": turn_id[-1], # [batch_size, 1]
         "user_utterance": torch.stack(user_utterance_conversations), # [batch_size, ?, max_utterance_len]
@@ -101,5 +106,6 @@ def collate_fn(data):
         "system_utterance": torch.stack(system_utterance_conversations), # [batch_size, ?, max_utterance_len]
         "system_I_label": torch.stack(system_I_label_conversations), # [batch_size, ?, 1]
         "context": torch.stack(context_conversations), # [batch_size, ?, max_context_len]
-        "qpp_features": torch.stack(qpp_features_conversations) # [batch_size, ?, 9]
+        "qpp_features": torch.stack(qpp_features_conversations), # [batch_size, ?, 9]
+        "resolved_query": resolved_query_conversations[-1]  # [batch_size, ?] - 文字列のリスト
     }

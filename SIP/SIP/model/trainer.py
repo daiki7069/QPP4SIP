@@ -110,6 +110,10 @@ class Trainer(object):
 
             accumulative_turn_id = []
             accumulative_prediction = []
+            accumulative_true_label = []  # 正解ラベル
+            accumulative_qpp_values = []  # QPPの値
+            accumulative_prediction_probs = []  # initiativeの予測確率
+            accumulative_resolved_query = []  # resolvedQuery
 
             for k, data in enumerate(test_loader, 0):
                 if (k + 1) == 1 or (k + 1) % 100 == 0:
@@ -132,7 +136,16 @@ class Trainer(object):
                     data = data_cuda
 
                 # [pair_num, ?]
-                predicted = self.eval_model(data)
+                model_output = self.eval_model(data)
+                
+                # モデルの出力形式を確認
+                if isinstance(model_output, dict):
+                    predicted = model_output['predicted_paths']
+                    emission_scores = model_output['emission_scores']
+                else:
+                    # 後方互換性のため、古い形式もサポート
+                    predicted = model_output
+                    emission_scores = None
 
                 assert len(predicted)==len(data["turn_id"])
 
@@ -140,21 +153,54 @@ class Trainer(object):
                     # 会話インデックスとturn_idを組み合わせた一意の識別子を生成
                     unique_id = f"conv_{k}_turn_{turn_id}"
                     accumulative_turn_id.append(unique_id)
+                    
+                    # 予測ラベル
                     if self.args.task=="SIP":
                         accumulative_prediction.append("Initiative" if int(predicted[idx][-1])==1 else "Non-initiative")
                     elif self.args.task in ["AP", "SIP-AP"]:
                         accumulative_prediction.append(predicted[idx])
                     else:
                         raise NotImplementedError
+                    
+                    # 正解ラベル
+                    true_label = "Initiative" if int(data["system_I_label"][0, idx].item()) == 1 else "Non-initiative"
+                    accumulative_true_label.append(true_label)
+                    
+                    # QPPの値（ndcg@1を使用）
+                    qpp_value = data["qpp_features"][0, idx, 0].item()  # ndcg@1
+                    accumulative_qpp_values.append(qpp_value)
+                    
+                    # initiativeの予測確率
+                    if emission_scores is not None:
+                        # 最後のターン（システム発話）のinitiative確率を取得
+                        last_turn_probs = emission_scores[idx][-1]  # [2] - [non-initiative_prob, initiative_prob]
+                        initiative_prob = last_turn_probs[1].item()  # initiativeの確率
+                        accumulative_prediction_probs.append(initiative_prob)
+                    else:
+                        accumulative_prediction_probs.append(0.0)  # デフォルト値
+                    
+                    # resolvedQuery
+                    resolved_query = data["resolved_query"][idx] if "resolved_query" in data else ""
+                    accumulative_resolved_query.append(resolved_query)
 
             with open(os.path.join(self.args.output_path, self.args.dataset_type+"."+str(epoch_id)+".txt"), 'w') as w:
-                for index, turn_id in enumerate(accumulative_turn_id):
-                    if self.args.task == "SIP":
-                        w.write(turn_id + '\t' + str(accumulative_prediction[index])  + '\n')
-                    elif self.args.task in ["AP", "SIP-AP"]:
+                if self.args.task == "SIP":
+                    # ヘッダー行を追加
+                    w.write("turn_id\tpredicted_label\ttrue_label\tqpp_value\tinitiative_prob\tresolved_query\n")
+                    
+                    for index, turn_id in enumerate(accumulative_turn_id):
+                        # 追加項目を含む出力形式
+                        w.write(turn_id + '\t' + 
+                               str(accumulative_prediction[index]) + '\t' +  # 予測ラベル
+                               str(accumulative_true_label[index]) + '\t' +  # 正解ラベル
+                               str(accumulative_qpp_values[index]) + '\t' +  # QPPの値
+                               str(accumulative_prediction_probs[index]) + '\t' +  # initiativeの予測確率
+                               str(accumulative_resolved_query[index]) + '\n')  # resolvedQuery
+                elif self.args.task in ["AP", "SIP-AP"]:
+                    for index, turn_id in enumerate(accumulative_turn_id):
                         assert isinstance(accumulative_prediction[index], list)
                         w.write(turn_id + '\t' + ",".join(accumulative_prediction[index]) + '\n')
-                    else:
-                        raise NotImplementedError
+                else:
+                    raise NotImplementedError
 
         return None

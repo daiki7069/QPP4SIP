@@ -1,4 +1,5 @@
 from model.utils import universal_sentence_embedding
+from model.focal_loss import create_focal_loss_for_sip
 import torch
 import torch.nn as nn
 from transformers import BertModel
@@ -316,6 +317,12 @@ class BILSTMCRF(nn.Module):
         self.crf = crf(args=args)
         self.prior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
         self.posterior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
+        
+        # Focal Loss for handling class imbalance
+        self.focal_loss = create_focal_loss_for_sip(
+            class_imbalance_ratio=getattr(args, 'class_imbalance_ratio', 6.5),
+            gamma=getattr(args, 'focal_gamma', 2.0)
+        )
 
     def forward(self, data):
         # pooling_user_utterance [batch=1, ?, hidden_size]
@@ -340,6 +347,7 @@ class BILSTMCRF(nn.Module):
         elif self.args.mode == 'inference':
             predicted_path_batch = []
             predicted_path_batch_from_emission = []
+            emission_scores_batch = []  # 予測確率を保存するためのリスト
 
         # traverse all turns (user-system pairs) in a conversation
         for i in range(pair_num):
@@ -444,6 +452,10 @@ class BILSTMCRF(nn.Module):
                 assert len(predicted_path) == combined_emission_scores.shape[1] == (partial_posterior_emission_scores.shape[1] + 1) == (partial_posterior_hidden_squence.shape[1]+1) == (prior_hidden_squence.shape[1]+1)
                 predicted_path_batch.append(predicted_path) # [[2], [4], ...]
                 predicted_path_batch_from_emission.append(combined_emission_scores.squeeze(0).max(1)[1].tolist())  # [1, 2i+2, 2] --> [2i+2, 2] -->[2i+2]
+                
+                # 予測確率を保存（softmaxを適用）
+                emission_probs = torch.softmax(combined_emission_scores.squeeze(0), dim=1)  # [2i+2, 2]
+                emission_scores_batch.append(emission_probs)  # 各ターンの予測確率を保存
 
         if self.args.mode == 'train':
             gold_score_tensor = torch.cat(gold_score_batch)  # [pair_num]
@@ -457,8 +469,14 @@ class BILSTMCRF(nn.Module):
 
             loss_crf = torch.mean(total_score_tensor - gold_score_tensor) # average each sample
             loss_mle_e = F.mse_loss(prior_emission_score_tensor, posterior_emission_score_tensor.detach())  # [pair_num, 2]
+            
+            # Focal Loss for emission scores (prior network)
+            # Convert labels to appropriate format for focal loss
+            # We'll use the system I labels for focal loss calculation
+            system_labels = data['system_I_label'].squeeze(0)  # [pair_num]
+            focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
 
-            return {"loss_crf": loss_crf, "loss_mle_e": loss_mle_e}
+            return {"loss_crf": loss_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
 
         elif self.args.mode == 'inference':
             assert len(predicted_path_batch[0])==len(predicted_path_batch_from_emission[0])==len(I_label_sequence_batch[0])==2
@@ -466,7 +484,11 @@ class BILSTMCRF(nn.Module):
             if len(predicted_path_batch)>1:
                 assert len(predicted_path_batch[1])==len(predicted_path_batch_from_emission[1])==len(I_label_sequence_batch[1])==4
 
-            return predicted_path_batch
+            # 予測パスと予測確率の両方を返す
+            return {
+                'predicted_paths': predicted_path_batch,
+                'emission_scores': emission_scores_batch
+            }
 
 class ContextEncoding(nn.Module):
     """

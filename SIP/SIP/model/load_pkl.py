@@ -61,6 +61,7 @@ def convert_dialogue_to_conversations(dialogue_data):
                 'system_utterance': first_label.get('response', ''),
                 'system_I_label': first_label.get('responseType', ''),
                 'qpp_features': qpp_features,  # QPP特徴量を追加
+                'resolved_query': turn.get('resolvedQuery', ''),  # resolvedQueryを追加
             }
             conversation.append(conversation_turn)
         

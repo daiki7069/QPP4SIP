@@ -47,11 +47,19 @@ def evaluation_SIP(prediction_path=None, label_path=None):
                 id2label[unique_id] = 'Non-initiative'
 
     with open(prediction_path, 'r') as r:
-        for line in r:
-            turn_id, prediction = line.rstrip().split("\t")
-            prediction_list.append(prediction)
-            # 一意の識別子でラベルを取得
-            label_list.append(id2label[turn_id])
+        lines = r.readlines()
+        # ヘッダー行をスキップ
+        if lines and lines[0].startswith("turn_id\t"):
+            lines = lines[1:]
+        
+        for line in lines:
+            parts = line.rstrip().split("\t")
+            if len(parts) >= 2:
+                turn_id = parts[0]
+                prediction = parts[1]
+                prediction_list.append(prediction)
+                # 一意の識別子でラベルを取得
+                label_list.append(id2label[turn_id])
 
     print(f"Debug: id2label length: {len(id2label)}")
     print(f"Debug: prediction_list length: {len(prediction_list)}")

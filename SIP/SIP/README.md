@@ -75,7 +75,7 @@ uv run qpp4sip-train --model qpp4sip --qpp4sip_pattern policy_gating --mode trai
 
 ```bash
 # 評価の実行
-uv run qpp4sip-evaluate --prediction_path output/qpp4sip_feature_fusion --label_path dataset/dev_resolved_retrieved.pkl --task SIP --dataset_type dev
+uv run qpp4sip-evaluate --prediction_path output/qpp4sip_feature_fusion --label_path dataset/test_resolved_retrieved.pkl --task SIP --dataset_type test
 ```
 
 ### 4. 一括実行（推奨）

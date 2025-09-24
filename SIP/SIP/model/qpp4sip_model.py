@@ -1,4 +1,5 @@
 from model.utils import universal_sentence_embedding
+from model.focal_loss import create_focal_loss_for_sip
 import torch
 import torch.nn as nn
 from transformers import BertModel
@@ -46,7 +47,7 @@ class posterior_conversation_encoding(nn.Module):
     def __init__(self, args=None):
         super().__init__()
         self.args = args
-        self.lstm = nn.LSTM(self.args.hidden_size, self.args.hidden_size, dropout=self.args.dropout, num_layers=self.args.BiLSTM_layer, bidirectional=True, batch_first=True)
+        self.lstm = nn.LSTM(self.args.hidden_size, self.args.hidden_size, dropout=self.args.dropout, num_layers=self.args.BiLSTM_layers, bidirectional=True, batch_first=True)
 
     def forward(self, input):
         output, (_,_) = self.lstm(input) # [batch_size, ?, hidden_size*2]
@@ -60,7 +61,7 @@ class prior_conversation_encoding(nn.Module):
     def __init__(self, args=None):
         super().__init__()
         self.args = args
-        self.lstm = nn.LSTM(self.args.hidden_size, self.args.hidden_size, dropout=self.args.dropout, num_layers=self.args.BiLSTM_layer, bidirectional=True, batch_first=True)
+        self.lstm = nn.LSTM(self.args.hidden_size, self.args.hidden_size, dropout=self.args.dropout, num_layers=self.args.BiLSTM_layers, bidirectional=True, batch_first=True)
 
     def forward(self, input):
         output, (_,_)= self.lstm(input) # [batch_size, ?, hidden_size*2]
@@ -154,13 +155,13 @@ class qpp4sip_crf(nn.Module):
         self.args = args
 
         # 基本遷移行列
-        self.matrice_all = nn.Parameter(torch.Tensor(2, 2))
-        self.matrice_u2s = nn.Parameter(torch.Tensor(2, 2))
-        self.matrice_s2u = nn.Parameter(torch.Tensor(2, 2))
+        self.matrice_all = nn.Parameter(torch.randn(2, 2) * 0.1)
+        self.matrice_u2s = nn.Parameter(torch.randn(2, 2) * 0.1)
+        self.matrice_s2u = nn.Parameter(torch.randn(2, 2) * 0.1)
 
         # QPP4SIP特有の遷移行列
-        self.matrice_qpp_feature = nn.Parameter(torch.Tensor(2, 2))
-        self.matrice_qpp_policy = nn.Parameter(torch.Tensor(2, 2))
+        self.matrice_qpp_feature = nn.Parameter(torch.randn(2, 2) * 0.1)
+        self.matrice_qpp_policy = nn.Parameter(torch.randn(2, 2) * 0.1)
 
     def forward(self, emission_scores, label, prior, posterior_sequence, state, qpp_gate=None):
         """
@@ -310,6 +311,12 @@ class QPP4SIPBILSTMCRF(nn.Module):
             self.qpp_auxiliary_head = qpp_auxiliary_head(args=args)
         elif self.args.qpp4sip_pattern == "policy_gating":
             self.qpp_policy_gating = qpp_policy_gating(args=args)
+        
+        # Focal Loss for handling class imbalance
+        self.focal_loss = create_focal_loss_for_sip(
+            class_imbalance_ratio=getattr(args, 'class_imbalance_ratio', 6.5),
+            gamma=getattr(args, 'focal_gamma', 2.0)
+        )
 
     def forward(self, data):
         # pooling_user_utterance [batch=1, ?, hidden_size]
@@ -327,19 +334,20 @@ class QPP4SIPBILSTMCRF(nn.Module):
 
         I_label_sequence_batch = []
 
+        # QPP補助損失用（推論モードでも初期化）
+        qpp_loss_batch = []
+
         if self.args.mode == 'train':
             prior_emission_score_batch = []
             posterior_emission_score_batch = []
 
             gold_score_batch = []
             total_score_batch = []
-            
-            # QPP補助損失用
-            qpp_loss_batch = []
 
         elif self.args.mode == 'inference':
             predicted_path_batch = []
             predicted_path_batch_from_emission = []
+            emission_scores_batch = []  # 予測確率を保存するためのリスト
 
         # traverse all turns (user-system pairs) in a conversation
         for i in range(pair_num):
@@ -427,6 +435,10 @@ class QPP4SIPBILSTMCRF(nn.Module):
                     # 融合された表現を元の次元に戻す
                     prior_emission_score = self.prior_e_project(torch.cat([fused_representation, bert_cls[:, self.args.hidden_size:]], dim=-1))
                     
+                    # QPP特徴量の正則化損失を追加（特徴量の品質向上）
+                    feature_regularization = torch.mean(torch.norm(current_qpp_features, p=2, dim=1))
+                    qpp_loss_batch.append(("feature_reg", feature_regularization * 0.01))  # 小さな重みで正則化
+                    
                 elif self.args.qpp4sip_pattern == "auxiliary_head":
                     # 補助ヘッド: QPP予測タスクを追加
                     bert_cls = prior_hidden_squence[:, -1, :]
@@ -440,7 +452,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
                         qpp_target = torch.randn_like(qpp_target) * 0.01
                     
                     qpp_loss = F.mse_loss(qpp_prediction, qpp_target)
-                    qpp_loss_batch.append(qpp_loss)
+                    qpp_loss_batch.append(("qpp_prediction", qpp_loss))
                     
                 elif self.args.qpp4sip_pattern == "policy_gating":
                     # ポリシー連動: QPPスコアに基づいてゲート値を計算
@@ -451,6 +463,10 @@ class QPP4SIPBILSTMCRF(nn.Module):
                         ndcg3_score = torch.randn_like(ndcg3_score) * 0.01
                     
                     qpp_gate = self.qpp_policy_gating(ndcg3_score)
+                    
+                    # ゲート値の正則化損失を追加（ゲートの学習安定化）
+                    gate_regularization = torch.mean(torch.norm(qpp_gate, p=2, dim=1))
+                    qpp_loss_batch.append(("gate_reg", gate_regularization * 0.01))  # 小さな重みで正則化
 
             if self.args.mode == 'train':
                 # obtain emission score
@@ -488,6 +504,10 @@ class QPP4SIPBILSTMCRF(nn.Module):
                 assert len(predicted_path) == combined_emission_scores.shape[1] == (partial_posterior_emission_scores.shape[1] + 1) == (partial_posterior_hidden_squence.shape[1]+1) == (prior_hidden_squence.shape[1]+1)
                 predicted_path_batch.append(predicted_path) # [[2], [4], ...]
                 predicted_path_batch_from_emission.append(combined_emission_scores.squeeze(0).max(1)[1].tolist())  # [1, 2i+2, 2] --> [2i+2, 2] -->[2i+2]
+                
+                # 予測確率を保存（softmaxを適用）
+                emission_probs = torch.softmax(combined_emission_scores.squeeze(0), dim=1)  # [2i+2, 2]
+                emission_scores_batch.append(emission_probs)  # 各ターンの予測確率を保存
 
         if self.args.mode == 'train':
             gold_score_tensor = torch.cat(gold_score_batch)  # [pair_num]
@@ -501,13 +521,39 @@ class QPP4SIPBILSTMCRF(nn.Module):
 
             loss_crf = torch.mean(total_score_tensor - gold_score_tensor) # average each sample
             loss_mle_e = F.mse_loss(prior_emission_score_tensor, posterior_emission_score_tensor.detach())  # [pair_num, 2]
-
-            result = {"loss_crf": loss_crf, "loss_mle_e": loss_mle_e}
             
-            # QPP補助損失を追加
-            if self.args.qpp4sip_pattern == "auxiliary_head" and qpp_loss_batch:
-                qpp_loss_total = torch.mean(torch.stack(qpp_loss_batch))
-                result["loss_qpp"] = qpp_loss_total
+            # Focal Loss for emission scores (prior network)
+            # Convert labels to appropriate format for focal loss
+            # We'll use the system I labels for focal loss calculation
+            system_labels = data['system_I_label'].squeeze(0)  # [pair_num]
+            focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
+
+            result = {"loss_crf": loss_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
+            
+            # QPP関連損失を追加（重み付けを調整）
+            if qpp_loss_batch:
+                # 損失の種類ごとに処理
+                qpp_losses = {}
+                total_qpp_loss = 0
+                
+                for loss_type, loss_value in qpp_loss_batch:
+                    if loss_type == "qpp_prediction":
+                        # QPP予測損失は0.1倍にスケールダウン
+                        weighted_loss = loss_value * 0.1
+                        qpp_losses["loss_qpp_pred"] = weighted_loss
+                        total_qpp_loss += weighted_loss
+                    else:
+                        # 正則化損失はそのまま
+                        qpp_losses[f"loss_{loss_type}"] = loss_value
+                        total_qpp_loss += loss_value
+                
+                result.update(qpp_losses)
+                # 総損失にQPP損失とFocal Lossを追加
+                result["total_loss"] = loss_crf + loss_mle_e + focal_loss_value + total_qpp_loss
+                
+            else:
+                # QPP損失がない場合でもFocal Lossを追加
+                result["total_loss"] = loss_crf + loss_mle_e + focal_loss_value
                 
             return result
 
@@ -517,4 +563,8 @@ class QPP4SIPBILSTMCRF(nn.Module):
             if len(predicted_path_batch)>1:
                 assert len(predicted_path_batch[1])==len(predicted_path_batch_from_emission[1])==len(I_label_sequence_batch[1])==4
 
-            return predicted_path_batch
+            # 予測パスと予測確率の両方を返す
+            return {
+                'predicted_paths': predicted_path_batch,
+                'emission_scores': emission_scores_batch
+            }
