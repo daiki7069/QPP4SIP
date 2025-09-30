@@ -35,11 +35,20 @@ def evaluation_SIP(prediction_path=None, label_path=None):
         for turn_idx, turn in enumerate(conv_data['turns']):
             # 推論結果と同じ形式の一意の識別子を生成
             unique_id = f"conv_{conv_idx}_turn_{turn_idx}"
-            # labelsの最初の要素のresponseTypeを使用
-            if turn['labels'] and len(turn['labels']) > 0:
+            
+            # TSVから変換したデータの場合と元のデータの場合を分けて処理
+            if 'labels' in turn and turn['labels'] and len(turn['labels']) > 0:
+                # 元のINSCITデータ形式の場合
                 response_type = turn['labels'][0]['responseType']
                 # responseTypeをInitiative/Non-initiativeに変換
                 if response_type in ['clarification', 'clarify']:
+                    id2label[unique_id] = 'Initiative'
+                else:
+                    id2label[unique_id] = 'Non-initiative'
+            elif 'system_I_label' in turn:
+                # TSVから変換したデータ形式の場合
+                system_i_label = turn['system_I_label']
+                if system_i_label == 'clarification':
                     id2label[unique_id] = 'Initiative'
                 else:
                     id2label[unique_id] = 'Non-initiative'

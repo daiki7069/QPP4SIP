@@ -44,6 +44,18 @@ def convert_dialogue_to_conversations(dialogue_data):
             # ターンを会話形式に変換
             labels = turn.get('labels', [])
             if not labels:
+                # TSVから変換したデータの場合、直接turnの情報を使用
+                if 'user_utterance' in turn:
+                    conversation_turn = {
+                        'turn_id': turn_index,
+                        'user_utterance': turn.get('user_utterance', ''),
+                        'user_I_label': turn.get('user_I_label', 'no_initiative'),
+                        'system_utterance': turn.get('system_utterance', ''),
+                        'system_I_label': turn.get('system_I_label', 'no_initiative'),
+                        'qpp_features': turn.get('qpp_features', {}),
+                        'resolved_query': turn.get('resolved_query', ''),
+                    }
+                    conversation.append(conversation_turn)
                 continue
                 
             first_label = labels[0]
