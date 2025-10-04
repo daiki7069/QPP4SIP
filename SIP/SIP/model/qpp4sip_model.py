@@ -1,5 +1,6 @@
-from model.utils import universal_sentence_embedding
+from utils.math_utils import universal_sentence_embedding
 from model.focal_loss import create_focal_loss_for_sip
+from model.music_model import crf, utterance_encoding, posterior_conversation_encoding, prior_conversation_encoding  # 共通クラスをインポート
 import torch
 import torch.nn as nn
 from transformers import BertModel
@@ -7,65 +8,6 @@ import numpy as np
 from sklearn.preprocessing import MultiLabelBinarizer
 import torch.nn.functional as F
 
-class utterance_encoding(nn.Module):
-    """
-    Utterance Encoding with BERT
-    Encode user and system utterances at the sentence (utterance) level.
-    """
-    def __init__(self, args=None):
-        super().__init__()
-        self.args = args
-        
-        self.enc = BertModel.from_pretrained('bert-base-uncased')
-
-    def forward(self, data):
-        batch_size, conversation_len, max_utterance_len = data['user_utterance'].size()
-
-        user_utterance = data['user_utterance'] # [batch, ?, max_utterance_len]
-        user_utterance = user_utterance.reshape(-1, max_utterance_len)  # [batch * ?, max_utterance_len]
-        user_utterance_mask = user_utterance.ne(0).detach()  # [batch * ?, max_utterance_len]
-
-        system_utterance = data['system_utterance'] # [batch, ?, max_utterance_len]
-        system_utterance = system_utterance.reshape(-1, max_utterance_len)  # [batch * ?, max_utterance_len]
-        system_utterance_mask = system_utterance.ne(0).detach()  # [batch * ?, max_utterance_len]
-
-        encoded_user_utterance = self.enc(user_utterance, attention_mask=user_utterance_mask.float())[0]    # [batch * ?, max_utterance_len, hidden_size]
-        pooling_user_utterance = universal_sentence_embedding(encoded_user_utterance, user_utterance_mask)  # [batch * ?, hidden_size] 単語ベクトル->文単位のベクトル
-        pooling_user_utterance /= np.sqrt(pooling_user_utterance.size()[-1])    # [batch * ?, hidden_size]
-
-        encoded_system_utterance = self.enc(system_utterance, attention_mask=system_utterance_mask.float())[0]    # [batch * ?, max_utterance_len, hidden_size]
-        pooling_system_utterance = universal_sentence_embedding(encoded_system_utterance, system_utterance_mask)  # [batch * ?, hidden_size] 単語ベクトル->文単位のベクトル
-        pooling_system_utterance /= np.sqrt(pooling_system_utterance.size()[-1])    # [batch * ?, hidden_size]
-
-        return pooling_user_utterance.reshape(batch_size, conversation_len, -1), pooling_system_utterance.reshape(batch_size, conversation_len, -1)  # [batch, ?, hidden_size], [batch, ?, hidden_size]
-
-class posterior_conversation_encoding(nn.Module):
-    """
-    Conversation Encoding with BiLSTM for posterior network
-    Encode the entire conversation up to the current turn.
-    """
-    def __init__(self, args=None):
-        super().__init__()
-        self.args = args
-        self.lstm = nn.LSTM(self.args.hidden_size, self.args.hidden_size, dropout=self.args.dropout, num_layers=self.args.BiLSTM_layers, bidirectional=True, batch_first=True)
-
-    def forward(self, input):
-        output, (_,_) = self.lstm(input) # [batch_size, ?, hidden_size*2]
-        return output   # [batch_size, ?, hidden_size*2]
-
-class prior_conversation_encoding(nn.Module):
-    """
-    Conversation Encoding with BiLSTM for prior network
-    Encode the entire conversation up to the current turn.
-    """
-    def __init__(self, args=None):
-        super().__init__()
-        self.args = args
-        self.lstm = nn.LSTM(self.args.hidden_size, self.args.hidden_size, dropout=self.args.dropout, num_layers=self.args.BiLSTM_layers, bidirectional=True, batch_first=True)
-
-    def forward(self, input):
-        output, (_,_)= self.lstm(input) # [batch_size, ?, hidden_size*2]
-        return output   # [batch_size, ?, hidden_size*2]
 
 class qpp_feature_fusion(nn.Module):
     """
@@ -75,9 +17,17 @@ class qpp_feature_fusion(nn.Module):
     def __init__(self, args=None):
         super().__init__()
         self.args = args
-        self.qpp_feature_dim = 9  # ndcg@1, ndcg@3, ndcg@5, precision@1, precision@3, precision@5, recall@1, recall@3, recall@5
+        # QPP特徴量の次元を設定から取得（デフォルトは9）
+        self.qpp_feature_dim = getattr(args, 'qpp_feature_dim', 9)
+        # 使用する特徴量のインデックスを設定から取得
+        self.qpp_feature_indices = getattr(args, 'qpp_feature_indices', None)
+        if self.qpp_feature_indices is not None:
+            self.actual_qpp_dim = len(self.qpp_feature_indices)
+        else:
+            self.actual_qpp_dim = self.qpp_feature_dim
+        
         self.fusion_mlp = nn.Sequential(
-            nn.Linear(self.args.hidden_size + self.qpp_feature_dim, self.args.hidden_size),
+            nn.Linear(self.args.hidden_size + self.actual_qpp_dim, self.args.hidden_size),
             nn.ReLU(),
             nn.Dropout(self.args.dropout),
             nn.Linear(self.args.hidden_size, self.args.hidden_size)
@@ -87,12 +37,18 @@ class qpp_feature_fusion(nn.Module):
         """
         Args:
             bert_representation: [batch_size, hidden_size] BERTの[CLS]表現
-            qpp_features: [batch_size, 9] QPP特徴量
+            qpp_features: [batch_size, qpp_feature_dim] QPP特徴量
         Returns:
             fused_representation: [batch_size, hidden_size] 融合された表現
         """
+        # 特徴量選択（指定されたインデックスのみを使用）
+        if self.qpp_feature_indices is not None:
+            selected_features = qpp_features[:, self.qpp_feature_indices]
+        else:
+            selected_features = qpp_features
+        
         # BERT表現とQPP特徴量を結合
-        combined = torch.cat([bert_representation, qpp_features], dim=-1)
+        combined = torch.cat([bert_representation, selected_features], dim=-1)
         # MLPで埋め込み
         fused_representation = self.fusion_mlp(combined)
         return fused_representation
@@ -100,16 +56,18 @@ class qpp_feature_fusion(nn.Module):
 class qpp_auxiliary_head(nn.Module):
     """
     QPP補助ヘッド（マルチタスク学習用）
-    ndcg@3を予測する回帰ヘッド
+    指定されたQPP特徴量を予測する回帰ヘッド
     """
     def __init__(self, args=None):
         super().__init__()
         self.args = args
+        # 予測対象の特徴量インデックス（デフォルトはndcg@3）
+        self.target_feature_index = getattr(args, 'qpp_target_feature_index', 1)  # ndcg@3
         self.qpp_head = nn.Sequential(
             nn.Linear(self.args.hidden_size, self.args.hidden_size // 2),
             nn.ReLU(),
             nn.Dropout(self.args.dropout),
-            nn.Linear(self.args.hidden_size // 2, 1)  # ndcg@3の予測
+            nn.Linear(self.args.hidden_size // 2, 1)  # 単一特徴量の予測
         )
 
     def forward(self, bert_representation):
@@ -117,20 +75,22 @@ class qpp_auxiliary_head(nn.Module):
         Args:
             bert_representation: [batch_size, hidden_size] BERTの[CLS]表現
         Returns:
-            qpp_prediction: [batch_size, 1] ndcg@3の予測値
+            qpp_prediction: [batch_size, 1] 指定されたQPP特徴量の予測値
         """
         return self.qpp_head(bert_representation)
 
 class qpp_policy_gating(nn.Module):
     """
     QPPポリシー連動モジュール
-    QPPスコアに基づいてイニシアチブ発動の閾値を調整
+    指定されたQPPスコアに基づいてイニシアチブ発動の閾値を調整
     """
     def __init__(self, args=None):
         super().__init__()
         self.args = args
+        # ゲート計算に使用する特徴量インデックス（デフォルトはndcg@3）
+        self.gate_feature_index = getattr(args, 'qpp_gate_feature_index', 1)  # ndcg@3
         self.qpp_gate = nn.Sequential(
-            nn.Linear(1, 16),  # ndcg@3を入力
+            nn.Linear(1, 16),  # 単一特徴量を入力
             nn.ReLU(),
             nn.Linear(16, 1),
             nn.Sigmoid()  # 0-1の範囲でゲート値を出力
@@ -139,151 +99,12 @@ class qpp_policy_gating(nn.Module):
     def forward(self, qpp_score):
         """
         Args:
-            qpp_score: [batch_size, 1] ndcg@3スコア
+            qpp_score: [batch_size, 1] 指定されたQPPスコア
         Returns:
             gate_value: [batch_size, 1] ゲート値（0-1）
         """
         return self.qpp_gate(qpp_score)
 
-class qpp4sip_crf(nn.Module):
-    """
-    QPP4SIP用のCRF実装
-    3つのパターンに対応
-    """
-    def __init__(self, args=None):
-        super().__init__()
-        self.args = args
-
-        # 基本遷移行列
-        self.matrice_all = nn.Parameter(torch.randn(2, 2) * 0.1)
-        self.matrice_u2s = nn.Parameter(torch.randn(2, 2) * 0.1)
-        self.matrice_s2u = nn.Parameter(torch.randn(2, 2) * 0.1)
-
-        # QPP4SIP特有の遷移行列
-        self.matrice_qpp_feature = nn.Parameter(torch.randn(2, 2) * 0.1)
-        self.matrice_qpp_policy = nn.Parameter(torch.randn(2, 2) * 0.1)
-
-    def forward(self, emission_scores, label, prior, posterior_sequence, state, qpp_gate=None):
-        """
-        QPP4SIP用のCRF forward pass
-        """
-        conversation_len = emission_scores.shape[0]
-
-        assert emission_scores.shape[0] == label.shape[0] 
-        assert conversation_len % 2 == 0
-
-        if self.args.mode=="train":
-            assert posterior_sequence.shape[0] % 2==0
-        elif self.args.mode == "inference":
-            assert posterior_sequence.shape[0] % 2==1
-            
-        padding_matrice = torch.zeros(2, 2, device=emission_scores.device)
-        
-        # 遷移行列の組み合わせ
-        who2who_subsidiary = torch.stack([self.matrice_u2s, self.matrice_s2u, padding_matrice],0)  # [3, 2, 2]
-        qpp_subsidiary = torch.stack([self.matrice_qpp_feature, self.matrice_qpp_policy, padding_matrice], 0) # [3, 2, 2]
-        overall_subsidiary = torch.stack([self.matrice_all, padding_matrice],0)  # [2, 2, 2]
-        bank = [who2who_subsidiary, qpp_subsidiary, overall_subsidiary]  # [3, x, 2, 2]
-
-        if self.args.mode=="train":
-            # obtain golden score
-            front_pointers= label[:-1]  # remove the last label
-            back_pointers = label[1:]  # remove the first label
-            assert front_pointers.shape[0]==back_pointers.shape[0]==conversation_len-1
-
-            sum_emission_score = torch.sum(emission_scores[range(conversation_len), label])
-
-            sum_transition_score =0
-            for index in range(conversation_len):
-                if index > 0: # sanity check
-                    if self.args.qpp4sip_pattern == "feature_fusion":
-                        combined_matrice = bank[0][state["who2who"][index]] + bank[1][state["qpp_feature"][index]]
-                    elif self.args.qpp4sip_pattern == "auxiliary_head":
-                        combined_matrice = bank[0][state["who2who"][index]] + bank[2][state["overall"][index]]
-                    elif self.args.qpp4sip_pattern == "policy_gating":
-                        # QPPポリシー連動の場合、ゲート値を考慮
-                        if qpp_gate is not None and index < len(qpp_gate):
-                            gate_value = qpp_gate[index]
-                            combined_matrice = bank[0][state["who2who"][index]] + gate_value * bank[1][state["qpp_policy"][index]]
-                        else:
-                            combined_matrice = bank[0][state["who2who"][index]]
-                    else:
-                        # デフォルトは基本CRF
-                        combined_matrice = bank[2][state["overall"][index]]
-
-                    sum_transition_score += combined_matrice[front_pointers[index-1], back_pointers[index-1]]
-
-            gold_score = sum_emission_score + sum_transition_score
-
-            # obtain total score
-            alpha = torch.full((1, 2), 0.0, device=emission_scores.device) # [1, 2]
-            for index in range(conversation_len):
-                if self.args.qpp4sip_pattern == "feature_fusion":
-                    combined_matrice = bank[0][state["who2who"][index]] + bank[1][state["qpp_feature"][index]]
-                elif self.args.qpp4sip_pattern == "auxiliary_head":
-                    combined_matrice = bank[0][state["who2who"][index]] + bank[2][state["overall"][index]]
-                elif self.args.qpp4sip_pattern == "policy_gating":
-                    if qpp_gate is not None and index < len(qpp_gate):
-                        gate_value = qpp_gate[index]
-                        combined_matrice = bank[0][state["who2who"][index]] + gate_value * bank[1][state["qpp_policy"][index]]
-                    else:
-                        combined_matrice = bank[0][state["who2who"][index]]
-                else:
-                    combined_matrice = bank[2][state["overall"][index]]
-
-                if index ==0:
-                    assert torch.equal(combined_matrice, torch.zeros(2,2, device=emission_scores.device).int())
-
-                alpha = torch.logsumexp(alpha.T + emission_scores[index].unsqueeze(0) + combined_matrice, dim=0, keepdim=True)  # [1, 2]  row vector
-
-            total_score = torch.logsumexp(alpha.T, dim=0).squeeze()
-
-            return gold_score, total_score
-
-        elif self.args.mode=="inference":
-            backtrace = []
-            alpha = torch.full((1, 2), 0.0, device= emission_scores.device) # [1, 2]  row vector
-
-            for index in range(conversation_len):
-                if self.args.qpp4sip_pattern == "feature_fusion":
-                    combined_matrice = bank[0][state["who2who"][index]] + bank[1][state["qpp_feature"][index]]
-                elif self.args.qpp4sip_pattern == "auxiliary_head":
-                    combined_matrice = bank[0][state["who2who"][index]] + bank[2][state["overall"][index]]
-                elif self.args.qpp4sip_pattern == "policy_gating":
-                    if qpp_gate is not None and index < len(qpp_gate):
-                        gate_value = qpp_gate[index]
-                        combined_matrice = bank[0][state["who2who"][index]] + gate_value * bank[1][state["qpp_policy"][index]]
-                    else:
-                        combined_matrice = bank[0][state["who2who"][index]]
-                else:
-                    combined_matrice = bank[2][state["overall"][index]]
-
-                if index == 0:
-                    assert torch.equal(combined_matrice, torch.zeros(2, 2, device=emission_scores.device).int())
-
-                alpha = alpha.T + emission_scores[index].unsqueeze(0) + combined_matrice  # [2, 2]
-
-                viterbivars_t, bptrs_t = torch.max(alpha, dim=0) # [2], [2]
-
-                backtrace.append(bptrs_t)
-                alpha = viterbivars_t.unsqueeze(0)  # [1, 2]  row vector
-
-            # backtrack
-            best_tag_id = alpha.flatten().argmax().item()
-            best_path = [best_tag_id]
-
-            assert torch.equal(backtrace[0], torch.zeros(2, device=emission_scores.device).int())
-
-            for bptrs_t in reversed(backtrace[1:]):  # ignore the first one
-                best_tag_id = bptrs_t[best_tag_id].item()
-                best_path.append(best_tag_id)
-
-            best_path.reverse()
-
-            assert len(best_path) % 2 == 0
-            assert len(best_path) == conversation_len
-
-            return best_path
 
 class QPP4SIPBILSTMCRF(nn.Module):
     """
@@ -300,7 +121,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
         self.utterance_encoding=utterance_encoding(args=args)
         self.posterior_conversation_encoding = posterior_conversation_encoding(args=args)
         self.prior_conversation_encoding = prior_conversation_encoding(args=args)
-        self.crf = qpp4sip_crf(args=args)
+        self.crf = crf(args=args)  # 共通のCRFクラスを使用
         self.prior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
         self.posterior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
 
@@ -375,29 +196,56 @@ class QPP4SIPBILSTMCRF(nn.Module):
 
             I_label_sequence_batch.append(I_label_sequence.squeeze().tolist())  # [[2], [4], ...] only used for inference
 
-            state = {"who2who": [], "qpp_feature": [], "qpp_policy": [], "overall": []}
+            state = {"who2who": [], "position": [], "Intime": [], "Distance": [], "overall": []}
 
             for turn_index in range(len(logger["role"])):
                 if turn_index == 0:
                     state["who2who"].append(-1)
-                    state["qpp_feature"].append(-1)
-                    state["qpp_policy"].append(-1)
+                    state["position"].append(-1)
+                    state["Intime"].append(-1)
+                    state["Distance"].append(-1)
                     state["overall"].append(-1)
                 else:
                     state["overall"].append(0)
 
-                    if logger["role"][turn_index - 1] == "system":
-                        # system to user
-                        state["who2who"].append(1)
-                        state["qpp_feature"].append(0)
-                        state["qpp_policy"].append(0)
+                    if turn_index <= 19:
+                        state["position"].append(turn_index - 1)
                     else:
-                        # user to system
-                        state["who2who"].append(0)
-                        state["qpp_feature"].append(1)
-                        state["qpp_policy"].append(1)
+                        state["position"].append(-1)
 
-            assert len(state["qpp_feature"]) == len(state["qpp_policy"]) == len(state["who2who"]) == len(state["overall"]) == len(logger["role"]) == len(logger["system_I"])
+                    if logger["role"][turn_index - 1] == "system":
+                        # we don't concentrate on this perspective
+                        state["who2who"].append(1)
+                        state["Intime"].append(-1)
+                        state["Distance"].append(-1)
+
+                    else:
+                        # user to system | the last one is user
+                        state["who2who"].append(0)
+                        I_times = sum(logger["system_I"][0:turn_index - 1])
+                        if I_times == 0:
+                            state["Intime"].append(0)
+                            state["Distance"].append(-1)
+                        else:
+                            if I_times == 1:
+                                state["Intime"].append(1)
+                            else:
+                                state["Intime"].append(1)
+
+                            last_system_I_turn = -1
+                            for turn_index_ in range(len(logger["system_I"][0:turn_index - 1])):
+                                if logger["system_I"][turn_index_] == 1:
+                                    last_system_I_turn = turn_index_
+
+                            distance = turn_index - last_system_I_turn
+
+                            if distance == 2:
+                                state["Distance"].append(0)
+                            else:
+                                state["Distance"].append(1)
+
+            assert len(state["Distance"]) == len(state["Intime"]) == len(state["who2who"]) == len(
+                state["position"]) == len(state["overall"]) == len(logger["role"]) == len(logger["system_I"])
 
             prior_hidden_squence = self.prior_conversation_encoding(prior_utterance_sequence)
             prior_emission_score = self.prior_e_project(prior_hidden_squence[:, -1, :])
@@ -405,9 +253,9 @@ class QPP4SIPBILSTMCRF(nn.Module):
             # QPP特徴量の処理
             qpp_gate = None
             if qpp_features is not None and i < qpp_features.shape[1]:
-                current_qpp_features = qpp_features[:, i, :]  # [batch_size, 9]
+                current_qpp_features = qpp_features[:, i, :]  # [batch_size, qpp_feature_dim]
                 
-                # デバッグ情報
+                # 特徴量のバリデーション
                 if torch.isnan(current_qpp_features).any():
                     print(f"警告: QPP特徴量にNaNが含まれています (ターン {i})")
                     print(f"QPP特徴量: {current_qpp_features}")
@@ -421,22 +269,29 @@ class QPP4SIPBILSTMCRF(nn.Module):
                 if current_qpp_features.sum() > 0:
                     current_qpp_features = torch.clamp(current_qpp_features, 0.0, 1.0)
                 
+                # 特徴量選択の適用
+                if hasattr(self, 'qpp_feature_fusion') and self.qpp_feature_fusion.qpp_feature_indices is not None:
+                    # 特徴量選択が設定されている場合は、選択された特徴量のみを使用
+                    selected_features = current_qpp_features[:, self.qpp_feature_fusion.qpp_feature_indices]
+                else:
+                    selected_features = current_qpp_features
+                
                 if self.args.qpp4sip_pattern == "feature_fusion":
                     # 特徴融合: BERT表現にQPP特徴量を結合
                     bert_cls = prior_hidden_squence[:, -1, :]  # [batch_size, hidden_size*2]
                     # 最初の半分を取ってBERTの[CLS]表現として使用
                     bert_cls_half = bert_cls[:, :self.args.hidden_size]  # [batch_size, hidden_size]
                     
-                    # QPP特徴量が全て0の場合は、小さなノイズを追加して学習を安定化
-                    if current_qpp_features.sum() == 0:
-                        current_qpp_features = torch.randn_like(current_qpp_features) * 0.01
+                    # 選択された特徴量を使用
+                    if selected_features.sum() == 0:
+                        selected_features = torch.randn_like(selected_features) * 0.01
                     
-                    fused_representation = self.qpp_feature_fusion(bert_cls_half, current_qpp_features)
+                    fused_representation = self.qpp_feature_fusion(bert_cls_half, selected_features)
                     # 融合された表現を元の次元に戻す
                     prior_emission_score = self.prior_e_project(torch.cat([fused_representation, bert_cls[:, self.args.hidden_size:]], dim=-1))
                     
                     # QPP特徴量の正則化損失を追加（特徴量の品質向上）
-                    feature_regularization = torch.mean(torch.norm(current_qpp_features, p=2, dim=1))
+                    feature_regularization = torch.mean(torch.norm(selected_features, p=2, dim=1))
                     qpp_loss_batch.append(("feature_reg", feature_regularization * 0.01))  # 小さな重みで正則化
                     
                 elif self.args.qpp4sip_pattern == "auxiliary_head":
@@ -444,8 +299,9 @@ class QPP4SIPBILSTMCRF(nn.Module):
                     bert_cls = prior_hidden_squence[:, -1, :]
                     bert_cls_half = bert_cls[:, :self.args.hidden_size]
                     qpp_prediction = self.qpp_auxiliary_head(bert_cls_half)
-                    # ndcg@3の真値を取得（3番目の特徴量）
-                    qpp_target = current_qpp_features[:, 1:2]  # ndcg@3
+                    # 指定された特徴量の真値を取得
+                    target_index = self.qpp_auxiliary_head.target_feature_index
+                    qpp_target = current_qpp_features[:, target_index:target_index+1]
                     
                     # QPP特徴量が全て0の場合は、小さなノイズを追加
                     if current_qpp_features.sum() == 0:
@@ -456,13 +312,14 @@ class QPP4SIPBILSTMCRF(nn.Module):
                     
                 elif self.args.qpp4sip_pattern == "policy_gating":
                     # ポリシー連動: QPPスコアに基づいてゲート値を計算
-                    ndcg3_score = current_qpp_features[:, 1:2]  # ndcg@3
+                    gate_index = self.qpp_policy_gating.gate_feature_index
+                    gate_score = current_qpp_features[:, gate_index:gate_index+1]
                     
                     # QPP特徴量が全て0の場合は、小さなノイズを追加
                     if current_qpp_features.sum() == 0:
-                        ndcg3_score = torch.randn_like(ndcg3_score) * 0.01
+                        gate_score = torch.randn_like(gate_score) * 0.01
                     
-                    qpp_gate = self.qpp_policy_gating(ndcg3_score)
+                    qpp_gate = self.qpp_policy_gating(gate_score)
                     
                     # ゲート値の正則化損失を追加（ゲートの学習安定化）
                     gate_regularization = torch.mean(torch.norm(qpp_gate, p=2, dim=1))
@@ -486,7 +343,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
                                                       torch.zeros_like(prior_emission_score), 
                                                       prior_emission_score)
 
-                gold_score, total_score= self.crf(posterior_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), posterior_hidden_squence.squeeze(0), state, qpp_gate)
+                gold_score, total_score= self.crf(posterior_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), posterior_hidden_squence.squeeze(0), state)
 
                 gold_score_batch.append(gold_score.unsqueeze(0))
                 total_score_batch.append(total_score.unsqueeze(0))
@@ -494,13 +351,13 @@ class QPP4SIPBILSTMCRF(nn.Module):
                 prior_emission_score_batch.append(prior_emission_score.unsqueeze(1))
                 posterior_emission_score_batch.append(posterior_emission_scores[:, -1, :].unsqueeze(1))
 
-        # End of training cycle
+                # End of training cycle
             elif self.args.mode == 'inference':
                 partial_posterior_hidden_squence = self.posterior_conversation_encoding(prior_utterance_sequence)  #  [1, 2i+1, 2*hidden_size_BiLSTM]
                 partial_posterior_emission_scores = self.posterior_e_project(partial_posterior_hidden_squence)  # [1, 2i+1, 2]
 
                 combined_emission_scores = torch.cat([partial_posterior_emission_scores, prior_emission_score.unsqueeze(1)], 1)  # [1, 2i+2, 2]
-                predicted_path = self.crf(combined_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), partial_posterior_hidden_squence.squeeze(0) , state, qpp_gate)
+                predicted_path = self.crf(combined_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), partial_posterior_hidden_squence.squeeze(0) , state)
                 assert len(predicted_path) == combined_emission_scores.shape[1] == (partial_posterior_emission_scores.shape[1] + 1) == (partial_posterior_hidden_squence.shape[1]+1) == (prior_hidden_squence.shape[1]+1)
                 predicted_path_batch.append(predicted_path) # [[2], [4], ...]
                 predicted_path_batch_from_emission.append(combined_emission_scores.squeeze(0).max(1)[1].tolist())  # [1, 2i+2, 2] --> [2i+2, 2] -->[2i+2]

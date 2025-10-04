@@ -1,4 +1,4 @@
-from model.utils import universal_sentence_embedding
+from utils.math_utils import universal_sentence_embedding
 from model.focal_loss import create_focal_loss_for_sip
 import torch
 import torch.nn as nn
@@ -329,6 +329,7 @@ class BILSTMCRF(nn.Module):
         # pooling_system_utterance [batch=1, ?, hidden_size]
         pooling_user_utterance, pooling_system_utterance = self.utterance_encoding(data)
         batch_size, pair_num, hidden_size = pooling_user_utterance.size()
+        # バッチサイズは設計上1のみサポート（CRFの制約のため）
 
         previous_utterance_sequence = []
         previous_I_label_sequence = []
@@ -364,7 +365,7 @@ class BILSTMCRF(nn.Module):
             assert posterior_utterance_sequence.shape[1] == 2*(i+1)
 
             logger["role"].append("system")
-            logger["system_I"].append(data['system_I_label'][:, i].squeeze().item())  # add 1 or 0
+            logger["system_I"].append(data['system_I_label'][:, i].squeeze().item() if data['system_I_label'][:, i].squeeze().numel() == 1 else data['system_I_label'][:, i].squeeze()[0].item())  # add 1 or 0
 
             assert len(logger["role"]) == len(logger["system_I"]) == 2 * (i + 1)
 
@@ -536,161 +537,3 @@ class OneStep(nn.Module):
         output = output.transpose(0,1) # [pair_num, 1, hidden_size]
         state = state.transpose(0,1) # [pair_num, 1, hidden_size]
         return output, state
-
-# class ActionPrediction(nn.Module):
-#     """
-#     SIPでは不使用
-#     """
-#     def __init__(self, args, config,mlb):
-#         super().__init__()
-#         self.args = args
-#         self.config = config
-#         self.mlb = mlb
-
-#         self.context_encoding = ContextEncoding(args=args)
-
-#         if args.model == 'mlc':
-#             if args.dataset == "WISE":
-#                 action_num = 23
-#             elif args.dataset == "MSDialog":
-#                 action_num = 12
-
-#             if args.task=="SIP-AP":
-#                 self.d_embedding = nn.Embedding(2, self.args.hidden_size)
-#                 self.map_state2action = nn.Linear(self.args.hidden_size*2, action_num)
-#             elif args.task=="AP":
-#                 self.map_state2action = nn.Linear(self.args.hidden_size, action_num)
-#             else:
-#                 raise NotImplementedError
-
-#         elif args.model == 'sg':
-#             if args.dataset == "WISE":
-#                 action_num = 26  # 23+3
-#             elif args.dataset == "MSDialog":
-#                 action_num = 15  # 12+3
-
-#             if args.task=="SIP-AP":
-#                 self.d_embedding = nn.Embedding(2, self.args.hidden_size)
-#                 self.map_enc2dec = nn.Linear(self.args.hidden_size*2, self.args.hidden_size)
-#             elif args.task == "AP":
-#                 self.map_enc2dec = nn.Linear(self.args.hidden_size, self.args.hidden_size)
-#             else:
-#                 raise NotImplementedError
-
-#             self.map_state2action = nn.Linear(self.args.hidden_size, action_num)
-#             self.action_embedding = nn.Embedding(action_num, self.args.hidden_size, padding_idx=0)
-#             self.dec = OneStep(args=args, actiom_embedding=self.action_embedding)
-
-#     def forward(self, data):
-#         # batch size is always one
-#         cls = self.context_encoding(data)  # [CLS] [batch_size, pair_num, hidden_size]
-#         batch_size, pair_num, hidden_size = cls.size()
-
-#         if self.args.model == 'mlc':
-#             if self.args.task=="SIP-AP":
-#                 if self.args.mode == "inference" and self.args.Oracle_SIP==False:
-#                     d = self.d_embedding(data['system_I_prediction'])  # [batch_size, pair_num, 768]
-#                 else:
-#                     d = self.d_embedding(data['system_I_label'])  # [batch_size, pair_num, 768]
-#                 logits = self.map_state2action(torch.cat([cls, d], 2))  # [batch=1, pair_num, 2*768]-->[batch_size, pair_num, 23/12]
-#             elif self.args.task == "AP":
-#                 logits = self.map_state2action(cls)  # [batch_size, pair_num, 768]-->[batch_size, pair_num, 23/12]
-#             else:
-#                 raise NotImplementedError
-
-#             if self.args.mode == 'train':
-#                 loss = F.binary_cross_entropy_with_logits(logits.squeeze(0),data['system_action_label'].float().squeeze(0).detach()).unsqueeze(0)
-#                 return {"loss": loss}
-#             elif self.args.mode == 'inference':
-#                 predicted = torch.where(torch.sigmoid(logits) > 0.5, 1, 0)  # [batch=1, pair_num, 23/12]
-#                 predicted_mlb = self.mlb.inverse_transform(predicted.squeeze(0).cpu())
-#                 for idx, row in enumerate(predicted_mlb):
-#                     predicted_mlb[idx]=list(row)
-
-#                 predicted_verfied=[]
-#                 for row in predicted.squeeze(0):
-#                     predicted_verfied.append([self.config.action[idx] for idx, col in enumerate(row) if col>0])
-
-
-#                 assert predicted_mlb==predicted_verfied
-#                 return predicted_mlb
-
-#         elif self.args.model == 'sg':
-#             if self.args.task=="SIP-AP":
-#                 if self.args.mode == "inference" and self.args.Oracle_SIP==False:
-#                     d = self.d_embedding(data['system_I_prediction'])  # [batch=1, ?, 768]
-#                 else:
-#                     d = self.d_embedding(data['system_I_label'])  # [batch=1, ?, 768]
-#                 # [batch, pair_num, 2*768]-->[batch, pair_num, 768] --> [pair_num, hidden_size]--> [pair_num, 1, hidden_size]
-#                 initialised_decoder_state = self.map_enc2dec(torch.cat([cls, d], 2)).squeeze(0).unsqueeze(1)
-#             elif self.args.task == "AP":
-#                 # [batch, pair_num, 768]-->[batch, pair_num, 768] --> [pair_num, 768]--> [pair_num, 1, 768]
-#                 initialised_decoder_state = self.map_enc2dec(cls).squeeze(0).unsqueeze(1)
-#             else:
-#                 raise NotImplementedError
-
-#             system_action_sequence = data['system_action_sequence'].squeeze(0)  # [batch_size, pair_num, max_target_length]-->[pair_num, max_target_length]
-#             pair_num, max_target_length = system_action_sequence.size()  # [pair_num, max_target_length]
-
-#             if self.args.mode == 'train':
-#                 token_index = torch.Tensor([1] * pair_num).unsqueeze(1).long().cuda()  # [pair_num, 1]
-
-#                 outputs_on_actions = []
-#                 states = [initialised_decoder_state]  # [pair_num, 1, hidden_size]
-
-#                 for t in range(max_target_length):
-#                     output, state = self.dec(token_index, states[-1], initialised_decoder_state)
-#                     # output [pair_num, 1, hidden_size]
-#                     # state  [pair_num, 1, hidden_size]
-#                     output_on_action = self.map_state2action(output)  # [pair_num, 1, label_size]
-#                     states.append(state)
-#                     outputs_on_actions.append(output_on_action)
-#                     token_index = system_action_sequence[:, t].unsqueeze(1)  # [pair_num, 1]
-
-#                 assert (len(states) - 1) == len(outputs_on_actions) == max_target_length
-
-#                 outputs_on_actions = torch.cat(outputs_on_actions, dim=1)  # [pair_num, max_target_length, label_size]
-
-#                 loss = F.cross_entropy(outputs_on_actions.view(-1, outputs_on_actions.size(-1)),data['system_action_sequence'].view(-1), ignore_index=0)
-#                 return {"loss": loss}
-
-#             elif self.args.mode == 'inference':
-#                 greedy_indices = []
-#                 greedy_ends = torch.Tensor([0] * pair_num).unsqueeze(1).long().cuda() == 1  # [pair_num, 1] all values are false
-
-#                 token_index = torch.Tensor([1] * pair_num).unsqueeze(1).long().cuda()  # [pair_num, 1]
-#                 states = [initialised_decoder_state]  # [pair_num, 1, hidden_size]
-
-#                 for t in range(max_target_length):
-#                     output, state = self.dec(token_index, states[-1], initialised_decoder_state)
-#                     # output [pair_num, 1, hidden_size]
-#                     # state  [pair_num, 1, hidden_size]
-#                     states.append(state)
-#                     output_on_action = self.map_state2action(output)  # [pair_num, 1, label_size]
-#                     # probs [pair_num, 1]
-#                     # id [pair_num, 1]
-#                     probs, id = torch.max(output_on_action, dim=2)
-
-#                     greedy_end = id == 2  # [pair_num, 1]
-#                     id.masked_fill_(greedy_ends, 0)  # [pair_num, 1]
-#                     greedy_indices.append(id)  # [[pair_num, 1], [pair_num, 1],....]
-
-#                     greedy_ends = greedy_ends | greedy_end  # [pair_num, 1]
-#                     token_index = id  # [pair_num, 1]
-
-#                 predicted = torch.cat(greedy_indices, dim=1)  # [pair_num, max_target_length]
-
-#                 actions_pairs = []
-#                 for pair in predicted:
-#                     action_pair = []
-#                     for id in pair:
-#                         action = self.config.id2action[id.item()]
-#                         if action == "[PAD]" or action == "[SOA]":
-#                             continue
-#                         if action == "[EOA]":
-#                             break
-#                         action_pair.append(action)
-#                     if len(action_pair) == 0:
-#                         pass
-#                     actions_pairs.append(action_pair)
-#                 return actions_pairs

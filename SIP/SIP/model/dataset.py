@@ -32,12 +32,13 @@ class Dataset(Dataset):
                 conversation_content["user_utterance"].append(torch.tensor(self.tokenizer.encode(turn["user_utterance"], add_special_tokens=True, max_length=self.max_utterance_len, padding="max_length", truncation=True)))
                 conversation_content["user_I_label"].append(torch.tensor(1) if turn["user_I_label"]=="clarification" else torch.tensor(0))
                 conversation_content["system_utterance"].append(torch.tensor(self.tokenizer.encode(turn["system_utterance"], add_special_tokens=True, max_length=self.max_utterance_len, padding="max_length", truncation=True)))
-                conversation_content["system_I_label"].append(torch.tensor(1) if turn["system_I_label"]=="clarification" else torch.tensor(0))
+                # system_I_labelはresponse_typeから直接判定（TSVから変換されたPKL形式）
+                response_type = turn.get("response_type", "")
+                conversation_content["system_I_label"].append(torch.tensor(1) if response_type == "clarification" else torch.tensor(0))
                 
-                # QPP特徴量を処理
-                qpp_features = turn.get("qpp_features", {})
-                qpp_feature_names = ['ndcg@1', 'ndcg@3', 'ndcg@5', 'precision@1', 'precision@3', 'precision@5', 'recall@1', 'recall@3', 'recall@5']
-                qpp_tensor = torch.tensor([qpp_features.get(name, 0.0) for name in qpp_feature_names], dtype=torch.float32)
+                # QPP特徴量を処理（データセットから直接取得）
+                qpp_feature_names = ['ndcg@1', 'ndcg@5', 'ndcg@10', 'precision@1', 'precision@5', 'precision@10', 'recall@1', 'recall@5', 'recall@10']
+                qpp_tensor = torch.tensor([turn.get(name, 0.0) for name in qpp_feature_names], dtype=torch.float32)
                 conversation_content["qpp_features"].append(qpp_tensor)
                 
                 # resolvedQueryを処理
@@ -88,7 +89,7 @@ class Dataset(Dataset):
                     conversation_content["resolved_query"]  # resolved_queryを追加
                 ]
             )
-            self.len = conversation_index + 1
+        self.len = len(self.conversations_tensor)
 
     def __len__(self):
         return self.len
@@ -99,13 +100,34 @@ class Dataset(Dataset):
 
 def collate_fn(data):
     turn_id, user_utterance_conversations, user_I_label_conversations, system_utterance_conversations, system_I_label_conversations, context_conversations, qpp_features_conversations, resolved_query_conversations = zip(*data)
+    
+    # パディングのための最大長を計算
+    max_len = max(len(conv) for conv in user_utterance_conversations)
+    
+    # パディング関数
+    def pad_sequence(sequences, max_len, pad_value=0):
+        padded = []
+        for seq in sequences:
+            if len(seq) < max_len:
+                # パディング
+                pad_size = max_len - len(seq)
+                if seq.dim() == 2:
+                    pad_tensor = torch.full((pad_size, seq.size(1)), pad_value, dtype=seq.dtype)
+                else:
+                    pad_tensor = torch.full((pad_size,), pad_value, dtype=seq.dtype)
+                padded_seq = torch.cat([seq, pad_tensor], dim=0)
+            else:
+                padded_seq = seq
+            padded.append(padded_seq)
+        return torch.stack(padded)
+    
     return {
         "turn_id": turn_id[-1], # [batch_size, 1]
-        "user_utterance": torch.stack(user_utterance_conversations), # [batch_size, ?, max_utterance_len]
-        "user_I_label": torch.stack(user_I_label_conversations), # [batch_size, ?, 1]
-        "system_utterance": torch.stack(system_utterance_conversations), # [batch_size, ?, max_utterance_len]
-        "system_I_label": torch.stack(system_I_label_conversations), # [batch_size, ?, 1]
-        "context": torch.stack(context_conversations), # [batch_size, ?, max_context_len]
-        "qpp_features": torch.stack(qpp_features_conversations), # [batch_size, ?, 9]
+        "user_utterance": pad_sequence(user_utterance_conversations, max_len), # [batch_size, max_len, max_utterance_len]
+        "user_I_label": pad_sequence(user_I_label_conversations, max_len), # [batch_size, max_len, 1]
+        "system_utterance": pad_sequence(system_utterance_conversations, max_len), # [batch_size, max_len, max_utterance_len]
+        "system_I_label": pad_sequence(system_I_label_conversations, max_len), # [batch_size, max_len, 1]
+        "context": pad_sequence(context_conversations, max_len), # [batch_size, max_len, max_context_len]
+        "qpp_features": pad_sequence(qpp_features_conversations, max_len), # [batch_size, max_len, 9]
         "resolved_query": resolved_query_conversations[-1]  # [batch_size, ?] - 文字列のリスト
     }

@@ -66,7 +66,9 @@ class Trainer(object):
     def train_epoch(self, train_dataset, train_collate_fn, epoch, optimizer, scheduler=None):
         self.model.train()  
 
-        train_loader = torch.utils.data.DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=self.args.batch_size, shuffle=True)
+        # バッチサイズは設計上1のみサポート（CRFの制約のため）
+        batch_size = 1
+        train_loader = torch.utils.data.DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=batch_size, shuffle=True)
 
         start_time = time.perf_counter()
         step = 0
@@ -106,7 +108,9 @@ class Trainer(object):
     def infer(self, epoch_id, dataset, collate_fn):
         self.eval_model.eval()
         with torch.no_grad():
-            test_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=self.args.batch_size,shuffle=False, collate_fn=collate_fn, num_workers=0)
+            # バッチサイズは設計上1のみサポート（CRFの制約のため）
+            batch_size = 1
+            test_loader = torch.utils.data.DataLoader(dataset=dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn, num_workers=0)
 
             accumulative_turn_id = []
             accumulative_prediction = []
