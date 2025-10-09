@@ -121,7 +121,7 @@ SIP/
 |------|------|------------|
 | `--epoch_num` | エポック数 | `20` |
 | `--learning_rate` | 学習率 | `2e-5` |
-| `--lr_crf` | CRF学習率 | `1e-3` |
+| `--lr_distance_crf` | CRF学習率 | `1e-3` |
 | `--max_utterance_len` | 最大発話長 | `128` |
 | `--max_context_len` | 最大コンテキスト長 | `384` |
 

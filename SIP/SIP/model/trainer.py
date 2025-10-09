@@ -34,9 +34,9 @@ class Trainer(object):
         if self.accumulation_count % self.args.accumulation_steps == 0:
             if self.args.task=="SIP":
                 self.writer.add_scalar('Loss/overall', sum_loss.item(), scheduler.state_dict()['_step_count'])
-                self.writer.add_scalar('Loss/crf', loss["loss_crf"].item(), scheduler.state_dict()['_step_count'])
+                self.writer.add_scalar('Loss/distance_crf', loss["loss_distance_crf"].item(), scheduler.state_dict()['_step_count'])
                 self.writer.add_scalar('Loss/mle_e', loss["loss_mle_e"].item(), scheduler.state_dict()['_step_count'])
-                self.writer.add_scalars('Loss/all', {'overall': sum_loss.item(),'crf': loss["loss_crf"].item(),'mle_e': loss["loss_mle_e"].item()},scheduler.state_dict()['_step_count'])
+                self.writer.add_scalars('Loss/all', {'overall': sum_loss.item(),'distance_crf': loss["loss_distance_crf"].item(),'mle_e': loss["loss_mle_e"].item()},scheduler.state_dict()['_step_count'])
             elif self.args.task in ["AP", "SIP-AP"]:
                 self.writer.add_scalar('Loss', sum_loss.item(), scheduler.state_dict()['_step_count'])
             else:

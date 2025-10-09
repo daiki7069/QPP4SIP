@@ -7,7 +7,7 @@ import numpy as np
 from sklearn.preprocessing import MultiLabelBinarizer
 import torch.nn.functional as F
 
-class utterance_encoding(nn.Module):
+class UtteranceEncoding(nn.Module):
     """
     Utterance Encoding with BERT
     Encode user and system utterances at the sentence (utterance) level.
@@ -39,7 +39,7 @@ class utterance_encoding(nn.Module):
 
         return pooling_user_utterance.reshape(batch_size, conversation_len, -1), pooling_system_utterance.reshape(batch_size, conversation_len, -1)  # [batch, ?, hidden_size], [batch, ?, hidden_size]
 
-class posterior_conversation_encoding(nn.Module):
+class PosteriorConversationEncoding(nn.Module):
     """
     Conversation Encoding with BiLSTM for posterior network
     Encode the entire conversation up to the current turn.
@@ -53,7 +53,7 @@ class posterior_conversation_encoding(nn.Module):
         output, (_,_) = self.lstm(input) # [batch_size, ?, hidden_size*2]
         return output   # [batch_size, ?, hidden_size*2]
 
-class prior_conversation_encoding(nn.Module):
+class PriorConversationEncoding(nn.Module):
     """
     Conversation Encoding with BiLSTM for prior network
     Encode the entire conversation up to the current turn.
@@ -67,7 +67,7 @@ class prior_conversation_encoding(nn.Module):
         output, (_,_)= self.lstm(input) # [batch_size, ?, hidden_size*2]
         return output   # [batch_size, ?, hidden_size*2]
 
-class crf(nn.Module):
+class DistanceCRF(nn.Module):
     """
 
     """
@@ -311,10 +311,10 @@ class BILSTMCRF(nn.Module):
         super().__init__()
         self.args = args
 
-        self.utterance_encoding=utterance_encoding(args=args)
-        self.posterior_conversation_encoding = posterior_conversation_encoding(args=args)
-        self.prior_conversation_encoding = prior_conversation_encoding(args=args)
-        self.crf = crf(args=args)
+        self.utterance_encoding=UtteranceEncoding(args=args)
+        self.posterior_conversation_encoding = PosteriorConversationEncoding(args=args)
+        self.prior_conversation_encoding = PriorConversationEncoding(args=args)
+        self.distance_crf = DistanceCRF(args=args)
         self.prior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
         self.posterior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
         
@@ -435,7 +435,7 @@ class BILSTMCRF(nn.Module):
                 posterior_hidden_squence = self.posterior_conversation_encoding(posterior_utterance_sequence)
                 posterior_emission_scores = self.posterior_e_project(posterior_hidden_squence)
 
-                gold_score, total_score= self.crf(posterior_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), posterior_hidden_squence.squeeze(0), state)
+                gold_score, total_score= self.distance_crf(posterior_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), posterior_hidden_squence.squeeze(0), state)
 
                 gold_score_batch.append(gold_score.unsqueeze(0))
                 total_score_batch.append(total_score.unsqueeze(0))
@@ -449,7 +449,7 @@ class BILSTMCRF(nn.Module):
                 partial_posterior_emission_scores = self.posterior_e_project(partial_posterior_hidden_squence)  # [1, 2i+1, 2]
 
                 combined_emission_scores = torch.cat([partial_posterior_emission_scores, prior_emission_score.unsqueeze(1)], 1)  # [1, 2i+2, 2]
-                predicted_path = self.crf(combined_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), partial_posterior_hidden_squence.squeeze(0) , state)
+                predicted_path = self.distance_crf(combined_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), partial_posterior_hidden_squence.squeeze(0) , state)
                 assert len(predicted_path) == combined_emission_scores.shape[1] == (partial_posterior_emission_scores.shape[1] + 1) == (partial_posterior_hidden_squence.shape[1]+1) == (prior_hidden_squence.shape[1]+1)
                 predicted_path_batch.append(predicted_path) # [[2], [4], ...]
                 predicted_path_batch_from_emission.append(combined_emission_scores.squeeze(0).max(1)[1].tolist())  # [1, 2i+2, 2] --> [2i+2, 2] -->[2i+2]
@@ -468,7 +468,7 @@ class BILSTMCRF(nn.Module):
             assert pair_num == prior_emission_score_tensor.shape[0] == posterior_emission_score_tensor.shape[0]
             assert prior_emission_score_tensor.shape[1] == posterior_emission_score_tensor.shape[1] # 2
 
-            loss_crf = torch.mean(total_score_tensor - gold_score_tensor) # average each sample
+            loss_distance_crf = torch.mean(total_score_tensor - gold_score_tensor) # average each sample
             loss_mle_e = F.mse_loss(prior_emission_score_tensor, posterior_emission_score_tensor.detach())  # [pair_num, 2]
             
             # Focal Loss for emission scores (prior network)
@@ -477,7 +477,7 @@ class BILSTMCRF(nn.Module):
             system_labels = data['system_I_label'].squeeze(0)  # [pair_num]
             focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
 
-            return {"loss_crf": loss_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
+            return {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
 
         elif self.args.mode == 'inference':
             assert len(predicted_path_batch[0])==len(predicted_path_batch_from_emission[0])==len(I_label_sequence_batch[0])==2

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-EPOCH_NUM=20
+EPOCH_NUM=1
 INPUT_PATH=./dataset
 LOG_PATH=./logs/music
 CHECKPOINT_PATH=./checkpoints/music
@@ -13,15 +13,15 @@ mkdir -p $CHECKPOINT_PATH
 mkdir -p $OUTPUT_PATH
 echo "Directories created successfully."
 
-# 学習
-echo "Starting training..."
-uv run python run.py --mode train --model music --input_path $INPUT_PATH/bm25_train.pkl --epoch_num $EPOCH_NUM > $LOG_PATH/train.log 2>&1
-if [ $? -eq 0 ]; then
-    echo "Training completed successfully."
-else
-    echo "Training failed. Check $LOG_PATH/train.log for details."
-    exit 1
-fi
+# # 学習
+# echo "Starting training..."
+# uv run python run.py --mode train --model music --input_path $INPUT_PATH/bm25_train.pkl --epoch_num $EPOCH_NUM > $LOG_PATH/train.log 2>&1
+# if [ $? -eq 0 ]; then
+#     echo "Training completed successfully."
+# else
+#     echo "Training failed. Check $LOG_PATH/train.log for details."
+#     exit 1
+# fi
 
 # 推論
 echo "Starting inference..."

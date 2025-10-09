@@ -1,6 +1,6 @@
 from utils.math_utils import universal_sentence_embedding
 from model.focal_loss import create_focal_loss_for_sip
-from model.music_model import crf, utterance_encoding, posterior_conversation_encoding, prior_conversation_encoding  # 共通クラスをインポート
+from model.music_model import distance_crf, utterance_encoding, posterior_conversation_encoding, prior_conversation_encoding  # 共通クラスをインポート
 import torch
 import torch.nn as nn
 from transformers import BertModel
@@ -121,7 +121,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
         self.utterance_encoding=utterance_encoding(args=args)
         self.posterior_conversation_encoding = posterior_conversation_encoding(args=args)
         self.prior_conversation_encoding = prior_conversation_encoding(args=args)
-        self.crf = crf(args=args)  # 共通のCRFクラスを使用
+        self.distance_crf = distance_crf(args=args)  # 共通のCRFクラスを使用
         self.prior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
         self.posterior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
 
@@ -321,6 +321,18 @@ class QPP4SIPBILSTMCRF(nn.Module):
                     
                     qpp_gate = self.qpp_policy_gating(gate_score)
                     
+                    # Policy Gating: 通常の予測とQPP情報を統合
+                    # 1. 通常の予測値（gatingなし）
+                    base_emission_score = prior_emission_score.clone()
+                    
+                    # 2. QPP情報に基づく予測値（QPP値自体を予測に反映）
+                    qpp_informed_score = torch.tanh(gate_score) * 2.0  # QPP値を予測スコアに変換
+                    # prior_emission_scoreの形状に合わせて調整
+                    qpp_informed_score = qpp_informed_score.expand_as(prior_emission_score)
+                    
+                    # 3. ゲート値による統合: g * base + (1-g) * qpp_informed
+                    prior_emission_score = qpp_gate * base_emission_score + (1 - qpp_gate) * qpp_informed_score
+                    
                     # ゲート値の正則化損失を追加（ゲートの学習安定化）
                     gate_regularization = torch.mean(torch.norm(qpp_gate, p=2, dim=1))
                     qpp_loss_batch.append(("gate_reg", gate_regularization * 0.01))  # 小さな重みで正則化
@@ -329,6 +341,18 @@ class QPP4SIPBILSTMCRF(nn.Module):
                 # obtain emission score
                 posterior_hidden_squence = self.posterior_conversation_encoding(posterior_utterance_sequence)
                 posterior_emission_scores = self.posterior_e_project(posterior_hidden_squence)
+                
+                # Policy Gatingの場合、posterior_emission_scoresにもゲート値を適用
+                if self.args.qpp4sip_pattern == "policy_gating" and qpp_gate is not None:
+                    # 1. 通常の予測値（gatingなし）
+                    base_posterior_scores = posterior_emission_scores.clone()
+                    
+                    # 2. QPP情報に基づく予測値（QPP値自体を予測に反映）
+                    qpp_informed_posterior = torch.tanh(gate_score) * 2.0  # QPP値を予測スコアに変換
+                    qpp_informed_posterior = qpp_informed_posterior.unsqueeze(1).expand_as(posterior_emission_scores)
+                    
+                    # 3. ゲート値による統合: g * base + (1-g) * qpp_informed
+                    posterior_emission_scores = qpp_gate.unsqueeze(1) * base_posterior_scores + (1 - qpp_gate.unsqueeze(1)) * qpp_informed_posterior
 
                 # NaNチェック
                 if torch.isnan(posterior_emission_scores).any():
@@ -343,7 +367,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
                                                       torch.zeros_like(prior_emission_score), 
                                                       prior_emission_score)
 
-                gold_score, total_score= self.crf(posterior_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), posterior_hidden_squence.squeeze(0), state)
+                gold_score, total_score= self.distance_crf(posterior_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), posterior_hidden_squence.squeeze(0), state)
 
                 gold_score_batch.append(gold_score.unsqueeze(0))
                 total_score_batch.append(total_score.unsqueeze(0))
@@ -357,7 +381,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
                 partial_posterior_emission_scores = self.posterior_e_project(partial_posterior_hidden_squence)  # [1, 2i+1, 2]
 
                 combined_emission_scores = torch.cat([partial_posterior_emission_scores, prior_emission_score.unsqueeze(1)], 1)  # [1, 2i+2, 2]
-                predicted_path = self.crf(combined_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), partial_posterior_hidden_squence.squeeze(0) , state)
+                predicted_path = self.distance_crf(combined_emission_scores.squeeze(0), I_label_sequence.squeeze(0), prior_hidden_squence[:, -1, :].squeeze(0), partial_posterior_hidden_squence.squeeze(0) , state)
                 assert len(predicted_path) == combined_emission_scores.shape[1] == (partial_posterior_emission_scores.shape[1] + 1) == (partial_posterior_hidden_squence.shape[1]+1) == (prior_hidden_squence.shape[1]+1)
                 predicted_path_batch.append(predicted_path) # [[2], [4], ...]
                 predicted_path_batch_from_emission.append(combined_emission_scores.squeeze(0).max(1)[1].tolist())  # [1, 2i+2, 2] --> [2i+2, 2] -->[2i+2]
@@ -376,7 +400,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
             assert pair_num == prior_emission_score_tensor.shape[0] == posterior_emission_score_tensor.shape[0]
             assert prior_emission_score_tensor.shape[1] == posterior_emission_score_tensor.shape[1] # 2
 
-            loss_crf = torch.mean(total_score_tensor - gold_score_tensor) # average each sample
+            loss_distance_crf = torch.mean(total_score_tensor - gold_score_tensor) # average each sample
             loss_mle_e = F.mse_loss(prior_emission_score_tensor, posterior_emission_score_tensor.detach())  # [pair_num, 2]
             
             # Focal Loss for emission scores (prior network)
@@ -385,7 +409,7 @@ class QPP4SIPBILSTMCRF(nn.Module):
             system_labels = data['system_I_label'].squeeze(0)  # [pair_num]
             focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
 
-            result = {"loss_crf": loss_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
+            result = {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
             
             # QPP関連損失を追加（重み付けを調整）
             if qpp_loss_batch:
@@ -406,11 +430,11 @@ class QPP4SIPBILSTMCRF(nn.Module):
                 
                 result.update(qpp_losses)
                 # 総損失にQPP損失とFocal Lossを追加
-                result["total_loss"] = loss_crf + loss_mle_e + focal_loss_value + total_qpp_loss
+                result["total_loss"] = loss_distance_crf + loss_mle_e + focal_loss_value + total_qpp_loss
                 
             else:
                 # QPP損失がない場合でもFocal Lossを追加
-                result["total_loss"] = loss_crf + loss_mle_e + focal_loss_value
+                result["total_loss"] = loss_distance_crf + loss_mle_e + focal_loss_value
                 
             return result
 
