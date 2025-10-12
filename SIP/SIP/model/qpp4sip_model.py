@@ -1,6 +1,6 @@
 from utils.math_utils import universal_sentence_embedding
 from model.focal_loss import create_focal_loss_for_sip
-from model.music_model import distance_crf, utterance_encoding, posterior_conversation_encoding, prior_conversation_encoding  # 共通クラスをインポート
+from model.music_model import DistanceCRF, UtteranceEncoding, PosteriorConversationEncoding, PriorConversationEncoding  # 共通クラスをインポート
 import torch
 import torch.nn as nn
 from transformers import BertModel
@@ -118,10 +118,10 @@ class QPP4SIPBILSTMCRF(nn.Module):
         super().__init__()
         self.args = args
 
-        self.utterance_encoding=utterance_encoding(args=args)
-        self.posterior_conversation_encoding = posterior_conversation_encoding(args=args)
-        self.prior_conversation_encoding = prior_conversation_encoding(args=args)
-        self.distance_crf = distance_crf(args=args)  # 共通のCRFクラスを使用
+        self.utterance_encoding=UtteranceEncoding(args=args)
+        self.posterior_conversation_encoding = PosteriorConversationEncoding(args=args)
+        self.prior_conversation_encoding = PriorConversationEncoding(args=args)
+        self.distance_crf = DistanceCRF(args=args)  # 共通のCRFクラスを使用
         self.prior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
         self.posterior_e_project = nn.Linear(2 * self.args.hidden_size, 2)
 

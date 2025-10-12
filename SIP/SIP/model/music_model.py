@@ -365,12 +365,12 @@ class BILSTMCRF(nn.Module):
             assert posterior_utterance_sequence.shape[1] == 2*(i+1)
 
             logger["role"].append("system")
-            logger["system_I"].append(data['system_I_label'][:, i].squeeze().item() if data['system_I_label'][:, i].squeeze().numel() == 1 else data['system_I_label'][:, i].squeeze()[0].item())  # add 1 or 0
+            logger["system_I"].append(data['response_type'][:, i].squeeze().item() if data['response_type'][:, i].squeeze().numel() == 1 else data['response_type'][:, i].squeeze()[0].item())  # add 1 or 0
 
             assert len(logger["role"]) == len(logger["system_I"]) == 2 * (i + 1)
 
-            previous_I_label_sequence.append(data['user_I_label'][:, i].unsqueeze(1))  # add user's utterance I label [1, 1]
-            previous_I_label_sequence.append(data['system_I_label'][:, i].unsqueeze(1))  # add system's utterance I label [1,1]
+            previous_I_label_sequence.append(data['query_type'][:, i].unsqueeze(1)) # FIXME  # add user's utterance I label [1, 1]
+            previous_I_label_sequence.append(data['response_type'][:, i].unsqueeze(1))  # add system's utterance I label [1,1]
             I_label_sequence = torch.cat(previous_I_label_sequence, 1)  # [1, 2i+2]
             assert I_label_sequence.shape[1] == 2 * (i + 1)
 
@@ -474,7 +474,7 @@ class BILSTMCRF(nn.Module):
             # Focal Loss for emission scores (prior network)
             # Convert labels to appropriate format for focal loss
             # We'll use the system I labels for focal loss calculation
-            system_labels = data['system_I_label'].squeeze(0)  # [pair_num]
+            system_labels = data['response_type'].squeeze(0)  # [pair_num]
             focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
 
             return {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
@@ -485,11 +485,7 @@ class BILSTMCRF(nn.Module):
             if len(predicted_path_batch)>1:
                 assert len(predicted_path_batch[1])==len(predicted_path_batch_from_emission[1])==len(I_label_sequence_batch[1])==4
 
-            # 予測パスと予測確率の両方を返す
-            return {
-                'predicted_paths': predicted_path_batch,
-                'emission_scores': emission_scores_batch
-            }
+            return predicted_path_batch
 
 class ContextEncoding(nn.Module):
     """

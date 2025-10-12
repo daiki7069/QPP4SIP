@@ -30,23 +30,24 @@ def evaluation_SIP(prediction_path=None, label_path=None):
     label_list = []
 
     id2label = {}
-    # pickleファイルを読み込み
-    with open(label_path, 'rb') as f:
-        dialogue_data = pickle.load(f)
+    # pickleファイルを読み込み（torch.saveで保存されているためtorch.loadを使用）
+    import torch
+    dialogue_data = torch.load(label_path)
     
     # 会話ごとにグループ化
     dialogue_groups = {}
-    for item in dialogue_data:
-        dialogue_id = item.get('dialogue_id', 'unknown')
-        if dialogue_id not in dialogue_groups:
-            dialogue_groups[dialogue_id] = []
-        dialogue_groups[dialogue_id].append(item)
+    for conversation_index, conversation in enumerate(dialogue_data):
+        for turn in conversation:
+            dialogue_id = turn.get('conv_id', f'conversation_{conversation_index}')
+            if dialogue_id not in dialogue_groups:
+                dialogue_groups[dialogue_id] = []
+            dialogue_groups[dialogue_id].append(turn)
 
     # 会話IDとturn_idを組み合わせた一意の識別子を作成
     for conv_idx, (conv_id, turns) in enumerate(dialogue_groups.items()):
         for turn_idx, turn in enumerate(turns):
-            # 推論結果と同じ形式の一意の識別子を生成
-            unique_id = f"conv_{conv_idx}_turn_{turn_idx}"
+            # 推論結果と同じ形式の一意の識別子を生成（conversation_index_turn_id形式）
+            unique_id = f"{conv_idx}_{turn['turn_id']}"
 
             # response_typeをInitiative/Non-initiativeに変換
             response_type = turn.get('response_type', '')

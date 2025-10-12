@@ -124,11 +124,12 @@ class Trainer(object):
                     inference_message = "{} on the {} dataset: doing {} / total {} in epoch {}".format(self.args.name,self.args.dataset, k + 1,len(test_loader), epoch_id)
                     print(inference_message)
                     
+                    # TODO: remove
                     # ログファイルに出力
-                    if hasattr(self.args, 'log_path'):
-                        log_file = os.path.join(self.args.log_path, f"inference_{self.args.dataset_type}_{self.args.qpp4sip_pattern if hasattr(self.args, 'qpp4sip_pattern') else 'music'}.log")
-                        with open(log_file, 'a', encoding='utf-8') as f:
-                            f.write(f"{inference_message}\n")
+                    # if hasattr(self.args, 'log_path'):
+                    #     log_file = os.path.join(self.args.log_path, f"inference_{self.args.dataset_type}_{self.args.qpp4sip_pattern if hasattr(self.args, 'qpp4sip_pattern') else 'music'}.log")
+                    #     with open(log_file, 'a', encoding='utf-8') as f:
+                    #         f.write(f"{inference_message}\n")
 
                 if torch.cuda.is_available():
                     data_cuda = dict()
@@ -140,57 +141,45 @@ class Trainer(object):
                     data = data_cuda
 
                 # [pair_num, ?]
-                model_output = self.eval_model(data)
-                
-                # モデルの出力形式を確認
-                if isinstance(model_output, dict):
-                    predicted = model_output['predicted_paths']
-                    emission_scores = model_output['emission_scores']
-                else:
-                    # 後方互換性のため、古い形式もサポート
-                    predicted = model_output
-                    emission_scores = None
+                predicted = self.eval_model(data)
 
                 assert len(predicted)==len(data["turn_id"])
 
                 for idx, turn_id in enumerate(data["turn_id"]):
-                    # 会話インデックスとturn_idを組み合わせた一意の識別子を生成
-                    unique_id = f"conv_{k}_turn_{turn_id}"
-                    accumulative_turn_id.append(unique_id)
+                    accumulative_turn_id.append(turn_id)
                     
                     # 予測ラベル
                     if self.args.task=="SIP":
                         accumulative_prediction.append("Initiative" if int(predicted[idx][-1])==1 else "Non-initiative")
-                    elif self.args.task in ["AP", "SIP-AP"]:
-                        accumulative_prediction.append(predicted[idx])
                     else:
                         raise NotImplementedError
                     
                     # 正解ラベル
-                    true_label = "Initiative" if int(data["system_I_label"][0, idx].item()) == 1 else "Non-initiative"
+                    true_label = "Initiative" if int(data["response_type"][0, idx].item()) == 1 else "Non-initiative"
                     accumulative_true_label.append(true_label)
                     
-                    # QPPの値（ndcg@1を使用）
-                    qpp_value = data["qpp_features"][0, idx, 0].item()  # ndcg@1
+                    # QPPの値
+                    qpp_value = data["qpp_feature"][0, idx].item()
                     accumulative_qpp_values.append(qpp_value)
                     
-                    # initiativeの予測確率
-                    if emission_scores is not None:
-                        # 最後のターン（システム発話）のinitiative確率を取得
-                        last_turn_probs = emission_scores[idx][-1]  # [2] - [non-initiative_prob, initiative_prob]
-                        initiative_prob = last_turn_probs[1].item()  # initiativeの確率
-                        accumulative_prediction_probs.append(initiative_prob)
-                    else:
-                        accumulative_prediction_probs.append(0.0)  # デフォルト値
+                    # # TODO: remove
+                    # # initiativeの予測確率
+                    # if predicted is not None:
+                    #     # 最後のターン（システム発話）のinitiative確率を取得
+                    #     last_turn_probs = predicted[idx][-1]  # [2] - [non-initiative_prob, initiative_prob]
+                    #     initiative_prob = last_turn_probs[1].item()  # initiativeの確率
+                    #     accumulative_prediction_probs.append(initiative_prob)
+                    # else:
+                    #     accumulative_prediction_probs.append(0.0)  # デフォルト値
                     
-                    # resolvedQuery
-                    resolved_query = data["resolved_query"][idx] if "resolved_query" in data else ""
-                    accumulative_resolved_query.append(resolved_query)
+                    # user_utterance
+                    user_utterance = data["user_utterance"][0, idx] if "user_utterance" in data else ""
+                    accumulative_resolved_query.append(user_utterance)
 
             with open(os.path.join(self.args.output_path, self.args.dataset_type+"."+str(epoch_id)+".txt"), 'w') as w:
                 if self.args.task == "SIP":
                     # ヘッダー行を追加
-                    w.write("turn_id\tpredicted_label\ttrue_label\tqpp_value\tinitiative_prob\tresolved_query\n")
+                    w.write("turn_id\tpredicted_label\ttrue_label\tqpp_value\tuser_utterance\n")
                     
                     for index, turn_id in enumerate(accumulative_turn_id):
                         # 追加項目を含む出力形式
@@ -198,12 +187,7 @@ class Trainer(object):
                                str(accumulative_prediction[index]) + '\t' +  # 予測ラベル
                                str(accumulative_true_label[index]) + '\t' +  # 正解ラベル
                                str(accumulative_qpp_values[index]) + '\t' +  # QPPの値
-                               str(accumulative_prediction_probs[index]) + '\t' +  # initiativeの予測確率
-                               str(accumulative_resolved_query[index]) + '\n')  # resolvedQuery
-                elif self.args.task in ["AP", "SIP-AP"]:
-                    for index, turn_id in enumerate(accumulative_turn_id):
-                        assert isinstance(accumulative_prediction[index], list)
-                        w.write(turn_id + '\t' + ",".join(accumulative_prediction[index]) + '\n')
+                               str(accumulative_resolved_query[index]) + '\n')  # user_utterance
                 else:
                     raise NotImplementedError
 

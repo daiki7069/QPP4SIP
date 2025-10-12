@@ -20,6 +20,7 @@ class QPPExperimentConfig:
         6: "recall@1",
         7: "recall@5",
         8: "recall@10",
+        9: "recall@50",
     }
     
     # よく使用される特徴量セットの定義

@@ -8,10 +8,12 @@ import sys
 import argparse
 import numpy as np
 import torch
+import torch.optim as optim
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
 from sklearn.preprocessing import MultiLabelBinarizer
 import pickle
+from transformers import get_constant_schedule
 
 # パスを追加
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +21,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from model.dataset import Dataset, collate_fn
 from model.music_model import BILSTMCRF
 from model.qpp4sip_model import QPP4SIPBILSTMCRF
+from model.policy_gating import GatedBILSTMCRF
 from model.trainer import Trainer
 from utils.random_utils import replicability
 from config.dataset_config import Config
@@ -34,34 +37,36 @@ def get_model(args):
         return BILSTMCRF(args)
     elif args.model == "qpp4sip":
         return QPP4SIPBILSTMCRF(args)
+    elif args.model == "qpp_gating":
+        return GatedBILSTMCRF(args)
     else:
         raise ValueError(f"サポートされていないモデル: {args.model}")
 
 
-def get_qpp_feature_id(args):
-    """
-    QPP特徴量のIDを生成する関数
+# def get_qpp_feature_id(args):
+#     """
+#     QPP特徴量のIDを生成する関数
     
-    Args:
-        args: コマンドライン引数
+#     Args:
+#         args: コマンドライン引数
         
-    Returns:
-        str: QPP特徴量のID（例: "012" for ndcg系のみ）
-    """
-    if args.model != "qpp4sip":
-        return ""
+#     Returns:
+#         str: QPP特徴量のID（例: "012" for ndcg系のみ）
+#     """
+#     if args.model != "qpp4sip":
+#         return ""
     
-    # QPP特徴量のインデックスを取得
-    if hasattr(args, 'qpp_feature_indices') and args.qpp_feature_indices:
-        # 指定された特徴量インデックスを使用
-        feature_indices = args.qpp_feature_indices
-    else:
-        # デフォルトは全特徴量（0-8）
-        feature_indices = list(range(9))
+#     # QPP特徴量のインデックスを取得
+#     if hasattr(args, 'qpp_feature_indices') and args.qpp_feature_indices:
+#         # 指定された特徴量インデックスを使用
+#         feature_indices = args.qpp_feature_indices
+#     else:
+#         # デフォルトは全特徴量（0-8）
+#         feature_indices = list(range(9))
     
-    # インデックスを文字列に変換して結合
-    feature_id = ''.join(map(str, sorted(feature_indices)))
-    return feature_id
+#     # インデックスを文字列に変換して結合
+#     feature_id = ''.join(map(str, sorted(feature_indices)))
+#     return feature_id
 
 
 def run_train(args):
@@ -78,28 +83,30 @@ def run_train(args):
     print(f"バッチサイズ: {batch_size} (固定)")
     
     # 設定の初期化
-    config = Config(args)
-    mlb = MultiLabelBinarizer()
+    # config = Config(args)
+    # mlb = MultiLabelBinarizer()
+
+    conversations = torch.load(args.input_path)
     
-    # データの読み込み
-    print(f"データを読み込み中: {args.input_path}")
-    with open(args.input_path, 'rb') as f:
-        dialogue_data = pickle.load(f)
+    # # データの読み込み
+    # print(f"データを読み込み中: {args.input_path}")
+    # with open(args.input_path, 'rb') as f:
+    #     dialogue_data = pickle.load(f)
     
-    # ダイアログデータを会話データに変換
-    conversations = convert_dialogue_to_conversations(dialogue_data)
-    print(f"会話数: {len(conversations)}")
+    # # ダイアログデータを会話データに変換
+    # conversations = convert_dialogue_to_conversations(dialogue_data)
+    # print(f"会話数: {len(conversations)}")
     
-    # QPP特徴量の検証
-    if args.model == "qpp4sip":
-        # conversations[0]は会話のターンのリストなので、最初のターンのQPP特徴量を確認
-        qpp_features = None
-        if conversations and len(conversations) > 0 and len(conversations[0]) > 0:
-            # 実際のデータセットからQPP特徴量を構築
-            turn = conversations[0][0]
-            qpp_feature_names = ['ndcg@1', 'ndcg@5', 'ndcg@10', 'precision@1', 'precision@5', 'precision@10', 'recall@1', 'recall@5', 'recall@10']
-            qpp_features = {name: turn.get(name, 0.0) for name in qpp_feature_names}
-        QPPExperimentConfig.validate_qpp_features(qpp_features)
+    # # QPP特徴量の検証
+    # if args.model == "qpp4sip":
+    #     # conversations[0]は会話のターンのリストなので、最初のターンのQPP特徴量を確認
+    #     qpp_features = None
+    #     if conversations and len(conversations) > 0 and len(conversations[0]) > 0:
+    #         # 実際のデータセットからQPP特徴量を構築
+    #         turn = conversations[0][0]
+    #         qpp_feature_names = ['ndcg@1', 'ndcg@5', 'ndcg@10', 'precision@1', 'precision@5', 'precision@10', 'recall@1', 'recall@5', 'recall@10']
+    #         qpp_features = {name: turn.get(name, 0.0) for name in qpp_feature_names}
+    #     QPPExperimentConfig.validate_qpp_features(qpp_features)
     
     # モデルの初期化
     model = get_model(args)
@@ -111,8 +118,6 @@ def run_train(args):
     
     # オプティマイザーの設定
     if args.model == "music":
-        from torch import optim
-        from transformers import get_constant_schedule
         
         model_optimizer = optim.Adam([
             {"params": model.utterance_encoding.parameters()},
@@ -120,32 +125,36 @@ def run_train(args):
             {"params": model.prior_conversation_encoding.lstm.parameters()},
             {"params": model.prior_e_project.parameters()},
             {"params": model.posterior_e_project.parameters()},
-            {"params": model.distance_distance_crf.parameters(), "lr": args.lr_distance_crf}
+            {"params": model.distance_crf.parameters(), "lr": args.lr_distance_crf}
+        ], lr=args.learning_rate)
+    elif args.model == "qpp_gating":
+        model_optimizer = optim.Adam([
+            {"params": model.gated_utterance_encoding.parameters()},
+            {"params": model.posterior_conversation_encoding.lstm.parameters()},
+            {"params": model.prior_conversation_encoding.lstm.parameters()},
+            {"params": model.prior_e_project.parameters()},
+            {"params": model.posterior_e_project.parameters()},
+            {"params": model.distance_crf.parameters(), "lr": args.lr_distance_crf}
         ], lr=args.learning_rate)
     else:
-        from torch import optim
-        from transformers import get_constant_schedule
-        
-        model_optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
+        raise NotImplementedError
+
+    # if args.initialization_path is not None:
+    #     model.load_state_dict(torch.load(args.initialization_path)["model"])    # TODO: 転移学習ようのため未使用
     
     model_scheduler = get_constant_schedule(model_optimizer)
     
-    # TensorBoardライターの設定
     writer = SummaryWriter(args.log_path)
     
-    # 学習の実行
     trainer = Trainer(args, model, writer)
     model_optimizer.zero_grad()
     
     for i in range(1, args.epoch_num + 1):
         print(f"エポック {i}/{args.epoch_num} 開始")
-        
-        dataset = Dataset(args, config, mlb, conversations)
+        dataset = Dataset(args, conversations)
         trainer.train_epoch(dataset, collate_fn, i, model_optimizer, model_scheduler)
         trainer.serialize(i, model_scheduler, saved_model_path=args.saved_model_path)
-        
         print(f"エポック {i}/{args.epoch_num} 完了")
-    
     writer.close()
     print("=== 学習完了 ===")
 
@@ -160,20 +169,21 @@ def run_inference(args):
     print(f"チェックポイント: {args.saved_model_path}")
     
     # 設定の初期化
-    config = Config(args)
-    mlb = MultiLabelBinarizer()
+    # config = Config(args)
+    # mlb = MultiLabelBinarizer()
     
-    # データの読み込み
-    print(f"データを読み込み中: {args.input_path}")
-    with open(args.input_path, 'rb') as f:
-        dialogue_data = pickle.load(f)
+    # # データの読み込み
+    # print(f"データを読み込み中: {args.input_path}")
+    # with open(args.input_path, 'rb') as f:
+    #     dialogue_data = pickle.load(f)
     
-    # ダイアログデータを会話データに変換
-    conversations = convert_dialogue_to_conversations(dialogue_data)
-    print(f"会話数: {len(conversations)}")
+    # # ダイアログデータを会話データに変換
+    # conversations = convert_dialogue_to_conversations(dialogue_data)
+    # print(f"会話数: {len(conversations)}")
     
     # データセットの作成
-    dataset = Dataset(args, config, mlb, conversations)
+    conversations = torch.load(args.input_path)
+    dataset = Dataset(args, conversations)
     
     # 各エポックの推論を実行
     for epoch_id in range(1, args.epoch_num + 1):
@@ -347,11 +357,12 @@ def main():
     parser.add_argument("--name", type=str, default="QPP4SIP", help="モデル名")
     parser.add_argument("--dataset", type=str, default="INSCIT", help="データセット名（INSCIT固定）")
     parser.add_argument("--model", type=str, default="music", 
-                       choices=["music", "qpp4sip"], 
+                       choices=["music", "qpp4sip", "qpp_gating"], 
                        help="モデルタイプ")
     parser.add_argument("--qpp4sip_pattern", type=str, default="feature_fusion", 
                        choices=["feature_fusion", "auxiliary_head", "policy_gating"], 
                        help="QPP4SIP実装パターン")
+    parser.add_argument("--qpp_feature_name", type=str, default="f1@5", help="QPP特徴量名")
     
     # パス設定
     parser.add_argument("--input_path", type=str, required=True, help="入力データのパス")
