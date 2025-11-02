@@ -27,6 +27,7 @@ from utils.random_utils import replicability
 from config.dataset_config import Config
 from utils.load_pkl import convert_dialogue_to_conversations
 from config.qpp_config import QPPExperimentConfig
+from config.wandb import init_wandb, log_training_metrics, log_evaluation_metrics, create_config_dict, get_experiment_name
 
 
 def get_model(args):
@@ -43,30 +44,30 @@ def get_model(args):
         raise ValueError(f"サポートされていないモデル: {args.model}")
 
 
-# def get_qpp_feature_id(args):
-#     """
-#     QPP特徴量のIDを生成する関数
+def get_qpp_feature_id(args):
+    """
+    QPP特徴量のIDを生成する関数
     
-#     Args:
-#         args: コマンドライン引数
+    Args:
+        args: コマンドライン引数
         
-#     Returns:
-#         str: QPP特徴量のID（例: "012" for ndcg系のみ）
-#     """
-#     if args.model != "qpp4sip":
-#         return ""
+    Returns:
+        str: QPP特徴量のID（例: "012" for ndcg系のみ）
+    """
+    if args.model != "qpp4sip":
+        return ""
     
-#     # QPP特徴量のインデックスを取得
-#     if hasattr(args, 'qpp_feature_indices') and args.qpp_feature_indices:
-#         # 指定された特徴量インデックスを使用
-#         feature_indices = args.qpp_feature_indices
-#     else:
-#         # デフォルトは全特徴量（0-8）
-#         feature_indices = list(range(9))
+    # QPP特徴量のインデックスを取得
+    if hasattr(args, 'qpp_feature_indices') and args.qpp_feature_indices:
+        # 指定された特徴量インデックスを使用
+        feature_indices = args.qpp_feature_indices
+    else:
+        # デフォルトは全特徴量（0-8）
+        feature_indices = list(range(9))
     
-#     # インデックスを文字列に変換して結合
-#     feature_id = ''.join(map(str, sorted(feature_indices)))
-#     return feature_id
+    # インデックスを文字列に変換して結合
+    feature_id = ''.join(map(str, sorted(feature_indices)))
+    return feature_id
 
 
 def run_train(args):
@@ -86,7 +87,50 @@ def run_train(args):
     # config = Config(args)
     # mlb = MultiLabelBinarizer()
 
-    conversations = torch.load(args.input_path)
+    # データの読み込み（torch形式またはJSON形式に対応）
+    if args.input_path.endswith('.json'):
+        # JSON形式の場合は読み込んでtorch形式で再保存（必要に応じて）
+        import json
+        print(f"JSONファイルを読み込み中: {args.input_path}")
+        with open(args.input_path, 'r', encoding='utf-8') as f:
+            conversations = json.load(f)
+        
+        # torch形式で保存（キャッシュとして）
+        pkl_path = args.input_path.replace('.json', '.pkl')
+        if not os.path.exists(pkl_path):
+            print(f"torch形式で保存中: {pkl_path}")
+            torch.save(conversations, pkl_path)
+    else:
+        # torch形式（.pkl）を直接読み込み
+        conversations = torch.load(args.input_path)
+    
+    # データが各ターンが独立した会話として保存されている場合、会話ごとに再グループ化
+    if isinstance(conversations, list) and len(conversations) > 0:
+        # 最初の要素をチェックして、各会話が1ターンしかないか確認
+        if isinstance(conversations[0], list) and len(conversations[0]) == 1:
+            # conv_idでグループ化して会話を再構築
+            print("警告: データが各ターンが独立した会話として保存されています。会話ごとに再グループ化します...")
+            conversations_dict = {}
+            for turn_list in conversations:
+                if len(turn_list) > 0:
+                    turn = turn_list[0]
+                    conv_id = turn.get('conv_id', '')
+                    if conv_id not in conversations_dict:
+                        conversations_dict[conv_id] = []
+                    conversations_dict[conv_id].append(turn)
+            
+            # 各会話のターンをturn_idでソート
+            regrouped_conversations = []
+            for conv_id, turns in conversations_dict.items():
+                turns.sort(key=lambda x: x['turn_id'])
+                regrouped_conversations.append(turns)
+            
+            conversations = regrouped_conversations
+            print(f"再グループ化完了: 会話数 {len(conversations)}")
+        else:
+            print(f"会話数: {len(conversations)}")
+    else:
+        print(f"会話数: {len(conversations) if isinstance(conversations, list) else 'N/A'}")
     
     # # データの読み込み
     # print(f"データを読み込み中: {args.input_path}")
@@ -146,16 +190,30 @@ def run_train(args):
     
     writer = SummaryWriter(args.log_path)
     
-    trainer = Trainer(args, model, writer)
+    # wandbの初期化
+    config_dict = create_config_dict(args)
+    experiment_name = get_experiment_name(args)
+    wandb_mode = os.getenv("WANDB_MODE", "online")
+    wandb_run = init_wandb(
+        project_name="QPP4SIP",
+        experiment_name=experiment_name,
+        config_dict=config_dict,
+        mode=wandb_mode
+    )
+    
+    trainer = Trainer(args, model, writer, wandb_run=wandb_run)
     model_optimizer.zero_grad()
     
+    global_step = 0
     for i in range(1, args.epoch_num + 1):
         print(f"エポック {i}/{args.epoch_num} 開始")
         dataset = Dataset(args, conversations)
-        trainer.train_epoch(dataset, collate_fn, i, model_optimizer, model_scheduler)
+        global_step = trainer.train_epoch(dataset, collate_fn, i, model_optimizer, model_scheduler, global_step=global_step)
         trainer.serialize(i, model_scheduler, saved_model_path=args.saved_model_path)
         print(f"エポック {i}/{args.epoch_num} 完了")
     writer.close()
+    if wandb_run:
+        wandb_run.finish()
     print("=== 学習完了 ===")
 
 
@@ -182,7 +240,44 @@ def run_inference(args):
     # print(f"会話数: {len(conversations)}")
     
     # データセットの作成
-    conversations = torch.load(args.input_path)
+    # データの読み込み（torch形式またはJSON形式に対応）
+    if args.input_path.endswith('.json'):
+        import json
+        print(f"JSONファイルを読み込み中: {args.input_path}")
+        with open(args.input_path, 'r', encoding='utf-8') as f:
+            conversations = json.load(f)
+        
+        # torch形式で保存（キャッシュとして）
+        pkl_path = args.input_path.replace('.json', '.pkl')
+        if not os.path.exists(pkl_path):
+            print(f"torch形式で保存中: {pkl_path}")
+            torch.save(conversations, pkl_path)
+    else:
+        conversations = torch.load(args.input_path)
+    
+    # データが各ターンが独立した会話として保存されている場合、会話ごとに再グループ化
+    if isinstance(conversations, list) and len(conversations) > 0:
+        if isinstance(conversations[0], list) and len(conversations[0]) == 1:
+            print("警告: データが各ターンが独立した会話として保存されています。会話ごとに再グループ化します...")
+            conversations_dict = {}
+            for turn_list in conversations:
+                if len(turn_list) > 0:
+                    turn = turn_list[0]
+                    conv_id = turn.get('conv_id', '')
+                    if conv_id not in conversations_dict:
+                        conversations_dict[conv_id] = []
+                    conversations_dict[conv_id].append(turn)
+            
+            regrouped_conversations = []
+            for conv_id, turns in conversations_dict.items():
+                turns.sort(key=lambda x: x['turn_id'])
+                regrouped_conversations.append(turns)
+            
+            conversations = regrouped_conversations
+            print(f"再グループ化完了: 会話数 {len(conversations)}")
+        else:
+            print(f"会話数: {len(conversations)}")
+    
     dataset = Dataset(args, conversations)
     
     # 各エポックの推論を実行
@@ -226,6 +321,17 @@ def run_evaluation(args):
     
     from evaluation.evaluation import evaluation_SIP, generate_summary
     
+    # wandbの初期化（評価時も実行ログを残すため）
+    config_dict = create_config_dict(args)
+    experiment_name = get_experiment_name(args)
+    wandb_mode = os.getenv("WANDB_MODE", "online")
+    wandb_run = init_wandb(
+        project_name="QPP4SIP",
+        experiment_name=experiment_name + "_eval",
+        config_dict=config_dict,
+        mode=wandb_mode
+    )
+    
     # 全エポックの評価結果を格納
     all_results = {}
     
@@ -239,6 +345,10 @@ def run_evaluation(args):
             results = evaluation_SIP(prediction_path=prediction_path, label_path=args.input_path)
             all_results[epoch_id] = results
             print(f"エポック {epoch_id}: F1={results['f1']:.2f}, Acc={results['acc']:.2f}")
+            
+            # wandbに評価結果を記録
+            if wandb_run:
+                log_evaluation_metrics(epoch=epoch_id, eval_results=results)
         else:
             print(f"予測ファイルが見つかりません: {prediction_path}")
     
@@ -269,6 +379,8 @@ def run_evaluation(args):
         print(f"出力ディレクトリ: {args.output_path}")
         print(f"期待されるファイル形式: dev.{{epoch_id}}.txt")
     
+    if wandb_run:
+        wandb_run.finish()
     print("=== 評価完了 ===")
 
 
@@ -369,6 +481,7 @@ def main():
     parser.add_argument("--output_path", type=str, default="./output", help="出力パス")
     parser.add_argument("--saved_model_path", type=str, default="./checkpoints", help="チェックポイントのパス")
     parser.add_argument("--log_path", type=str, default="log", help="ログのパス")
+    parser.add_argument("--new_features_path", type=str, default=None, help="追加特長量CSVファイルのパス")
     
     # モデルのパラメータ
     parser.add_argument("--hidden_size", type=int, default=768, help="隠れ層のサイズ")

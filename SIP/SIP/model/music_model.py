@@ -474,10 +474,11 @@ class BILSTMCRF(nn.Module):
             # Focal Loss for emission scores (prior network)
             # Convert labels to appropriate format for focal loss
             # We'll use the system I labels for focal loss calculation
-            system_labels = data['response_type'].squeeze(0)  # [pair_num]
-            focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
+            # system_labels = data['response_type'].squeeze(0)  # [pair_num]
+            # focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
+            # focal_loss is disabled
 
-            return {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
+            return {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e}
 
         elif self.args.mode == 'inference':
             assert len(predicted_path_batch[0])==len(predicted_path_batch_from_emission[0])==len(I_label_sequence_batch[0])==2

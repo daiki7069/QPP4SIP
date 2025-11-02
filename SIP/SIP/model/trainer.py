@@ -10,7 +10,7 @@ import numpy as np
 
 
 class Trainer(object):
-    def __init__(self, args, model, writer=None):
+    def __init__(self, args, model, writer=None, wandb_run=None):
         super(Trainer, self).__init__()
         self.args = args
 
@@ -23,6 +23,7 @@ class Trainer(object):
 
         self.accumulation_count = 0
         self.writer = writer
+        self.wandb_run = wandb_run
 
     def train_batch(self, epoch, data, optimizer, scheduler=None):
         self.accumulation_count += 1
@@ -32,13 +33,34 @@ class Trainer(object):
         sum_loss.backward()
 
         if self.accumulation_count % self.args.accumulation_steps == 0:
+            step_count = scheduler.state_dict()['_step_count']
+            
             if self.args.task=="SIP":
-                self.writer.add_scalar('Loss/overall', sum_loss.item(), scheduler.state_dict()['_step_count'])
-                self.writer.add_scalar('Loss/distance_crf', loss["loss_distance_crf"].item(), scheduler.state_dict()['_step_count'])
-                self.writer.add_scalar('Loss/mle_e', loss["loss_mle_e"].item(), scheduler.state_dict()['_step_count'])
-                self.writer.add_scalars('Loss/all', {'overall': sum_loss.item(),'distance_crf': loss["loss_distance_crf"].item(),'mle_e': loss["loss_mle_e"].item()},scheduler.state_dict()['_step_count'])
+                self.writer.add_scalar('Loss/overall', sum_loss.item(), step_count)
+                self.writer.add_scalar('Loss/distance_crf', loss["loss_distance_crf"].item(), step_count)
+                self.writer.add_scalar('Loss/mle_e', loss["loss_mle_e"].item(), step_count)
+                self.writer.add_scalars('Loss/all', {'overall': sum_loss.item(),'distance_crf': loss["loss_distance_crf"].item(),'mle_e': loss["loss_mle_e"].item()}, step_count)
+                
+                # wandbにも記録
+                if self.wandb_run is not None:
+                    from config.wandb import log_training_metrics
+                    loss_dict_log = {
+                        "loss_overall": sum_loss.item(),
+                        "loss_distance_crf": loss["loss_distance_crf"].item(),
+                        "loss_mle_e": loss["loss_mle_e"].item()
+                    }
+                    # focal lossは無効化済み
+                    
+                    learning_rate = scheduler.get_last_lr()[0] if scheduler is not None else None
+                    log_training_metrics(epoch=epoch, step=step_count, loss_dict=loss_dict_log, learning_rate=learning_rate)
             elif self.args.task in ["AP", "SIP-AP"]:
-                self.writer.add_scalar('Loss', sum_loss.item(), scheduler.state_dict()['_step_count'])
+                self.writer.add_scalar('Loss', sum_loss.item(), step_count)
+                
+                # wandbにも記録
+                if self.wandb_run is not None:
+                    from config.wandb import log_training_metrics
+                    learning_rate = scheduler.get_last_lr()[0] if scheduler is not None else None
+                    log_training_metrics(epoch=epoch, step=step_count, loss_dict={"loss": sum_loss.item()}, learning_rate=learning_rate)
             else:
                 raise NotImplementedError
 
@@ -63,7 +85,7 @@ class Trainer(object):
         torch.save(fuse_dict, os.path.join(saved_model_path, '.'.join([str(epoch), 'pkl'])))
         print("Saved epoch {} model".format(epoch))
 
-    def train_epoch(self, train_dataset, train_collate_fn, epoch, optimizer, scheduler=None):
+    def train_epoch(self, train_dataset, train_collate_fn, epoch, optimizer, scheduler=None, global_step=0):
         self.model.train()  
 
         # バッチサイズは設計上1のみサポート（CRFの制約のため）
@@ -71,7 +93,7 @@ class Trainer(object):
         train_loader = torch.utils.data.DataLoader(train_dataset, collate_fn=train_collate_fn, batch_size=batch_size, shuffle=True)
 
         start_time = time.perf_counter()
-        step = 0
+        step = global_step
 
         for j, data in enumerate(train_loader, 0):
             if torch.cuda.is_available():
@@ -104,6 +126,7 @@ class Trainer(object):
                 sys.stdout.flush()
 
         sys.stdout.flush()
+        return step
 
     def infer(self, epoch_id, dataset, collate_fn):
         self.eval_model.eval()
@@ -172,8 +195,8 @@ class Trainer(object):
                     # else:
                     #     accumulative_prediction_probs.append(0.0)  # デフォルト値
                     
-                    # user_utterance
-                    user_utterance = data["user_utterance"][0, idx] if "user_utterance" in data else ""
+                    # user_utterance（テンソルの場合は空文字列として扱う、評価時には不要）
+                    user_utterance = ""  # user_utteranceはテンソルなので評価時には出力しない
                     accumulative_resolved_query.append(user_utterance)
 
             with open(os.path.join(self.args.output_path, self.args.dataset_type+"."+str(epoch_id)+".txt"), 'w') as w:

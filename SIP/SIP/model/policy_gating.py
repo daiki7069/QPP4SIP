@@ -28,8 +28,9 @@ class PolicyGating(nn.Module):
             g_t: [batch_size, hidden_size] 現在のターンのゲート値ベクトル * batch_size
             g_t_mean: [batch_size] 現在のターンのゲート値の平均値 * batch_size
         """
-        f_projected = self.f_project(f_t)
-        gate_input = torch.cat([h_t, f_projected], dim=-1)
+        f_projected = self.f_project(f_t)  # [batch_size, hidden_size]
+        # gate_inputは元のQPP特徴量f_tを使う（g_projectがhidden_size + qpp_sizeを期待しているため）
+        gate_input = torch.cat([h_t, f_t], dim=-1)  # [batch_size, hidden_size + qpp_size]
         g_t = torch.sigmoid(self.g_project(gate_input)) # [batch_size, hidden_size]
 
         h_fused = g_t * h_t + (1 - g_t) * f_projected
@@ -62,7 +63,9 @@ class GatedUtteranceEncoding(nn.Module):
         encoded_user_utterance = self.enc(user_utterance, attention_mask=user_utterance_mask.float())[0]    # [batch * ?, max_utterance_len, hidden_size]
         pooling_user_utterance = universal_sentence_embedding(encoded_user_utterance, user_utterance_mask)  # [batch * ?, hidden_size] 単語ベクトル->文単位のベクトル
         pooling_user_utterance /= np.sqrt(pooling_user_utterance.size()[-1])    # [batch * ?, hidden_size]
-        pooling_user_utterance, g_t, g_t_mean = self.policy_gating(pooling_user_utterance, data['user_qpp'])  # [batch * ?, hidden_size], [batch * ?, 1], [batch * ?, 1] # TODO: user_qppの定義
+        # qpp_featureを形状変換: [batch, conversation_len] -> [batch * conversation_len, 1]
+        user_qpp = data['qpp_feature'].reshape(-1, 1).float()  # [batch * ?, 1] float型に変換
+        pooling_user_utterance, g_t, g_t_mean = self.policy_gating(pooling_user_utterance, user_qpp)  # [batch * ?, hidden_size], [batch * ?, 1], [batch * ?, 1]
 
         encoded_system_utterance = self.enc(system_utterance, attention_mask=system_utterance_mask.float())[0]    # [batch * ?, max_utterance_len, hidden_size]
         pooling_system_utterance = universal_sentence_embedding(encoded_system_utterance, system_utterance_mask)  # [batch * ?, hidden_size] 単語ベクトル->文単位のベクトル
@@ -234,10 +237,11 @@ class GatedBILSTMCRF(nn.Module):
             # Focal Loss for emission scores (prior network)
             # Convert labels to appropriate format for focal loss
             # We'll use the system I labels for focal loss calculation
-            system_labels = data['response_type'].squeeze(0)  # [pair_num]
-            focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
+            # system_labels = data['response_type'].squeeze(0)  # [pair_num]
+            # focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
+            # focal_loss is disabled
 
-            return {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
+            return {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e}
 
         elif self.args.mode == 'inference':
             assert len(predicted_path_batch[0])==len(predicted_path_batch_from_emission[0])==len(I_label_sequence_batch[0])==2

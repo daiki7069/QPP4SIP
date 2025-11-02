@@ -30,29 +30,34 @@ def evaluation_SIP(prediction_path=None, label_path=None):
     label_list = []
 
     id2label = {}
-    # pickleファイルを読み込み（torch.saveで保存されているためtorch.loadを使用）
+    # データの読み込み（torch形式またはJSON形式に対応）
     import torch
-    dialogue_data = torch.load(label_path)
+    if label_path.endswith('.json'):
+        # JSON形式の場合は読み込む
+        with open(label_path, 'r', encoding='utf-8') as f:
+            dialogue_data = json.load(f)
+    else:
+        # torch形式（.pkl）を直接読み込み
+        dialogue_data = torch.load(label_path)
     
-    # 会話ごとにグループ化
-    dialogue_groups = {}
+    # データは既に会話ごとにグループ化されている
+    # 推論結果のturn_id形式は conversation_index_turn_id なので、その形式で一意の識別子を作成
     for conversation_index, conversation in enumerate(dialogue_data):
         for turn in conversation:
-            dialogue_id = turn.get('conv_id', f'conversation_{conversation_index}')
-            if dialogue_id not in dialogue_groups:
-                dialogue_groups[dialogue_id] = []
-            dialogue_groups[dialogue_id].append(turn)
-
-    # 会話IDとturn_idを組み合わせた一意の識別子を作成
-    for conv_idx, (conv_id, turns) in enumerate(dialogue_groups.items()):
-        for turn_idx, turn in enumerate(turns):
             # 推論結果と同じ形式の一意の識別子を生成（conversation_index_turn_id形式）
-            unique_id = f"{conv_idx}_{turn['turn_id']}"
+            unique_id = f"{conversation_index}_{turn['turn_id']}"
 
             # response_typeをInitiative/Non-initiativeに変換
+            # response_typeは"clarification [SEP] directAnswer"のような形式の可能性があるため、
+            # [SEP]で分割して最初の部分だけを使用
             response_type = turn.get('response_type', '')
-            if response_type in ['clarification', 'clarify']:
-                id2label[unique_id] = 'Initiative'
+            if isinstance(response_type, str):
+                # [SEP]で分割して最初の部分を取得
+                response_type_first = response_type.split(' [SEP] ')[0].strip() if ' [SEP] ' in response_type else response_type.strip()
+                if response_type_first.lower() == 'clarification':
+                    id2label[unique_id] = 'Initiative'
+                else:
+                    id2label[unique_id] = 'Non-initiative'
             else:
                 id2label[unique_id] = 'Non-initiative'
 
@@ -62,18 +67,45 @@ def evaluation_SIP(prediction_path=None, label_path=None):
         if lines and lines[0].startswith("turn_id\t"):
             lines = lines[1:]
         
+        # マルチラインの行（テンソルデータ）をスキップし、正しい行のみを処理
         for line in lines:
-            parts = line.rstrip().split("\t")
+            line = line.rstrip()
+            if not line:  # 空行をスキップ
+                continue
+            
+            # タブで分割（最初の2つのフィールドだけを使用）
+            parts = line.split("\t")
             if len(parts) >= 2:
-                turn_id = parts[0]
-                prediction = parts[1]
-                prediction_list.append(prediction)
-                # 一意の識別子でラベルを取得
-                label_list.append(id2label[turn_id])
+                turn_id = parts[0].strip()
+                prediction = parts[1].strip()
+                
+                # turn_idが数字_数字の形式でない場合はスキップ（マルチラインの継続行）
+                if not (turn_id and '_' in turn_id and turn_id.split('_')[0].isdigit()):
+                    continue
+                
+                # turn_idがid2labelに存在する場合のみ追加
+                if turn_id in id2label:
+                    prediction_list.append(prediction)
+                    label_list.append(id2label[turn_id])
+                else:
+                    # デバッグ用：見つからないturn_idを出力
+                    if len(prediction_list) < 5:  # 最初の5件だけ
+                        print(f"Warning: turn_id '{turn_id}' not found in id2label")
 
     print(f"Debug: id2label length: {len(id2label)}")
+    
+    # id2labelのラベル分布を確認
+    id2label_initiative = sum(1 for v in id2label.values() if v == 'Initiative')
+    id2label_non_initiative = sum(1 for v in id2label.values() if v == 'Non-initiative')
+    print(f"Debug: id2label distribution - Initiative: {id2label_initiative}, Non-initiative: {id2label_non_initiative}")
+    
     print(f"Debug: prediction_list length: {len(prediction_list)}")
     print(f"Debug: label_list length: {len(label_list)}")
+    
+    # label_listのラベル分布を確認（評価に使用されるラベル）
+    label_list_initiative = sum(1 for l in label_list if l == 'Initiative')
+    label_list_non_initiative = sum(1 for l in label_list if l == 'Non-initiative')
+    print(f"Debug: label_list distribution (used for evaluation) - Initiative: {label_list_initiative}, Non-initiative: {label_list_non_initiative}")
     
     # 長さが一致しない場合は警告を出して続行
     if len(id2label) != len(prediction_list):
@@ -83,6 +115,11 @@ def evaluation_SIP(prediction_path=None, label_path=None):
         prediction_list = prediction_list[:min_len]
         label_list = label_list[:min_len]
         print(f"Adjusted to length: {min_len}")
+        
+        # 調整後の分布も確認
+        label_list_initiative = sum(1 for l in label_list if l == 'Initiative')
+        label_list_non_initiative = sum(1 for l in label_list if l == 'Non-initiative')
+        print(f"Debug: label_list distribution after adjustment - Initiative: {label_list_initiative}, Non-initiative: {label_list_non_initiative}")
 
     # ラベルを数値に変換
     label_list = [1 if i == "Initiative" else 0 for i in label_list]
@@ -92,8 +129,11 @@ def evaluation_SIP(prediction_path=None, label_path=None):
     acc = accuracy_score(label_list, prediction_list)
     matrix = confusion_matrix(label_list, prediction_list, labels=[0, 1])
     acc_per_label = matrix.diagonal() / matrix.sum(axis=1)
-    total_num = matrix.sum(axis=1).tolist()
+    total_num = matrix.sum(axis=1).tolist()  # [Non-initiative数, Initiative数]
     hit_num = matrix.diagonal().tolist()
+    
+    print(f"Debug: confusion_matrix total_num [Non-initiative, Initiative]: {total_num}")
+    print(f"Debug: confusion_matrix hit_num [Non-initiative, Initiative]: {hit_num}")
     f1 = f1_score(label_list, prediction_list, average="macro")
     precision = precision_score(label_list, prediction_list, average="macro")
     recall = recall_score(label_list, prediction_list, average="macro")

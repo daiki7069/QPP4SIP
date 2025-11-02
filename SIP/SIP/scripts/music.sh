@@ -3,12 +3,12 @@
 EPOCH_NUM=20
 MODEL_NAME=music
 QPP_FEATURE_NAME=f1@5
-INPUT_DIR=/home/daiki_shibata/pj/QPP4SIP/SIP/dataset/INSCIT
-INPUT_DEV=dpr_dev.pkl
-INPUT_TRAIN=dpr_train.pkl
-LOG_PATH=./logs/${MODEL_NAME}/${QPP_FEATURE_NAME}
-CHECKPOINT_PATH=./checkpoints/${MODEL_NAME}/${QPP_FEATURE_NAME}
-OUTPUT_PATH=./output/${MODEL_NAME}/${QPP_FEATURE_NAME}
+INPUT_DIR=/home/daiki_shibata/pj/QPP4SIP/dataset/INSCIT
+INPUT_DEV=dpr_dev.json
+INPUT_TRAIN=dpr_train.json
+LOG_PATH=./logs/${MODEL_NAME}
+CHECKPOINT_PATH=./checkpoints/${MODEL_NAME}
+OUTPUT_PATH=./output/${MODEL_NAME}
 
 # 必要なディレクトリを作成
 echo "Creating necessary directories..."

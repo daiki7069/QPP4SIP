@@ -406,10 +406,11 @@ class QPP4SIPBILSTMCRF(nn.Module):
             # Focal Loss for emission scores (prior network)
             # Convert labels to appropriate format for focal loss
             # We'll use the system I labels for focal loss calculation
-            system_labels = data['system_I_label'].squeeze(0)  # [pair_num]
-            focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
+            # system_labels = data['system_I_label'].squeeze(0)  # [pair_num]
+            # focal_loss_value = self.focal_loss(prior_emission_score_tensor, system_labels)
+            # focal_loss is disabled
 
-            result = {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e, "loss_focal": focal_loss_value}
+            result = {"loss_distance_crf": loss_distance_crf, "loss_mle_e": loss_mle_e}
             
             # QPP関連損失を追加（重み付けを調整）
             if qpp_loss_batch:
@@ -429,12 +430,12 @@ class QPP4SIPBILSTMCRF(nn.Module):
                         total_qpp_loss += loss_value
                 
                 result.update(qpp_losses)
-                # 総損失にQPP損失とFocal Lossを追加
-                result["total_loss"] = loss_distance_crf + loss_mle_e + focal_loss_value + total_qpp_loss
+                # 総損失にQPP損失を追加（Focal Lossなし）
+                result["total_loss"] = loss_distance_crf + loss_mle_e + total_qpp_loss
                 
             else:
-                # QPP損失がない場合でもFocal Lossを追加
-                result["total_loss"] = loss_distance_crf + loss_mle_e + focal_loss_value
+                # QPP損失がない場合（Focal Lossなし）
+                result["total_loss"] = loss_distance_crf + loss_mle_e
                 
             return result
 

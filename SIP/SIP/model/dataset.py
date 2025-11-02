@@ -20,13 +20,7 @@ class Dataset(Dataset):
                 continue
                 
             conversation_content = { "turn_id": [], "user_utterance": [], "system_utterance": [], "response_type": [],
-                                    "context": [], "mrr": [], "found_ratio": [],
-                                    "mean_rank": [], "hit@1": [], "hit@5": [], "hit@10": [],
-                                    "hit@20": [], "hit@50": [], "precision@1": [], "precision@5": [],
-                                    "precision@10": [], "precision@20": [], "precision@50": [],
-                                    "recall@1": [], "recall@5": [], "recall@10": [], "recall@20": [], "recall@50": [],
-                                    "f1@1": [], "f1@5": [], "f1@10": [], "f1@20": [], "f1@50": [],
-                                    "ndcg@1": [], "ndcg@5": [], "ndcg@10": [], "ndcg@20": [], "ndcg@50": [], 
+                                    "context": [], self.args.qpp_feature_name: [],
                                     "response_type_prediction": [], "query_type": [] }
 
             context_list = []
@@ -38,34 +32,15 @@ class Dataset(Dataset):
                 answer_text = turn["answer"][0] if isinstance(turn["answer"], list) and len(turn["answer"]) > 0 else str(turn["answer"])
                 conversation_content["system_utterance"].append(torch.tensor(self.tokenizer.encode(answer_text, add_special_tokens=True, max_length=self.args.max_utterance_len, padding="max_length", truncation=True)))
                 conversation_content["response_type"].append(torch.tensor(1) if "clarification" in turn["response_type"] else torch.tensor(0))
-                conversation_content["mrr"].append(torch.tensor(turn["mrr"]))
-                conversation_content["found_ratio"].append(torch.tensor(turn["found_ratio"]))
-                conversation_content["mean_rank"].append(torch.tensor(turn["mean_rank"]))
-                conversation_content["hit@1"].append(torch.tensor(turn["hit@1"]))
-                conversation_content["hit@5"].append(torch.tensor(turn["hit@5"]))
-                conversation_content["hit@10"].append(torch.tensor(turn["hit@10"]))
-                conversation_content["hit@20"].append(torch.tensor(turn["hit@20"]))
-                conversation_content["hit@50"].append(torch.tensor(turn["hit@50"]))
-                conversation_content["precision@1"].append(torch.tensor(turn["precision@1"]))
-                conversation_content["precision@5"].append(torch.tensor(turn["precision@5"]))
-                conversation_content["precision@10"].append(torch.tensor(turn["precision@10"]))
-                conversation_content["precision@20"].append(torch.tensor(turn["precision@20"]))
-                conversation_content["precision@50"].append(torch.tensor(turn["precision@50"]))
-                conversation_content["recall@1"].append(torch.tensor(turn["recall@1"]))
-                conversation_content["recall@5"].append(torch.tensor(turn["recall@5"]))
-                conversation_content["recall@10"].append(torch.tensor(turn["recall@10"]))
-                conversation_content["recall@20"].append(torch.tensor(turn["recall@20"]))
-                conversation_content["recall@50"].append(torch.tensor(turn["recall@50"]))
-                conversation_content["f1@1"].append(torch.tensor(turn["f1@1"]))
-                conversation_content["f1@5"].append(torch.tensor(turn["f1@5"]))
-                conversation_content["f1@10"].append(torch.tensor(turn["f1@10"]))
-                conversation_content["f1@20"].append(torch.tensor(turn["f1@20"]))
-                conversation_content["f1@50"].append(torch.tensor(turn["f1@50"]))
-                conversation_content["ndcg@1"].append(torch.tensor(turn["ndcg@1"]))
-                conversation_content["ndcg@5"].append(torch.tensor(turn["ndcg@5"]))
-                conversation_content["ndcg@10"].append(torch.tensor(turn["ndcg@10"]))
-                conversation_content["ndcg@20"].append(torch.tensor(turn["ndcg@20"]))
-                conversation_content["ndcg@50"].append(torch.tensor(turn["ndcg@50"]))
+                if self.args.model == "qpp4sip" or self.args.model == "qpp_gating":
+                    # 必要なQPP特徴量のみを使用（存在しないメトリクス参照を避ける）
+                    feature_name = self.args.qpp_feature_name
+                    if feature_name not in turn:
+                        raise KeyError(f"指定されたQPP特徴量 {feature_name} がデータに存在しません")
+                    # float型に変換（整数型だとモデルの重みとdtype不一致エラーが発生する）
+                    conversation_content[self.args.qpp_feature_name].append(torch.tensor(float(turn[feature_name]), dtype=torch.float32))
+                elif self.args.model == "music":
+                    conversation_content[self.args.qpp_feature_name].append(torch.tensor(0))
                 conversation_content["query_type"].append(torch.tensor(0))  # FIXME: デフォルトでNon-initiative
 
                 conversation_content["response_type_prediction"].append(torch.tensor(1) if "clarification" in turn["response_type"] else torch.tensor(0))   # FIXME
