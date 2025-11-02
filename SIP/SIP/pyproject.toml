@@ -3,7 +3,7 @@ name = "qpp4sip"
 version = "0.1.0"
 description = "Query Performance Prediction for System Initiative Prediction"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.8,<3.12"
 authors = [
     {name = "QPP4SIP Team"}
 ]
@@ -13,15 +13,19 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
-    "numpy>=2.3.2",
-    "pandas>=2.3.3",
-    "scikit-learn>=1.7.1",
-    "tensorboard>=2.20.0",
-    "torch>=2.8.0",
-    "transformers>=4.55.4",
+    "numpy>=1.21.0,<2.0.0",
+    "pandas>=1.3.0,<2.3.0",
+    "scikit-learn>=1.0.0,<1.4.0",
+    "tensorboard>=2.8.0,<2.20.0",
+    "torch>=1.12.0,<2.1.0",
+    "transformers>=4.20.0,<4.40.0",
+    "wandb>=0.22.3",
 ]
 
 [project.scripts]

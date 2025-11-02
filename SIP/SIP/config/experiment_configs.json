@@ -1,0 +1,135 @@
+{
+    "default_config": {
+        "hidden_size": 768,
+        "dropout": 0.1,
+        "BiLSTM_layers": 2,
+        "class_imbalance_ratio": 6.5,
+        "focal_gamma": 2.0
+    },
+    "experiment_templates": {
+        "ndcg_experiments": [
+            {
+                "name": "ndcg_all_patterns",
+                "feature_set_name": "ndcg_only",
+                "patterns": [
+                    "feature_fusion",
+                    "auxiliary_head",
+                    "policy_gating"
+                ],
+                "target_index": 1,
+                "gate_index": 1,
+                "description": "NDCG特徴量のみを使用した全パターンの実験"
+            },
+            {
+                "name": "ndcg3_only",
+                "feature_set_name": "ndcg3_only",
+                "patterns": [
+                    "feature_fusion",
+                    "auxiliary_head",
+                    "policy_gating"
+                ],
+                "target_index": 1,
+                "gate_index": 1,
+                "description": "NDCG@3のみを使用した実験"
+            }
+        ],
+        "precision_experiments": [
+            {
+                "name": "precision_all_patterns",
+                "feature_set_name": "precision_only",
+                "patterns": [
+                    "feature_fusion",
+                    "auxiliary_head",
+                    "policy_gating"
+                ],
+                "target_index": 4,
+                "gate_index": 4,
+                "description": "Precision特徴量のみを使用した全パターンの実験"
+            }
+        ],
+        "recall_experiments": [
+            {
+                "name": "recall_all_patterns",
+                "feature_set_name": "recall_only",
+                "patterns": [
+                    "feature_fusion",
+                    "auxiliary_head",
+                    "policy_gating"
+                ],
+                "target_index": 7,
+                "gate_index": 7,
+                "description": "Recall特徴量のみを使用した全パターンの実験"
+            }
+        ],
+        "at3_experiments": [
+            {
+                "name": "at3_all_patterns",
+                "feature_set_name": "at3",
+                "patterns": [
+                    "feature_fusion",
+                    "auxiliary_head",
+                    "policy_gating"
+                ],
+                "target_index": 1,
+                "gate_index": 1,
+                "description": "@3の特徴量のみを使用した全パターンの実験"
+            }
+        ],
+        "comprehensive_experiments": [
+            {
+                "name": "all_features_all_patterns",
+                "feature_set_name": "all",
+                "patterns": [
+                    "feature_fusion",
+                    "auxiliary_head",
+                    "policy_gating"
+                ],
+                "target_index": 1,
+                "gate_index": 1,
+                "description": "全特徴量を使用した全パターンの実験"
+            }
+        ]
+    },
+    "custom_feature_sets": {
+        "ndcg_precision": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
+        ],
+        "ndcg_recall": [
+            0,
+            1,
+            2,
+            6,
+            7,
+            8
+        ],
+        "precision_recall": [
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+        ],
+        "at1_at3": [
+            0,
+            1,
+            3,
+            4,
+            6,
+            7
+        ],
+        "at3_at5": [
+            1,
+            2,
+            4,
+            5,
+            7,
+            8
+        ]
+    }
+}

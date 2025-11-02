@@ -1,164 +1,253 @@
-# QPP4SIP: Query Performance Prediction for System Initiative Prediction
+# QPP4SIP 実験システム
 
-このプロジェクトは、QPP（Query Performance Prediction）特徴量を活用したSIP（System Initiative Prediction）タスクの実装です。
+QPP特徴量を使用したSIP（System Initiative Prediction）実験のための統合システムです。
 
-## 概要
+## 🚀 クイックスタート
 
-QPP4SIPは、会話システムにおけるシステムのイニシアチブ発動を予測するタスクです。従来のSIPタスクに加えて、QPP特徴量（ndcg@3、precision@1など）を活用することで、より精度の高い予測を実現します。
+### データ前処理
 
-## 実装パターン
+```bash
+# データセットの準備と検証
+uv run python preprocess.py --prepare_dataset --validate_dataset --input_pkl data.pkl
 
-3つの異なるアプローチを実装しています：
+# 全ての前処理を実行
+uv run uv run python preprocess.py --all --input_pkl data.pkl --dataset_type train
+```
 
-1. **Feature Fusion**: BERTの[CLS]表現にQPP特徴量を結合してMLPで埋め込み
-2. **Auxiliary Head**: QPP回帰ヘッド（ndcg@3予測）を追加したマルチタスク学習
-3. **Policy Gating**: QPPスコアに基づいてイニシアチブ発動の閾値を調整するポリシー連動
+### 学習・推論・評価
 
-## ファイル構成
+```bash
+# 学習
+uv run python run.py --mode train --model qpp4sip --qpp4sip_pattern feature_fusion --qpp_feature_indices 0 1 2 --input_path data.pkl
+
+# 推論
+uv run python run.py --mode inference --model qpp4sip --qpp4sip_pattern feature_fusion --qpp_feature_indices 0 1 2 --input_path data.pkl --saved_model_path ./checkpoints/qpp4sip_feature_fusion_012
+
+# 評価
+uv run python run.py --mode evaluation --model qpp4sip --qpp4sip_pattern feature_fusion --qpp_feature_indices 0 1 2 --input_path data.pkl --output_path ./output/qpp4sip_feature_fusion_012/result
+
+# MUSICモデル（ベースライン）
+uv run python run.py --mode train --model music --input_path data.pkl
+```
+
+### バッチ実験の実行
+
+```bash
+# 全特徴量セット×全パターンの実験を一括実行
+./run_all_experiments.sh
+```
+
+## 📁 ディレクトリ構造
 
 ```
 SIP/
-├── model/
-│   ├── run.py                 # メイン実行スクリプト
-│   ├── music_model.py         # 従来のmusicモデル
-│   ├── qpp4sip_model.py       # QPP4SIPモデル（3パターン対応）
-│   ├── dataset.py             # データセット処理
-│   ├── trainer.py             # 学習・推論クラス
-│   ├── utils.py               # ユーティリティ関数
-│   └── load_pkl.py            # データ読み込み
-├── scripts/                   # シェルスクリプト
-│   └── *.sh                   # 実行スクリプト
-├── evaluation/                # 評価関連
-│   └── evaluation.py          # 評価スクリプト
-├── dataset/                   # データセットファイル
-├── checkpoints/               # 学習済みモデル
-├── output/                    # 推論・評価結果
-└── logs/                      # ログファイル
+├── preprocess.py              # データ前処理エントリポイント
+├── run.py                     # 学習・推論・評価エントリポイント
+├── run_all_experiments.sh     # バッチ実験スクリプト
+├── config/                    # 設定ファイル
+│   ├── qpp_config.py         # QPP特徴量実験の設定クラス
+│   └── experiment_configs.json # 実験設定のテンプレート
+├── model/                     # モデル定義
+│   ├── qpp4sip_model.py      # QPP4SIPモデル
+│   ├── music_model.py        # MUSICモデル（ベースライン）
+│   └── ...
+├── utils/                     # ユーティリティ
+│   └── experiment_utils.py   # 実験管理用ユーティリティ
+├── dataset/                   # データセット
+├── evaluation/                # 評価モジュール
+└── experiments/               # 実験結果（自動生成）
 ```
 
-## 使用方法
+## 🔧 実験の流れ
 
-### 1. 環境設定
+1. **環境セットアップ**: 実験ディレクトリの作成、設定の保存
+2. **学習の実行**: モデルの学習
+3. **推論の実行**: 学習済みモデルでの推論
+4. **評価の実行**: 推論結果の評価
+5. **サマリー出力**: 実験結果のサマリー生成
+
+## ⚙️ 利用可能な設定
+
+### 基本引数
+
+| 引数 | 説明 | デフォルト | 必須 |
+|------|------|------------|------|
+| `--mode` | 実行モード | `train` | はい |
+| `--model` | モデルタイプ | `music` | はい |
+| `--input_path` | 入力PKLファイルのパス | - | はい |
+| `--output_path` | 出力パス | `./output` | いいえ |
+| `--saved_model_path` | チェックポイントのパス | `./checkpoints` | いいえ |
+
+### モデル
+
+- `music`: MUSICモデル（ベースライン）
+- `qpp4sip`: QPP4SIPモデル
+
+### QPP4SIPパターン
+
+- `feature_fusion`: 特徴融合（BERT表現にQPP特徴量を結合）
+- `auxiliary_head`: 補助ヘッド（QPP予測タスクを追加）
+- `policy_gating`: ポリシー連動（QPPスコアに基づいてゲート値を計算）
+
+### QPP特徴量の指定
+
+#### 特徴量インデックス（推奨）
 
 ```bash
-# conda環境のアクティベート
-conda activate sip
-
-# 依存関係のインストール
-uv sync
+# 特定の特徴量のみ使用
+--qpp_feature_indices 0 1 2  # ndcg@1, ndcg@3, ndcg@5
+--qpp_feature_indices 3 4 5  # precision@1, precision@5, precision@10
+--qpp_feature_indices 6 7 8  # recall@1, recall@5, recall@10
+--qpp_feature_indices 0 1 2 3 4 5 6 7 8  # 全特徴量
 ```
 
-### 2. モデル選択
+#### 特徴量マッピング
 
-#### 従来のmusicモデル
+| インデックス | 特徴量名 | 説明 |
+|-------------|----------|------|
+| 0 | ndcg@1 | NDCG@1 |
+| 1 | ndcg@3 | NDCG@3 |
+| 2 | ndcg@5 | NDCG@5 |
+| 3 | precision@1 | Precision@1 |
+| 4 | precision@5 | Precision@5 |
+| 5 | precision@10 | Precision@10 |
+| 6 | recall@1 | Recall@1 |
+| 7 | recall@5 | Recall@5 |
+| 8 | recall@10 | Recall@10 |
+
+### 学習パラメータ
+
+| 引数 | 説明 | デフォルト |
+|------|------|------------|
+| `--epoch_num` | エポック数 | `20` |
+| `--learning_rate` | 学習率 | `2e-5` |
+| `--lr_distance_crf` | CRF学習率 | `1e-3` |
+| `--max_utterance_len` | 最大発話長 | `128` |
+| `--max_context_len` | 最大コンテキスト長 | `384` |
+
+### 出力パスの命名規則
+
+QPP4SIPモデルの場合、出力パスは以下の形式で自動生成されます：
+
+```
+./output/qpp4sip_{pattern}_{feature_id}/
+```
+
+例：
+- `qpp4sip_feature_fusion_012` (ndcg系のみ)
+- `qpp4sip_feature_fusion_345` (precision系のみ)
+- `qpp4sip_feature_fusion_012345678` (全特徴量)
+
+## 📊 実験結果の管理
+
+各実験は以下の構造で保存されます：
+
+```
+experiments/
+└── model_pattern_features_YYYYMMDD_HHMMSS/
+    ├── models/              # 学習済みモデル
+    ├── logs/                # ログファイル
+    ├── results/             # 推論結果
+    ├── evaluation/          # 評価結果
+    ├── configs/             # 設定ファイル
+    ├── experiment_info.txt  # 実験情報
+    └── experiment_summary.txt # 実験サマリー
+```
+
+## 🛠️ 高度な使用方法
+
+### 実験例
+
+#### 1. NDCG系特徴量のみで実験
+
 ```bash
 # 学習
-uv run qpp4sip-train --model music --mode train --input_path dataset/train_resolved_retrieved.pkl
+python run.py --mode train --model qpp4sip --qpp4sip_pattern feature_fusion --qpp_feature_indices 0 1 2 --input_path dataset/pkl/bm25_train.pkl
 
 # 推論
-uv run qpp4sip-inference --model music --mode inference --input_path dataset/dev_resolved_retrieved.pkl
+python run.py --mode inference --model qpp4sip --qpp4sip_pattern feature_fusion --qpp_feature_indices 0 1 2 --input_path dataset/pkl/bm25_dev.pkl --saved_model_path ./checkpoints/qpp4sip_feature_fusion_012
+
+# 評価
+python run.py --mode evaluation --model qpp4sip --qpp4sip_pattern feature_fusion --qpp_feature_indices 0 1 2 --input_path dataset/pkl/bm25_dev.pkl --output_path ./output/qpp4sip_feature_fusion_012/result
 ```
 
-#### QPP4SIPモデル（3パターン）
-```bash
-# Feature Fusion
-uv run qpp4sip-train --model qpp4sip --qpp4sip_pattern feature_fusion --mode train --input_path dataset/train_resolved_retrieved.pkl
-
-# Auxiliary Head
-uv run qpp4sip-train --model qpp4sip --qpp4sip_pattern auxiliary_head --mode train --input_path dataset/train_resolved_retrieved.pkl
-
-# Policy Gating
-uv run qpp4sip-train --model qpp4sip --qpp4sip_pattern policy_gating --mode train --input_path dataset/train_resolved_retrieved.pkl
-```
-
-### 3. 評価
+#### 2. 全特徴量で実験
 
 ```bash
-# 評価の実行
-uv run qpp4sip-evaluate --prediction_path output/qpp4sip_feature_fusion --label_path dataset/test_resolved_retrieved.pkl --task SIP --dataset_type test
+# 学習（特徴量インデックスを指定しない場合は全特徴量を使用）
+python run.py --mode train --model qpp4sip --qpp4sip_pattern feature_fusion --input_path dataset/pkl/bm25_train.pkl
+
+# 推論
+python run.py --mode inference --model qpp4sip --qpp4sip_pattern feature_fusion --input_path dataset/pkl/bm25_dev.pkl --saved_model_path ./checkpoints/qpp4sip_feature_fusion_012345678
+
+# 評価
+python run.py --mode evaluation --model qpp4sip --qpp4sip_pattern feature_fusion --input_path dataset/pkl/bm25_dev.pkl --output_path ./output/qpp4sip_feature_fusion_012345678/result
 ```
 
-### 4. 一括実行（推奨）
+#### 3. MUSICモデル（ベースライン）
 
-#### GPU並列実行
 ```bash
-# 3つのパターンを並列でGPU実行
-nohup bash scripts/run_qpp4sip_gpu_experiments.sh > experiment_gpu_main.log 2>&1 &
+# 学習
+python run.py --mode train --model music --input_path dataset/pkl/bm25_train.pkl
+
+# 推論
+python run.py --mode inference --model music --input_path dataset/pkl/bm25_dev.pkl --saved_model_path ./checkpoints/music
+
+# 評価
+python run.py --mode evaluation --model music --input_path dataset/pkl/bm25_dev.pkl --output_path ./output/music/result
 ```
 
-#### 進行状況の監視
-```bash
-bash scripts/monitor_gpu_experiments.sh
+### バッチサイズについて
+
+**注意**: このシステムはCRFの制約により、バッチサイズは1に固定されています。`--batch_size`引数は使用できません。
+
+## 🔍 トラブルシューティング
+
+### よくある問題
+
+1. **インポートエラー**: パスが正しく設定されているか確認してください
+2. **QPP特徴量の次元エラー**: 実際のPKLデータに存在する特徴量のみを使用してください
+3. **メモリ不足**: 使用する特徴量を減らしてください（バッチサイズは1に固定）
+4. **出力パスエラー**: 推論・評価時は学習時に生成されたパスを使用してください
+
+### ログの確認
+
+実験の詳細なログは `output/model_pattern_features/logs/` ディレクトリに保存されます。
+
+### 特徴量の確認
+
+使用可能なQPP特徴量を確認するには：
+
+```python
+from config.qpp_config import QPPExperimentConfig
+print(QPPExperimentConfig.QPP_FEATURE_NAMES)
 ```
 
-#### 評価の実行
-```bash
-bash scripts/evaluate_qpp4sip_experiments.sh
-```
+## 📈 実験結果の管理
 
-## スクリプト詳細
-
-### メインスクリプト
-
-- `run_qpp4sip_gpu_experiments.sh`: GPU並列実行メインスクリプト
-- `evaluate_qpp4sip_experiments.sh`: 評価実行スクリプト
-- `monitor_gpu_experiments.sh`: GPU実験監視スクリプト
-
-詳細は [README_scripts.md](README_scripts.md) を参照してください。
-
-### 評価スクリプト
-
-評価スクリプトは `evaluation/evaluation.py` にあります。
-
-## 引数説明
-
-### 基本設定
-- `--model`: モデルタイプ（"music" または "qpp4sip"）
-- `--qpp4sip_pattern`: QPP4SIP実装パターン（"feature_fusion", "auxiliary_head", "policy_gating"）
-- `--mode`: 実行モード（"train" または "inference"）
-- `--input_path`: 入力データのパス（必須）
-- `--output_path`: 出力パス（デフォルト: "./output"）
-- `--saved_model_path`: チェックポイントのパス（デフォルト: "./checkpoints"）
-
-### モデルパラメータ
-- `--hidden_size`: 隠れ層のサイズ（デフォルト: 768）
-- `--dropout`: ドロップアウト率（デフォルト: 0.1）
-- `--BiLSTM_layer`: BiLSTM層数（デフォルト: 1）
-
-### 学習・推論パラメータ
-- `--epoch_num`: エポック数（デフォルト: 20）
-- `--batch_size`: バッチサイズ（デフォルト: 1）
-- `--learning_rate`: 学習率（デフォルト: 1e-5）
-
-## 出力ディレクトリ構造
+### 出力ディレクトリ構造
 
 ```
 output/
-├── qpp4sip_feature_fusion/     # feature_fusionパターンの結果
-├── qpp4sip_auxiliary_head/     # auxiliary_headパターンの結果
-└── qpp4sip_policy_gating/      # policy_gatingパターンの結果
-
-checkpoints/
-├── qpp4sip_feature_fusion/     # feature_fusionパターンのチェックポイント
-├── qpp4sip_auxiliary_head/     # auxiliary_headパターンのチェックポイント
-└── qpp4sip_policy_gating/      # policy_gatingパターンのチェックポイント
+├── music/                          # MUSICモデル
+├── qpp4sip_feature_fusion_012/     # NDCG系特徴量のみ
+├── qpp4sip_feature_fusion_345/     # Precision系特徴量のみ
+├── qpp4sip_feature_fusion_678/     # Recall系特徴量のみ
+└── qpp4sip_feature_fusion_012345678/ # 全特徴量
 ```
 
-## システム要件
+### 実験結果の比較
 
-- Python 3.12+
-- PyTorch
-- Transformers
-- CUDA対応GPU（推奨: RTX 3090以上）
-- メモリ: 16GB以上
+異なる特徴量セットの結果を比較するには、各ディレクトリの評価結果を確認してください。
 
-## 注意事項
+## 🧪 開発者向け情報
 
-1. GPU実験は6つのRTX 3090 GPUを使用して並列実行されます
-2. 各パターンは異なるGPUで実行されます
-3. 実験完了まで数時間かかる場合があります
-4. ログファイルで進行状況を確認できます
+### 新しいQPP特徴量の追加
 
-## ライセンス
+1. `config/qpp_config.py`の`QPP_FEATURE_NAMES`に新しい特徴量を追加
+2. `model/dataset.py`の`qpp_feature_names`リストを更新
+3. `config/qpp_config.py`の`validate_qpp_features`関数を更新
 
-このプロジェクトは研究目的で作成されています。
+### 新しいQPP4SIPパターンの追加
+
+`model/qpp4sip_model.py`に新しいパターンを実装し、`run.py`の引数処理を更新してください。

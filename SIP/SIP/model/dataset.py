@@ -1,58 +1,57 @@
-import torch
 from torch.utils.data import Dataset
+import torch
 from transformers import BertTokenizer
 
 class Dataset(Dataset):
-    """
-    """
-    def __init__(self, args, config, mlb, conversations):
+    def __init__(self, args, conversations):
         super(Dataset, self).__init__()
         self.args = args
-        self.config = config
-        self.mlb = mlb
         self.conversations = conversations
-
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', do_lower_case=True)
-        self.max_utterance_len = getattr(args, 'max_utterance_len', 512)
 
         self.conversations_tensor = []
         self.load()
 
     def load(self):
         for conversation_index, conversation in enumerate(self.conversations):
-            conversation_content = {"turn_id": [], "user_utterance": [], "user_I_label": [], "system_utterance": [],
-                                    "system_I_label": [], "context": [], "system_action_label": [],
-                                    "system_action_sequence": [],"system_I_prediction":[], "qpp_features": [], "resolved_query": []}
+            # TODO: 空の会話をスキップとは？
+            if not conversation or len(conversation) == 0:
+                print(f"Warning: Empty conversation at index {conversation_index}, skipping...")
+                continue
+                
+            conversation_content = { "turn_id": [], "user_utterance": [], "system_utterance": [], "response_type": [],
+                                    "context": [], self.args.qpp_feature_name: [],
+                                    "response_type_prediction": [], "query_type": [] }
 
             context_list = []
 
             for turn_index, turn in enumerate(conversation):
-                # process current turn
-                conversation_content["turn_id"].append(turn_index)
-                conversation_content["user_utterance"].append(torch.tensor(self.tokenizer.encode(turn["user_utterance"], add_special_tokens=True, max_length=self.max_utterance_len, padding="max_length", truncation=True)))
-                conversation_content["user_I_label"].append(torch.tensor(1) if turn["user_I_label"]=="clarification" else torch.tensor(0))
-                conversation_content["system_utterance"].append(torch.tensor(self.tokenizer.encode(turn["system_utterance"], add_special_tokens=True, max_length=self.max_utterance_len, padding="max_length", truncation=True)))
-                conversation_content["system_I_label"].append(torch.tensor(1) if turn["system_I_label"]=="clarification" else torch.tensor(0))
-                
-                # QPP特徴量を処理
-                qpp_features = turn.get("qpp_features", {})
-                qpp_feature_names = ['ndcg@1', 'ndcg@3', 'ndcg@5', 'precision@1', 'precision@3', 'precision@5', 'recall@1', 'recall@3', 'recall@5']
-                qpp_tensor = torch.tensor([qpp_features.get(name, 0.0) for name in qpp_feature_names], dtype=torch.float32)
-                conversation_content["qpp_features"].append(qpp_tensor)
-                
-                # resolvedQueryを処理
-                resolved_query = turn.get("resolved_query", "")
-                conversation_content["resolved_query"].append(resolved_query)
-                
-                # コンテキストを更新
-                context_list.append(turn["user_utterance"])
+                conversation_content["turn_id"].append(f"{conversation_index}_{turn['turn_id']}")
+                conversation_content["user_utterance"].append(torch.tensor(self.tokenizer.encode(turn["query"], add_special_tokens=True, max_length=self.args.max_utterance_len, padding="max_length", truncation=True)))
+                # answerがリストの場合は最初の要素を取得
+                answer_text = turn["answer"][0] if isinstance(turn["answer"], list) and len(turn["answer"]) > 0 else str(turn["answer"])
+                conversation_content["system_utterance"].append(torch.tensor(self.tokenizer.encode(answer_text, add_special_tokens=True, max_length=self.args.max_utterance_len, padding="max_length", truncation=True)))
+                conversation_content["response_type"].append(torch.tensor(1) if "clarification" in turn["response_type"] else torch.tensor(0))
+                if self.args.model == "qpp4sip" or self.args.model == "qpp_gating":
+                    # 必要なQPP特徴量のみを使用（存在しないメトリクス参照を避ける）
+                    feature_name = self.args.qpp_feature_name
+                    if feature_name not in turn:
+                        raise KeyError(f"指定されたQPP特徴量 {feature_name} がデータに存在しません")
+                    # float型に変換（整数型だとモデルの重みとdtype不一致エラーが発生する）
+                    conversation_content[self.args.qpp_feature_name].append(torch.tensor(float(turn[feature_name]), dtype=torch.float32))
+                elif self.args.model == "music":
+                    conversation_content[self.args.qpp_feature_name].append(torch.tensor(0))
+                conversation_content["query_type"].append(torch.tensor(0))  # FIXME: デフォルトでNon-initiative
+
+                conversation_content["response_type_prediction"].append(torch.tensor(1) if "clarification" in turn["response_type"] else torch.tensor(0))   # FIXME
+
+                context_list.append(turn["query"])
                 assert len(context_list) == turn_index * 2 + 1
 
                 context_text = " ".join(context_list)
 
                 context_tokens = self.tokenizer.tokenize(context_text)
 
-                # コンテキストウィンドウサイズに調整
                 if len(context_tokens) > (self.args.max_context_len - 2):
                     context_tokens_ = context_tokens[-(self.args.max_context_len - 2):]  # 510 tokens
                     context_tokens_ = ['[CLS]'] + context_tokens_ + ['[SEP]']
@@ -63,49 +62,57 @@ class Dataset(Dataset):
 
                 context_id = self.tokenizer.convert_tokens_to_ids(context_tokens_)
                 conversation_content["context"].append(torch.tensor(context_id))
-                context_list.append(turn["system_utterance"])
+                # answerがリストの場合は最初の要素を取得
+                answer_text = turn["answer"][0] if isinstance(turn["answer"], list) and len(turn["answer"]) > 0 else str(turn["answer"])
+                context_list.append(answer_text)
 
-            assert len(conversation_content["user_utterance"]) == len(conversation_content["user_I_label"]) == len(
-                conversation_content["system_utterance"]) == len(conversation_content["system_I_label"])== len(
-                conversation_content["context"]) == len(conversation_content["qpp_features"])
+            assert len(conversation_content["user_utterance"]) == len(conversation_content["system_utterance"]) == len(conversation_content["response_type"]) == len(conversation_content["context"])
 
-            user_utterance_conversation = torch.stack(conversation_content["user_utterance"])   # [?, max_utterance_len]
-            user_I_label_conversation = torch.stack(conversation_content["user_I_label"])   # [?, 1]
-            system_utterance_conversation = torch.stack(conversation_content["system_utterance"])   # [?, max_utterance_len]
-            system_I_label_conversation = torch.stack(conversation_content["system_I_label"])   # [?, 1]
-            context_conversation = torch.stack(conversation_content["context"])   # [?, max_context_len]
-            qpp_features_conversation = torch.stack(conversation_content["qpp_features"])   # [?, 9] (9個のQPP特徴量)
+            user_utterance_conversation = torch.stack(conversation_content["user_utterance"])
+            system_utterance_conversation = torch.stack(conversation_content["system_utterance"])
+            response_type_conversation = torch.stack(conversation_content["response_type"])
+            context_conversation = torch.stack(conversation_content["context"])
+            response_type_prediction_conversation = torch.stack(conversation_content["response_type_prediction"])
+            query_type_conversation = torch.stack(conversation_content["query_type"])
+            qpp_feature_conversation = torch.stack(conversation_content[self.args.qpp_feature_name])    # TODO: 1特徴量のみ対応
+
 
             self.conversations_tensor.append(
                 [
                     conversation_content["turn_id"],
                     user_utterance_conversation,
-                    user_I_label_conversation,
                     system_utterance_conversation,
-                    system_I_label_conversation,
+                    response_type_conversation,
                     context_conversation,
-                    qpp_features_conversation,
-                    conversation_content["resolved_query"]  # resolved_queryを追加
+                    response_type_prediction_conversation,
+                    qpp_feature_conversation,
+                    query_type_conversation
                 ]
             )
+
             self.len = conversation_index + 1
+            
 
     def __len__(self):
         return self.len
-
-    def __getitem__(self, idx):
-        conversation_tensor = self.conversations_tensor[idx]
+    
+    def __getitem__(self, index):
+        conversation_tensor = self.conversations_tensor[index]
         return [conversation_tensor[0], conversation_tensor[1], conversation_tensor[2], conversation_tensor[3], conversation_tensor[4], conversation_tensor[5], conversation_tensor[6], conversation_tensor[7]]
 
 def collate_fn(data):
-    turn_id, user_utterance_conversations, user_I_label_conversations, system_utterance_conversations, system_I_label_conversations, context_conversations, qpp_features_conversations, resolved_query_conversations = zip(*data)
+    turn_id, user_utterance_conversations, system_utterance_conversations, response_type_conversations, context_conversations, response_type_prediction_conversations, qpp_feature_conversations, query_type_conversations = zip(*data)
+    
+    # デバイスを取得（CUDAが利用可能な場合はCUDAを使用）
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
     return {
-        "turn_id": turn_id[-1], # [batch_size, 1]
-        "user_utterance": torch.stack(user_utterance_conversations), # [batch_size, ?, max_utterance_len]
-        "user_I_label": torch.stack(user_I_label_conversations), # [batch_size, ?, 1]
-        "system_utterance": torch.stack(system_utterance_conversations), # [batch_size, ?, max_utterance_len]
-        "system_I_label": torch.stack(system_I_label_conversations), # [batch_size, ?, 1]
-        "context": torch.stack(context_conversations), # [batch_size, ?, max_context_len]
-        "qpp_features": torch.stack(qpp_features_conversations), # [batch_size, ?, 9]
-        "resolved_query": resolved_query_conversations[-1]  # [batch_size, ?] - 文字列のリスト
+        "turn_id": turn_id[-1],
+        "user_utterance": torch.stack(user_utterance_conversations),
+        "system_utterance": torch.stack(system_utterance_conversations),
+        "response_type": torch.stack(response_type_conversations),
+        "context": torch.stack(context_conversations),
+        "response_type_prediction": torch.stack(response_type_prediction_conversations),
+        "qpp_feature": torch.stack(qpp_feature_conversations),
+        "query_type": torch.stack(query_type_conversations)
     }
