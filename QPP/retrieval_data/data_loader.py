@@ -90,6 +90,60 @@ class RetrievalDataLoader:
         
         return dcg / idcg if idcg > 0 else 0.0
     
+    def calculate_mrr(self, retrieved_docs: List[Dict], relevant_passage_ids: List[str]) -> float:
+        """MRRを計算"""
+        if not retrieved_docs or not relevant_passage_ids:
+            return 0.0
+        
+        for rank, doc in enumerate(retrieved_docs, start=1):
+            doc_id = doc.get('id', '')
+            if doc_id in relevant_passage_ids:
+                return 1.0 / rank
+        
+        return 0.0
+    
+    def calculate_precision_at_k(self, relevance_scores: List[float], k: int) -> float:
+        """Precision@kを計算"""
+        if not relevance_scores or k == 0:
+            return 0.0
+        
+        top_k = relevance_scores[:k]
+        relevant_count = sum(top_k)
+        return relevant_count / k if k > 0 else 0.0
+    
+    def calculate_recall_at_k(self, relevance_scores: List[float], k: int, total_relevant: int) -> float:
+        """Recall@kを計算"""
+        if not relevance_scores or total_relevant == 0:
+            return 0.0
+        
+        top_k = relevance_scores[:k]
+        relevant_count = sum(top_k)
+        return relevant_count / total_relevant if total_relevant > 0 else 0.0
+    
+    def calculate_hit_rate_at_k(self, relevance_scores: List[float], k: int) -> float:
+        """Hit Rate@kを計算（少なくとも1つの関連ドキュメントがあるかどうか）"""
+        if not relevance_scores or k == 0:
+            return 0.0
+        
+        top_k = relevance_scores[:k]
+        return 1.0 if any(top_k) else 0.0
+    
+    def calculate_map(self, relevance_scores: List[float], total_relevant: int) -> float:
+        """MAP (Mean Average Precision)を計算"""
+        if not relevance_scores or total_relevant == 0:
+            return 0.0
+        
+        precision_sum = 0.0
+        relevant_found = 0
+        
+        for i, score in enumerate(relevance_scores):
+            if score > 0:  # 関連ドキュメントが見つかった
+                relevant_found += 1
+                precision_at_i = relevant_found / (i + 1)
+                precision_sum += precision_at_i
+        
+        return precision_sum / total_relevant if total_relevant > 0 else 0.0
+    
     def process_data(self, split: str = "dev") -> Tuple[pd.DataFrame, pd.DataFrame]:
         """データを処理して2種類のCSVを生成"""
         # データの読み込み
@@ -142,11 +196,32 @@ class RetrievalDataLoader:
                     # evidenceがない場合は、全て0で記録
                     evidence_result.update({
                         'found_ratio': 0,
+                        'mrr': 0.0,
+                        'map': 0.0,
                         'ndcg@1': 0.0,
                         'ndcg@5': 0.0,
                         'ndcg@10': 0.0,
                         'ndcg@20': 0.0,
-                        'ndcg@50': 0.0
+                        'ndcg@50': 0.0,
+                        'ndcg@100': 0.0,
+                        'precision@1': 0.0,
+                        'precision@5': 0.0,
+                        'precision@10': 0.0,
+                        'precision@20': 0.0,
+                        'precision@50': 0.0,
+                        'precision@100': 0.0,
+                        'recall@1': 0.0,
+                        'recall@5': 0.0,
+                        'recall@10': 0.0,
+                        'recall@20': 0.0,
+                        'recall@50': 0.0,
+                        'recall@100': 0.0,
+                        'hit_rate@1': 0.0,
+                        'hit_rate@5': 0.0,
+                        'hit_rate@10': 0.0,
+                        'hit_rate@20': 0.0,
+                        'hit_rate@50': 0.0,
+                        'hit_rate@100': 0.0
                     })
                 evidence_only_results.append(evidence_result)
                 
@@ -164,11 +239,32 @@ class RetrievalDataLoader:
                     # evidenceがない場合は、全て0で記録
                     all_turns_result.update({
                         'found_ratio': 0,
+                        'mrr': 0.0,
+                        'map': 0.0,
                         'ndcg@1': 0.0,
                         'ndcg@5': 0.0,
                         'ndcg@10': 0.0,
                         'ndcg@20': 0.0,
-                        'ndcg@50': 0.0
+                        'ndcg@50': 0.0,
+                        'ndcg@100': 0.0,
+                        'precision@1': 0.0,
+                        'precision@5': 0.0,
+                        'precision@10': 0.0,
+                        'precision@20': 0.0,
+                        'precision@50': 0.0,
+                        'precision@100': 0.0,
+                        'recall@1': 0.0,
+                        'recall@5': 0.0,
+                        'recall@10': 0.0,
+                        'recall@20': 0.0,
+                        'recall@50': 0.0,
+                        'recall@100': 0.0,
+                        'hit_rate@1': 0.0,
+                        'hit_rate@5': 0.0,
+                        'hit_rate@10': 0.0,
+                        'hit_rate@20': 0.0,
+                        'hit_rate@50': 0.0,
+                        'hit_rate@100': 0.0
                     })
                 evidence_prev_evidence_results.append(all_turns_result)
         
@@ -183,6 +279,7 @@ class RetrievalDataLoader:
         # 関連性スコアの計算
         relevance_scores = []
         found_ratio = 0
+        total_relevant = len(relevant_passage_ids)
         
         for doc in retrieved_docs:
             doc_id = doc.get('id', '')
@@ -192,18 +289,70 @@ class RetrievalDataLoader:
             else:
                 relevance_scores.append(0.0)
         
+        # MRRの計算
+        mrr = self.calculate_mrr(retrieved_docs, relevant_passage_ids)
+        
         # NDCG@kの計算
         ndcg_1 = self.calculate_ndcg(relevance_scores, 1)
         ndcg_5 = self.calculate_ndcg(relevance_scores, 5)
         ndcg_10 = self.calculate_ndcg(relevance_scores, 10)
         ndcg_20 = self.calculate_ndcg(relevance_scores, 20)
         ndcg_50 = self.calculate_ndcg(relevance_scores, 50)
+        ndcg_100 = self.calculate_ndcg(relevance_scores, 100)
+        
+        # Precision@kの計算
+        precision_1 = self.calculate_precision_at_k(relevance_scores, 1)
+        precision_5 = self.calculate_precision_at_k(relevance_scores, 5)
+        precision_10 = self.calculate_precision_at_k(relevance_scores, 10)
+        precision_20 = self.calculate_precision_at_k(relevance_scores, 20)
+        precision_50 = self.calculate_precision_at_k(relevance_scores, 50)
+        precision_100 = self.calculate_precision_at_k(relevance_scores, 100)
+        
+        # Recall@kの計算
+        recall_1 = self.calculate_recall_at_k(relevance_scores, 1, total_relevant)
+        recall_5 = self.calculate_recall_at_k(relevance_scores, 5, total_relevant)
+        recall_10 = self.calculate_recall_at_k(relevance_scores, 10, total_relevant)
+        recall_20 = self.calculate_recall_at_k(relevance_scores, 20, total_relevant)
+        recall_50 = self.calculate_recall_at_k(relevance_scores, 50, total_relevant)
+        recall_100 = self.calculate_recall_at_k(relevance_scores, 100, total_relevant)
+        
+        # Hit Rate@kの計算
+        hit_rate_1 = self.calculate_hit_rate_at_k(relevance_scores, 1)
+        hit_rate_5 = self.calculate_hit_rate_at_k(relevance_scores, 5)
+        hit_rate_10 = self.calculate_hit_rate_at_k(relevance_scores, 10)
+        hit_rate_20 = self.calculate_hit_rate_at_k(relevance_scores, 20)
+        hit_rate_50 = self.calculate_hit_rate_at_k(relevance_scores, 50)
+        hit_rate_100 = self.calculate_hit_rate_at_k(relevance_scores, 100)
+        
+        # MAPの計算
+        map_score = self.calculate_map(relevance_scores, total_relevant)
         
         return {
             'found_ratio': found_ratio,
+            'mrr': mrr,
+            'map': map_score,
             'ndcg@1': ndcg_1,
             'ndcg@5': ndcg_5,
             'ndcg@10': ndcg_10,
             'ndcg@20': ndcg_20,
-            'ndcg@50': ndcg_50
+            'ndcg@50': ndcg_50,
+            'ndcg@100': ndcg_100,
+            'precision@1': precision_1,
+            'precision@5': precision_5,
+            'precision@10': precision_10,
+            'precision@20': precision_20,
+            'precision@50': precision_50,
+            'precision@100': precision_100,
+            'recall@1': recall_1,
+            'recall@5': recall_5,
+            'recall@10': recall_10,
+            'recall@20': recall_20,
+            'recall@50': recall_50,
+            'recall@100': recall_100,
+            'hit_rate@1': hit_rate_1,
+            'hit_rate@5': hit_rate_5,
+            'hit_rate@10': hit_rate_10,
+            'hit_rate@20': hit_rate_20,
+            'hit_rate@50': hit_rate_50,
+            'hit_rate@100': hit_rate_100
         }

@@ -1,0 +1,210 @@
+"""
+QPP評価スクリプト
+"""
+import argparse
+import pandas as pd
+from evaluate_post_retrieval import visualize_all_metrics as visualize_post_retrieval_metrics
+from evaluate_retrieval_data import visualize_all_metrics as visualize_retrieval_data_metrics
+from auc import plot_roc_curves
+
+
+def evaluate_post_retrieval():
+    """Post-retrieval QPP指標の評価"""
+    # 入力ファイルの設定
+    dev_csv_path = '/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/dev.csv'
+    output_dir = '/home/daiki_shibata/pj/QPP4SIP/QPP/evaluate/outputs'
+    
+    # メトリクス設定（メトリクス名、CSVパス、カラム名）
+    metric_configs = {
+        'entropy': {
+            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_entropy.csv',
+            'column': 'entropy'
+        },
+        'unique_titles': {
+            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_unique_titles.csv',
+            'column': 'num_unique_titles'
+        },
+        'nqc': {
+            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_nqc.csv',
+            'column': 'nqc'
+        },
+        'lci': {
+            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_lci.csv',
+            'column': 'lci'
+        },
+        'similarity': {
+            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_similarity.csv',
+            'column': 'mean_similarity'
+        }
+    }
+    
+    # マージ設定
+    merge_config = {
+        'left_on': ['dialogue_id', 'turn_id'],
+        'right_on': ['conv_id', 'turn_id'],
+        'how': 'inner'
+    }
+    
+    # 全指標の可視化
+    print("=== Post-retrieval QPP指標の可視化 ===")
+    visualize_post_retrieval_metrics(
+        dev_csv_path=dev_csv_path,
+        metric_configs=metric_configs,
+        merge_config=merge_config,
+        output_dir=output_dir
+    )
+    
+    # AUC算出とROC曲線の可視化
+    print("\n=== Post-retrieval AUC算出とROC曲線の可視化 ===")
+    metric_csv_paths = {
+        name: config['csv_path'] 
+        for name, config in metric_configs.items()
+    }
+    
+    roc_output_path = f'{output_dir}/roc_curves_post_retrieval.png'
+    auc_scores = plot_roc_curves(
+        dev_csv_path=dev_csv_path,
+        metric_csv_paths=metric_csv_paths,
+        output_path=roc_output_path,
+        positive_class='clarification',
+        merge_config=merge_config
+    )
+
+
+def evaluate_retrieval_data():
+    """Retrieval data QPP指標の評価"""
+    # 入力ファイルの設定
+    dev_csv_path = '/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/dev.csv'
+    retrieval_csv_path = '/home/daiki_shibata/pj/QPP4SIP/QPP/retrieval_data/outputs/dpr_dev_only_evidence.csv'
+    output_dir = '/home/daiki_shibata/pj/QPP4SIP/QPP/evaluate/outputs'
+    
+    # メトリクス設定（num_evidence_docsから始まる全ての評価指標）
+    metric_configs = {
+        'num_evidence_docs': {
+            'csv_path': retrieval_csv_path,
+            'column': 'num_evidence_docs'
+        },
+        'num_prev_evidence_docs': {
+            'csv_path': retrieval_csv_path,
+            'column': 'num_prev_evidence_docs'
+        },
+        'found_ratio': {
+            'csv_path': retrieval_csv_path,
+            'column': 'found_ratio'
+        },
+        'mrr': {
+            'csv_path': retrieval_csv_path,
+            'column': 'mrr'
+        },
+        'ndcg@1': {
+            'csv_path': retrieval_csv_path,
+            'column': 'ndcg@1'
+        },
+        'ndcg@5': {
+            'csv_path': retrieval_csv_path,
+            'column': 'ndcg@5'
+        },
+        'ndcg@10': {
+            'csv_path': retrieval_csv_path,
+            'column': 'ndcg@10'
+        },
+        'ndcg@20': {
+            'csv_path': retrieval_csv_path,
+            'column': 'ndcg@20'
+        },
+        'ndcg@50': {
+            'csv_path': retrieval_csv_path,
+            'column': 'ndcg@50'
+        },
+        'ndcg@100': {
+            'csv_path': retrieval_csv_path,
+            'column': 'ndcg@100'
+        }
+    }
+    
+    # 不足している評価指標があれば追加（CSVに存在する場合のみ）
+    retrieval_df = pd.read_csv(retrieval_csv_path)
+    additional_metrics = {
+        'map': 'map',
+        'precision@1': 'precision@1',
+        'precision@5': 'precision@5',
+        'precision@10': 'precision@10',
+        'precision@20': 'precision@20',
+        'precision@50': 'precision@50',
+        'precision@100': 'precision@100',
+        'recall@1': 'recall@1',
+        'recall@5': 'recall@5',
+        'recall@10': 'recall@10',
+        'recall@20': 'recall@20',
+        'recall@50': 'recall@50',
+        'recall@100': 'recall@100',
+        'hit_rate@1': 'hit_rate@1',
+        'hit_rate@5': 'hit_rate@5',
+        'hit_rate@10': 'hit_rate@10',
+        'hit_rate@20': 'hit_rate@20',
+        'hit_rate@50': 'hit_rate@50',
+        'hit_rate@100': 'hit_rate@100'
+    }
+    
+    for metric_name, column_name in additional_metrics.items():
+        if column_name in retrieval_df.columns:
+            metric_configs[metric_name] = {
+                'csv_path': retrieval_csv_path,
+                'column': column_name
+            }
+    
+    # マージ設定
+    merge_config = {
+        'left_on': ['dialogue_id', 'turn_id'],
+        'right_on': ['conv_id', 'turn_id'],
+        'how': 'inner'
+    }
+    
+    # 全指標の可視化
+    print("=== Retrieval data QPP指標の可視化 ===")
+    visualize_retrieval_data_metrics(
+        dev_csv_path=dev_csv_path,
+        metric_configs=metric_configs,
+        merge_config=merge_config,
+        output_dir=output_dir
+    )
+    
+    # AUC算出とROC曲線の可視化
+    print("\n=== Retrieval data AUC算出とROC曲線の可視化 ===")
+    metric_csv_paths = {
+        name: retrieval_csv_path  # 全て同じCSVファイル
+        for name in metric_configs.keys()
+    }
+    
+    roc_output_path = f'{output_dir}/roc_curves_retrieval_data.png'
+    auc_scores = plot_roc_curves(
+        dev_csv_path=dev_csv_path,
+        metric_csv_paths=metric_csv_paths,
+        output_path=roc_output_path,
+        positive_class='clarification',
+        merge_config=merge_config
+    )
+
+
+def main():
+    """メインエントリーポイント"""
+    parser = argparse.ArgumentParser(description="QPP評価スクリプト")
+    parser.add_argument(
+        '--mode',
+        type=str,
+        choices=['post_retrieval', 'retrieval_data', 'all'],
+        default='post_retrieval',
+        help='評価モード: post_retrieval (Post-retrieval指標), retrieval_data (Retrieval data指標), all (両方)'
+    )
+    
+    args = parser.parse_args()
+    
+    if args.mode == 'post_retrieval' or args.mode == 'all':
+        evaluate_post_retrieval()
+    
+    if args.mode == 'retrieval_data' or args.mode == 'all':
+        evaluate_retrieval_data()
+
+
+if __name__ == '__main__':
+    main()

@@ -32,7 +32,7 @@ def main():
         
         # サンプルデータの表示
         print("\nEvidence only sample:")
-        print(evidence_only_df[['conv_id', 'turn_id', 'found_ratio', 'ndcg@1', 'ndcg@5', 'ndcg@10']].head())
+        print(evidence_only_df[['conv_id', 'turn_id', 'found_ratio', 'mrr', 'ndcg@1', 'ndcg@5', 'ndcg@10']].head())
     
     # evidence + prevEvidenceの場合
     if not evidence_prev_evidence_df.empty:
@@ -42,12 +42,13 @@ def main():
         
         # サンプルデータの表示
         print("\nEvidence + PrevEvidence sample:")
-        print(evidence_prev_evidence_df[['conv_id', 'turn_id', 'found_ratio', 'ndcg@1', 'ndcg@5', 'ndcg@10']].head())
+        print(evidence_prev_evidence_df[['conv_id', 'turn_id', 'found_ratio', 'mrr', 'ndcg@1', 'ndcg@5', 'ndcg@10']].head())
     
     # 統計情報の表示
     if not evidence_only_df.empty:
         print(f"\nEvidence only statistics:")
         print(f"Found ratio: {evidence_only_df['found_ratio'].mean():.3f}")
+        print(f"MRR: {evidence_only_df['mrr'].mean():.3f}")
         print(f"NDCG@1: {evidence_only_df['ndcg@1'].mean():.3f}")
         print(f"NDCG@5: {evidence_only_df['ndcg@5'].mean():.3f}")
         print(f"NDCG@10: {evidence_only_df['ndcg@10'].mean():.3f}")
@@ -55,6 +56,7 @@ def main():
     if not evidence_prev_evidence_df.empty:
         print(f"\nEvidence + PrevEvidence statistics:")
         print(f"Found ratio: {evidence_prev_evidence_df['found_ratio'].mean():.3f}")
+        print(f"MRR: {evidence_prev_evidence_df['mrr'].mean():.3f}")
         print(f"NDCG@1: {evidence_prev_evidence_df['ndcg@1'].mean():.3f}")
         print(f"NDCG@5: {evidence_prev_evidence_df['ndcg@5'].mean():.3f}")
         print(f"NDCG@10: {evidence_prev_evidence_df['ndcg@10'].mean():.3f}")
