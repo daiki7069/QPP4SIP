@@ -56,10 +56,30 @@ def evaluate_post_retrieval():
     
     # AUC算出とROC曲線の可視化
     print("\n=== Post-retrieval AUC算出とROC曲線の可視化 ===")
-    metric_csv_paths = {
-        name: config['csv_path'] 
-        for name, config in metric_configs.items()
-    }
+    # 表示したいメトリクスを選択（Noneの場合は全て表示）
+    # 例: selected_metrics = ['entropy', 'nqc', 'lci']  # 特定のメトリクスのみ表示
+    # 例: selected_metrics = None  # 全てのメトリクスを表示
+    selected_metrics = None  # ここで表示したいメトリクスを指定
+    
+    if selected_metrics is None:
+        # 全てのメトリクスを表示
+        metric_csv_paths = {
+            name: config['csv_path'] 
+            for name, config in metric_configs.items()
+        }
+    else:
+        # 選択されたメトリクスのみ表示
+        metric_csv_paths = {
+            name: config['csv_path'] 
+            for name, config in metric_configs.items()
+            if name in selected_metrics
+        }
+        if not metric_csv_paths:
+            print("警告: 選択されたメトリクスが見つかりません。全てのメトリクスを表示します。")
+            metric_csv_paths = {
+                name: config['csv_path'] 
+                for name, config in metric_configs.items()
+            }
     
     roc_output_path = f'{output_dir}/roc_curves_post_retrieval.png'
     auc_scores = plot_roc_curves(
@@ -171,10 +191,30 @@ def evaluate_retrieval_data():
     
     # AUC算出とROC曲線の可視化
     print("\n=== Retrieval data AUC算出とROC曲線の可視化 ===")
-    metric_csv_paths = {
-        name: retrieval_csv_path  # 全て同じCSVファイル
-        for name in metric_configs.keys()
-    }
+    # 表示したいメトリクスを選択（Noneの場合は全て表示）
+    # 例: selected_metrics = ['mrr', 'ndcg@5', 'ndcg@10']  # 特定のメトリクスのみ表示
+    # 例: selected_metrics = None  # 全てのメトリクスを表示
+    selected_metrics = ['num_evidence_docs', 'num_prev_evidence_docs', 'precision@1', 'precision@5', 'precision@10', 'precision@20', 'precision@50', 'precision@100']  # ここで表示したいメトリクスを指定
+    
+    if selected_metrics is None:
+        # 全てのメトリクスを表示
+        metric_csv_paths = {
+            name: retrieval_csv_path  # 全て同じCSVファイル
+            for name in metric_configs.keys()
+        }
+    else:
+        # 選択されたメトリクスのみ表示
+        metric_csv_paths = {
+            name: retrieval_csv_path
+            for name in metric_configs.keys()
+            if name in selected_metrics
+        }
+        if not metric_csv_paths:
+            print("警告: 選択されたメトリクスが見つかりません。全てのメトリクスを表示します。")
+            metric_csv_paths = {
+                name: retrieval_csv_path
+                for name in metric_configs.keys()
+            }
     
     roc_output_path = f'{output_dir}/roc_curves_retrieval_data.png'
     auc_scores = plot_roc_curves(

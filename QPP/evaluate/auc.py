@@ -170,18 +170,17 @@ def plot_roc_curves(
     ax.set_ylabel('True Positive Rate (TPR)', fontsize=12)
     ax.set_title(f'ROC Curves for QPP Metrics\n(Positive Class: {positive_class})', fontsize=14, fontweight='bold')
     
-    # 凡例を図の外に配置（複数列に分ける）
+    # 凡例をグラフの中に配置
     num_metrics = len(auc_scores) + 1  # +1 for Random
     ncol = min(3, max(1, (num_metrics + 1) // 2))  # 最大3列、必要に応じて調整
     ax.legend(
-        loc='upper left',
-        bbox_to_anchor=(1.02, 1),
+        loc='lower right',
         fontsize=9,
         ncol=1,
-        framealpha=0.9
+        framealpha=0.3  # 半透明の背景
     )
     ax.grid(True, alpha=0.3)
-    plt.tight_layout(rect=[0, 0, 0.85, 1])  # 右側に凡例用のスペースを確保
+    plt.tight_layout()
     
     # 保存
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
@@ -297,7 +296,7 @@ def plot_individual_roc_curves(
         plt.xlabel('False Positive Rate (FPR)', fontsize=12)
         plt.ylabel('True Positive Rate (TPR)', fontsize=12)
         plt.title(f'ROC Curve: {metric_name.upper()}\n(Positive Class: {positive_class})', fontsize=14, fontweight='bold')
-        plt.legend(loc="lower right", fontsize=10)
+        plt.legend(loc="lower right", fontsize=10, framealpha=0.3)  # 半透明の背景
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
         
