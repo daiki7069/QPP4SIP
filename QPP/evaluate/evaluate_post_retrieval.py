@@ -8,7 +8,7 @@ from typing import Dict, List
 
 
 def visualize_all_metrics(
-    dev_csv_path: str,
+    csv_path: str,
     metric_configs: Dict[str, Dict[str, str]],
     merge_config: Dict,
     output_dir: str
@@ -17,20 +17,20 @@ def visualize_all_metrics(
     全QPP指標を1つの図にまとめて可視化する
     
     Args:
-        dev_csv_path: dev.csvのパス
+        csv_path: csvのパス
         metric_configs: メトリクス名とCSVパス、カラム名の辞書
                        例: {'entropy': {'csv_path': '...', 'column': 'entropy'}, ...}
         merge_config: マージ設定（left_on, right_on, how）
         output_dir: 出力ディレクトリ
     """
     # dev.csvを読み込む
-    dev_df = pd.read_csv(dev_csv_path)
+    df = pd.read_csv(csv_path)
     
     # 全メトリクスのデータをマージ
     merged_data = {}
     for metric_name, config in metric_configs.items():
         metric_df = pd.read_csv(config['csv_path'])
-        merged_df = dev_df.merge(
+        merged_df = df.merge(
             metric_df,
             left_on=merge_config['left_on'],
             right_on=merge_config['right_on'],

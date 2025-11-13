@@ -60,7 +60,7 @@ def create_binary_labels(response_types: pd.Series, positive_class: str = 'clari
 
 
 def plot_roc_curves(
-    dev_csv_path: str,
+    csv_path: str,
     metric_csv_paths: Dict[str, str],
     output_path: str,
     positive_class: str = 'clarification',
@@ -70,7 +70,7 @@ def plot_roc_curves(
     複数のQPPメトリクスについてROC曲線を描画し、AUCを計算する
     
     Args:
-        dev_csv_path: dev.csvのパス
+        csv_path: csvのパス
         metric_csv_paths: メトリクス名とCSVパスの辞書（例: {'nqc': 'path/to/nqc.csv', 'entropy': 'path/to/entropy.csv'}）
         output_path: 出力画像のパス
         positive_class: 正例とするresponse_type（デフォルト: 'clarification'）
@@ -88,13 +88,13 @@ def plot_roc_curves(
         }
     
     # dev.csvを読み込む
-    dev_df = pd.read_csv(dev_csv_path)
+    df = pd.read_csv(csv_path)
     
     # 二値ラベルを作成
-    if 'response_type' not in dev_df.columns:
+    if 'response_type' not in df.columns:
         raise ValueError("dev.csvに'response_type'カラムが見つかりません")
     
-    y_true = create_binary_labels(dev_df['response_type'], positive_class=positive_class)
+    y_true = create_binary_labels(df['response_type'], positive_class=positive_class)
     
     # 日本語フォントの設定
     plt.rcParams['font.family'] = 'DejaVu Sans'
@@ -111,7 +111,7 @@ def plot_roc_curves(
         metric_df = pd.read_csv(csv_path)
         
         # データをマージ
-        merged_df = dev_df.merge(
+        merged_df = df.merge(
             metric_df,
             left_on=merge_config['left_on'],
             right_on=merge_config['right_on'],
@@ -197,7 +197,7 @@ def plot_roc_curves(
 
 
 def plot_individual_roc_curves(
-    dev_csv_path: str,
+    csv_path: str,
     metric_csv_paths: Dict[str, str],
     output_dir: str,
     positive_class: str = 'clarification',
@@ -207,7 +207,7 @@ def plot_individual_roc_curves(
     各メトリクスについて個別にROC曲線を描画する
     
     Args:
-        dev_csv_path: dev.csvのパス
+        csv_path: csvのパス
         metric_csv_paths: メトリクス名とCSVパスの辞書
         output_dir: 出力ディレクトリ
         positive_class: 正例とするresponse_type
@@ -230,7 +230,7 @@ def plot_individual_roc_curves(
         }
     
     # dev.csvを読み込む
-    dev_df = pd.read_csv(dev_csv_path)
+    df = pd.read_csv(csv_path)
     y_true = create_binary_labels(dev_df['response_type'], positive_class=positive_class)
     
     # 日本語フォントの設定
@@ -243,7 +243,7 @@ def plot_individual_roc_curves(
         metric_df = pd.read_csv(csv_path)
         
         # データをマージ
-        merged_df = dev_df.merge(
+        merged_df = df.merge(
             metric_df,
             left_on=merge_config['left_on'],
             right_on=merge_config['right_on'],

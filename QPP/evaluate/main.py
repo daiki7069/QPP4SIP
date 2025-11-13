@@ -8,32 +8,32 @@ from evaluate_retrieval_data import visualize_all_metrics as visualize_retrieval
 from auc import plot_roc_curves
 
 
-def evaluate_post_retrieval():
+def evaluate_post_retrieval(split: str = 'train'):
     """Post-retrieval QPP指標の評価"""
     # 入力ファイルの設定
-    dev_csv_path = '/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/dev.csv'
+    csv_path = f'/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/{split}.csv'
     output_dir = '/home/daiki_shibata/pj/QPP4SIP/QPP/evaluate/outputs'
     
     # メトリクス設定（メトリクス名、CSVパス、カラム名）
     metric_configs = {
         'entropy': {
-            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_entropy.csv',
+            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_entropy.csv',
             'column': 'entropy'
         },
-        'unique_titles': {
-            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_unique_titles.csv',
-            'column': 'num_unique_titles'
-        },
+        # 'unique_titles': {
+        #     'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_unique_titles.csv',
+        #     'column': 'num_unique_titles'
+        # },
         'nqc': {
-            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_nqc.csv',
+            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_nqc.csv',
             'column': 'nqc'
         },
-        'lci': {
-            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_lci.csv',
-            'column': 'lci'
-        },
+        # 'lci': {
+        #     'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_lci.csv',
+        #     'column': 'lci'
+        # },
         'similarity': {
-            'csv_path': '/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/dev_similarity.csv',
+            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_similarity.csv',
             'column': 'mean_similarity'
         }
     }
@@ -48,7 +48,7 @@ def evaluate_post_retrieval():
     # 全指標の可視化
     print("=== Post-retrieval QPP指標の可視化 ===")
     visualize_post_retrieval_metrics(
-        dev_csv_path=dev_csv_path,
+        csv_path=csv_path,
         metric_configs=metric_configs,
         merge_config=merge_config,
         output_dir=output_dir
@@ -81,9 +81,9 @@ def evaluate_post_retrieval():
                 for name, config in metric_configs.items()
             }
     
-    roc_output_path = f'{output_dir}/roc_curves_post_retrieval.png'
+    roc_output_path = f'{output_dir}/roc_curves_post_retrieval_{split}.png'
     auc_scores = plot_roc_curves(
-        dev_csv_path=dev_csv_path,
+        csv_path=csv_path,
         metric_csv_paths=metric_csv_paths,
         output_path=roc_output_path,
         positive_class='clarification',
@@ -91,11 +91,11 @@ def evaluate_post_retrieval():
     )
 
 
-def evaluate_retrieval_data():
+def evaluate_retrieval_data(split: str = 'train'):
     """Retrieval data QPP指標の評価"""
     # 入力ファイルの設定
-    dev_csv_path = '/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/dev.csv'
-    retrieval_csv_path = '/home/daiki_shibata/pj/QPP4SIP/QPP/retrieval_data/outputs/dpr_dev_only_evidence.csv'
+    csv_path = f'/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/{split}.csv'
+    retrieval_csv_path = f'/home/daiki_shibata/pj/QPP4SIP/QPP/retrieval_data/outputs/dpr_{split}_only_evidence.csv'
     output_dir = '/home/daiki_shibata/pj/QPP4SIP/QPP/evaluate/outputs'
     
     # メトリクス設定（num_evidence_docsから始まる全ての評価指標）
@@ -104,14 +104,14 @@ def evaluate_retrieval_data():
             'csv_path': retrieval_csv_path,
             'column': 'num_evidence_docs'
         },
-        'num_prev_evidence_docs': {
-            'csv_path': retrieval_csv_path,
-            'column': 'num_prev_evidence_docs'
-        },
-        'found_ratio': {
-            'csv_path': retrieval_csv_path,
-            'column': 'found_ratio'
-        },
+        # 'num_prev_evidence_docs': {
+        #     'csv_path': retrieval_csv_path,
+        #     'column': 'num_prev_evidence_docs'
+        # },
+        # 'found_ratio': {
+        #     'csv_path': retrieval_csv_path,
+        #     'column': 'found_ratio'
+        # },
         'mrr': {
             'csv_path': retrieval_csv_path,
             'column': 'mrr'
@@ -183,7 +183,7 @@ def evaluate_retrieval_data():
     # 全指標の可視化
     print("=== Retrieval data QPP指標の可視化 ===")
     visualize_retrieval_data_metrics(
-        dev_csv_path=dev_csv_path,
+        csv_path=csv_path,
         metric_configs=metric_configs,
         merge_config=merge_config,
         output_dir=output_dir
@@ -216,9 +216,9 @@ def evaluate_retrieval_data():
                 for name in metric_configs.keys()
             }
     
-    roc_output_path = f'{output_dir}/roc_curves_retrieval_data.png'
+    roc_output_path = f'{output_dir}/roc_curves_retrieval_data_{split}.png'
     auc_scores = plot_roc_curves(
-        dev_csv_path=dev_csv_path,
+        csv_path=csv_path,
         metric_csv_paths=metric_csv_paths,
         output_path=roc_output_path,
         positive_class='clarification',
@@ -236,14 +236,21 @@ def main():
         default='post_retrieval',
         help='評価モード: post_retrieval (Post-retrieval指標), retrieval_data (Retrieval data指標), all (両方)'
     )
+    parser.add_argument(
+        '--split',
+        type=str,
+        choices=['train', 'dev'],
+        default='train',
+        help='データセットの種類 (train または dev, デフォルト: train)'
+    )
     
     args = parser.parse_args()
     
     if args.mode == 'post_retrieval' or args.mode == 'all':
-        evaluate_post_retrieval()
+        evaluate_post_retrieval(split=args.split)
     
     if args.mode == 'retrieval_data' or args.mode == 'all':
-        evaluate_retrieval_data()
+        evaluate_retrieval_data(split=args.split)
 
 
 if __name__ == '__main__':
