@@ -4,7 +4,11 @@ Post-retrieval QPP用のスクリプト
 import argparse
 from pathlib import Path
 from typing import Optional
-from content_analysis import ContentAnalyzer
+from methods.similarity import Similarity
+from methods.lci import LCI
+from methods.entropy import Entropy
+from methods.unique_titles import UniqueTitles
+from methods.nqc import NQC
 import torch
 
 # 入力ディレクトリを固定
@@ -18,7 +22,7 @@ def compute_similarity(split: str, top_k: int, device: Optional[str] = None):
     base_json_path = INPUT_DIR / f"{split}.json"
     output_json_path = INPUT_DIR / f"{split}_similarity.json"
     output_csv_path = OUTPUT_DIR / f"{split}_similarity.csv"
-    ContentAnalyzer.compute_similarity_from_files(
+    Similarity.compute_from_files(
         dpr_json_path=str(dpr_json_path),
         base_json_path=str(base_json_path),
         output_json_path=str(output_json_path),
@@ -34,7 +38,7 @@ def compute_lci(split: str, top_k: int, window: int = 3):
     base_json_path = INPUT_DIR / f"{split}.json"
     output_json_path = INPUT_DIR / f"{split}_lci.json"
     output_csv_path = OUTPUT_DIR / f"{split}_lci.csv"
-    ContentAnalyzer.compute_lci_from_files(
+    LCI.compute_from_files(
         dpr_json_path=str(dpr_json_path),
         base_json_path=str(base_json_path),
         output_json_path=str(output_json_path),
@@ -51,7 +55,7 @@ def compute_entropy(split: str, top_k: int):
     output_json_path = INPUT_DIR / f"{split}_entropy.json"
     output_csv_path = OUTPUT_DIR / f"{split}_entropy.csv"
 
-    ContentAnalyzer.compute_entropy_from_files(
+    Entropy.compute_from_files(
         dpr_json_path=str(dpr_json_path),
         base_json_path=str(base_json_path),
         output_json_path=str(output_json_path),
@@ -67,7 +71,7 @@ def compute_unique_titles(split: str, top_k: int):
     output_json_path = INPUT_DIR / f"{split}_unique_titles.json"
     output_csv_path = OUTPUT_DIR / f"{split}_unique_titles.csv"
 
-    ContentAnalyzer.compute_unique_titles_from_files(
+    UniqueTitles.compute_from_files(
         dpr_json_path=str(dpr_json_path),
         base_json_path=str(base_json_path),
         output_json_path=str(output_json_path),
@@ -83,7 +87,7 @@ def compute_nqc(split: str, top_k: int):
     output_json_path = INPUT_DIR / f"{split}_nqc.json"
     output_csv_path = OUTPUT_DIR / f"{split}_nqc.csv"
 
-    ContentAnalyzer.compute_nqc_from_files(
+    NQC.compute_from_files(
         dpr_json_path=str(dpr_json_path),
         base_json_path=str(base_json_path),
         output_json_path=str(output_json_path),
