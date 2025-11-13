@@ -16,10 +16,10 @@ def evaluate_post_retrieval(split: str = 'train'):
     
     # メトリクス設定（メトリクス名、CSVパス、カラム名）
     metric_configs = {
-        'entropy': {
-            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_entropy.csv',
-            'column': 'entropy'
-        },
+        # 'entropy': {
+        #     'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_entropy.csv',
+        #     'column': 'entropy'
+        # },
         # 'unique_titles': {
         #     'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_unique_titles.csv',
         #     'column': 'num_unique_titles'
@@ -35,7 +35,11 @@ def evaluate_post_retrieval(split: str = 'train'):
         'similarity': {
             'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_similarity.csv',
             'column': 'mean_similarity'
-        }
+        },
+        'wig': {
+            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_wig.csv',
+            'column': 'wig'
+        },
     }
     
     # マージ設定

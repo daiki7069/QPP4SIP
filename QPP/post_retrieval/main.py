@@ -9,6 +9,7 @@ from methods.lci import LCI
 from methods.entropy import Entropy
 from methods.unique_titles import UniqueTitles
 from methods.nqc import NQC
+from methods.wig import WIG
 import torch
 
 # 入力ディレクトリを固定
@@ -96,12 +97,30 @@ def compute_nqc(split: str, top_k: int):
     )
 
 
+def compute_wig(split: str, top_k: int, k: int = 20, bg_ratio: float = 0.5):
+    """DPRスコアからWIG（Weighted Information Gain）を計算"""
+    dpr_json_path = INPUT_DIR / f"dpr_{split}.json"
+    base_json_path = INPUT_DIR / f"{split}.json"
+    output_json_path = INPUT_DIR / f"{split}_wig.json"
+    output_csv_path = OUTPUT_DIR / f"{split}_wig.csv"
+
+    WIG.compute_from_files(
+        dpr_json_path=str(dpr_json_path),
+        base_json_path=str(base_json_path),
+        output_json_path=str(output_json_path),
+        output_csv_path=output_csv_path,
+        top_k=top_k,
+        k=k,
+        bg_ratio=bg_ratio
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Post-retrieval QPP分析スクリプト")
     parser.add_argument(
         "--metric",
-        choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "all"],
-        help="実行モード: 'similarity' (類似度統計), 'lci' (局所的集中度), 'entropy' (エントロピー), 'unique_titles' (ユニークタイトル数), 'nqc' (Normalized Query Clarity), または 'all' (全て)"
+        choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "wig", "all"],
+        help="実行モード: 'similarity' (類似度統計), 'lci' (局所的集中度), 'entropy' (エントロピー), 'unique_titles' (ユニークタイトル数), 'nqc' (Normalized Query Clarity), 'wig' (Weighted Information Gain), または 'all' (全て)"
     )
     parser.add_argument(
         "--split",
@@ -126,6 +145,18 @@ def main():
         type=int,
         default=10,
         help="LCI計算の半径 (lciモードのみ, デフォルト: 3)"
+    )
+    parser.add_argument(
+        "--wig_k",
+        type=int,
+        default=50,
+        help="WIG計算に使うtop-k文書数 (wigモードのみ, デフォルト: 50)"
+    )
+    parser.add_argument(
+        "--wig_bg_ratio",
+        type=float,
+        default=0.5,
+        help="WIG計算の背景モデルとして使う割合 (wigモードのみ, デフォルト: 0.5)"
     )
     
     args = parser.parse_args()
@@ -167,6 +198,14 @@ def main():
         compute_nqc(
             split=args.split,
             top_k=args.top_k
+        )
+    if args.metric == "wig" or args.metric == "all":
+        print("=== WIG (Weighted Information Gain) を計算 ===")
+        compute_wig(
+            split=args.split,
+            top_k=args.top_k,
+            k=args.wig_k,
+            bg_ratio=args.wig_bg_ratio
         )
 
 
