@@ -9,7 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, roc_curve
+from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, roc_curve, precision_recall_curve, average_precision_score
 from typing import Dict, List, Tuple, Any
 
 
@@ -79,10 +79,10 @@ def load_qpp_scores(split: str) -> Dict[str, Dict[Tuple[str, int], float]]:
     
     # QPPスコアの定義
     qpp_configs = {
-        # 'nqc': ('nqc.csv', 'nqc'),
+        'nqc': ('nqc.csv', 'nqc'),
         'similarity': ('similarity.csv', 'mean_similarity'),
-        # 'wig': ('wig.csv', 'wig'),
-        # 'entropy': ('entropy.csv', 'entropy'),
+        'wig': ('wig.csv', 'wig'),
+        'entropy': ('entropy.csv', 'entropy'),
         # 'lci': ('lci.csv', 'lci'),
         # 'unique_titles': ('unique_titles.csv', 'num_unique_titles'),
     }
@@ -213,6 +213,46 @@ def plot_roc_curves(
     plt.close()
 
 
+def plot_pr_curves(
+    y_train: pd.Series,
+    y_train_proba: np.ndarray,
+    y_test: pd.Series,
+    y_test_proba: np.ndarray,
+    train_ap: float,
+    test_ap: float
+) -> None:
+    """Precision-Recall曲線を描画して保存"""
+    # 訓練データのPR曲線
+    precision_train, recall_train, _ = precision_recall_curve(y_train, y_train_proba)
+    
+    # テストデータのPR曲線
+    precision_test, recall_test, _ = precision_recall_curve(y_test, y_test_proba)
+    
+    # ベースライン（ランダム分類器）
+    baseline = len(y_test[y_test == 1]) / len(y_test)
+    
+    # プロット
+    plt.figure(figsize=(10, 8))
+    plt.plot(recall_train, precision_train, label=f'Train (AP = {train_ap:.4f})', linewidth=2)
+    plt.plot(recall_test, precision_test, label=f'Test (AP = {test_ap:.4f})', linewidth=2)
+    plt.axhline(y=baseline, color='k', linestyle='--', label=f'Random (AP = {baseline:.4f})', linewidth=1)
+    
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall', fontsize=12)
+    plt.ylabel('Precision', fontsize=12)
+    plt.title('Precision-Recall Curves - L1 Regularized Logistic Regression', fontsize=14, fontweight='bold')
+    plt.legend(loc='lower left', fontsize=11)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    # 保存
+    output_path = OUTPUT_DIR / 'pr_curves.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - 保存先: {output_path}")
+    plt.close()
+
+
 def normalize_features(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame
@@ -330,6 +370,14 @@ def main():
     }).sort_values('coefficient', key=abs, ascending=False)
     print(feature_importance.to_string(index=False))
     
+    # 係数が0の特徴量を表示
+    zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
+    if len(zero_coef_features) > 0:
+        print(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
+        print(zero_coef_features[['feature']].to_string(index=False))
+    else:
+        print("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
+    
     # 5. 評価
     print("\n5. 評価中...")
     y_train_pred = model.predict(X_train_norm)
@@ -342,16 +390,19 @@ def main():
     train_acc = accuracy_score(y_train, y_train_pred)
     train_f1 = f1_score(y_train, y_train_pred)
     train_auc = roc_auc_score(y_train, y_train_proba)
+    train_ap = average_precision_score(y_train, y_train_proba)
     
     # テストデータの評価
     test_acc = accuracy_score(y_test, y_test_pred)
     test_f1 = f1_score(y_test, y_test_pred)
     test_auc = roc_auc_score(y_test, y_test_proba)
+    test_ap = average_precision_score(y_test, y_test_proba)
     
     print("\n=== 訓練データの評価 ===")
     print(f"Accuracy: {train_acc:.4f}")
     print(f"F1 Score: {train_f1:.4f}")
     print(f"AUC-ROC: {train_auc:.4f}")
+    print(f"Average Precision: {train_ap:.4f}")
     print("\n分類レポート:")
     print(classification_report(y_train, y_train_pred, target_names=['not_clarification', 'clarification']))
     
@@ -359,6 +410,7 @@ def main():
     print(f"Accuracy: {test_acc:.4f}")
     print(f"F1 Score: {test_f1:.4f}")
     print(f"AUC-ROC: {test_auc:.4f}")
+    print(f"Average Precision: {test_ap:.4f}")
     print("\n分類レポート:")
     print(classification_report(y_test, y_test_pred, target_names=['not_clarification', 'clarification']))
     
@@ -366,6 +418,11 @@ def main():
     print("\n6. ROC曲線を描画中...")
     plot_roc_curves(y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc)
     print("  - ROC曲線を保存しました")
+    
+    # 7. PR曲線の描画
+    print("\n7. Precision-Recall曲線を描画中...")
+    plot_pr_curves(y_train, y_train_proba, y_test, y_test_proba, train_ap, test_ap)
+    print("  - PR曲線を保存しました")
     
     print("\n=== 完了 ===")
 
