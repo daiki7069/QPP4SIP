@@ -163,7 +163,9 @@ def main():
     parser.add_argument('--task', type=str, default='SIP', choices=['SIP', 'AP'], help='評価するタスク')
     parser.add_argument('--dataset_type', type=str, default='test', choices=['train', 'dev', 'test'], help='データセットの種類')
     parser.add_argument('--epoch_num', type=int, default=20, help='評価するエポック数')
-    parser.add_argument('--dataset', type=str, default='INSCIT', help='データセット名（INSCIT固定）')
+    parser.add_argument('--dataset', type=str, default='INSCIT', 
+                       choices=['INSCIT', 'AmbigNQ'], 
+                       help='データセット名')
     
     args = parser.parse_args()
     

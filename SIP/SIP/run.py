@@ -467,7 +467,9 @@ def main():
                        help="実行モード")
     parser.add_argument("--task", type=str, default="SIP", help="タスク名")
     parser.add_argument("--name", type=str, default="QPP4SIP", help="モデル名")
-    parser.add_argument("--dataset", type=str, default="INSCIT", help="データセット名（INSCIT固定）")
+    parser.add_argument("--dataset", type=str, default="INSCIT", 
+                       choices=["INSCIT", "AmbigNQ"], 
+                       help="データセット名")
     parser.add_argument("--model", type=str, default="music", 
                        choices=["music", "qpp4sip", "qpp_gating"], 
                        help="モデルタイプ")

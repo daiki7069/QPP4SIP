@@ -144,15 +144,25 @@ def train(args):
     
     # Trainerの作成
     trainer_class = WeightedTrainer if args.use_class_weights else Trainer
-    trainer = trainer_class(
-        class_weights=class_weights,
-        model=model,
-        args=training_args,
-        train_dataset=train_dataset,
-        eval_dataset=dev_dataset,
-        compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)] if args.early_stopping else None,
-    )
+    if args.use_class_weights:
+        trainer = trainer_class(
+            class_weights=class_weights,
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset,
+            eval_dataset=dev_dataset,
+            compute_metrics=compute_metrics,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=10)] if args.early_stopping else None,
+        )
+    else:
+        trainer = trainer_class(
+            model=model,
+            args=training_args,
+            train_dataset=train_dataset,
+            eval_dataset=dev_dataset,
+            compute_metrics=compute_metrics,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=10)] if args.early_stopping else None,
+        )
     
     # 訓練の実行
     print("訓練を開始します...")
@@ -274,15 +284,25 @@ def train_kfold(args):
         
         # Trainerの作成
         trainer_class = WeightedTrainer if args.use_class_weights else Trainer
-        trainer = trainer_class(
-            class_weights=class_weights,
-            model=model,
-            args=training_args,
-            train_dataset=fold_train_dataset,
-            eval_dataset=fold_val_dataset,
-            compute_metrics=compute_metrics,
-            callbacks=[EarlyStoppingCallback(early_stopping_patience=10)] if args.early_stopping else None,
-        )
+        if args.use_class_weights:
+            trainer = trainer_class(
+                class_weights=class_weights,
+                model=model,
+                args=training_args,
+                train_dataset=fold_train_dataset,
+                eval_dataset=fold_val_dataset,
+                compute_metrics=compute_metrics,
+                callbacks=[EarlyStoppingCallback(early_stopping_patience=10)] if args.early_stopping else None,
+            )
+        else:
+            trainer = trainer_class(
+                model=model,
+                args=training_args,
+                train_dataset=fold_train_dataset,
+                eval_dataset=fold_val_dataset,
+                compute_metrics=compute_metrics,
+                callbacks=[EarlyStoppingCallback(early_stopping_patience=10)] if args.early_stopping else None,
+            )
         
         # 訓練の実行
         print(f"Fold {fold_idx + 1}の訓練を開始します...")
@@ -525,7 +545,15 @@ def evaluate(args):
         
     else:
         # 通常の単一モデル評価
-        model_path = args.model_path if args.model_path else os.path.join(args.output_dir, 'best_model')
+        if args.model_path:
+            model_path = os.path.abspath(args.model_path)
+            # ディレクトリが指定されていて、best_modelサブディレクトリが存在する場合は自動的に追加
+            if os.path.isdir(model_path):
+                best_model_path = os.path.join(model_path, 'best_model')
+                if os.path.exists(best_model_path) and os.path.isdir(best_model_path):
+                    model_path = best_model_path
+        else:
+            model_path = os.path.join(args.output_dir, 'best_model')
         print(f"モデルを読み込んでいます: {model_path}")
         
         tokenizer = AutoTokenizer.from_pretrained(model_path)
@@ -720,7 +748,15 @@ def predict(args):
     print("=" * 50)
     
     # モデルとトークナイザーの読み込み
-    model_path = args.model_path if args.model_path else os.path.join(args.output_dir, 'best_model')
+    if args.model_path:
+        model_path = os.path.abspath(args.model_path)
+        # ディレクトリが指定されていて、best_modelサブディレクトリが存在する場合は自動的に追加
+        if os.path.isdir(model_path):
+            best_model_path = os.path.join(model_path, 'best_model')
+            if os.path.exists(best_model_path) and os.path.isdir(best_model_path):
+                model_path = best_model_path
+    else:
+        model_path = os.path.join(args.output_dir, 'best_model')
     print(f"モデルを読み込んでいます: {model_path}")
     
     tokenizer = AutoTokenizer.from_pretrained(model_path)
