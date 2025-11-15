@@ -2,42 +2,50 @@
 QPP評価スクリプト
 """
 import argparse
+import os
 import pandas as pd
 from evaluate_post_retrieval import visualize_all_metrics as visualize_post_retrieval_metrics
 from evaluate_retrieval_data import visualize_all_metrics as visualize_retrieval_data_metrics
-from auc import plot_roc_curves
+from auc import plot_roc_curves, plot_pr_curves
 
 
-def evaluate_post_retrieval(split: str = 'train'):
+def evaluate_post_retrieval(split: str = 'train', dataset: str = 'INSCIT'):
     """Post-retrieval QPP指標の評価"""
+    # ベースパスの設定
+    base_dir = '/home/daiki_shibata/pj/QPP4SIP'
+    
     # 入力ファイルの設定
-    csv_path = f'/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/{split}.csv'
-    output_dir = '/home/daiki_shibata/pj/QPP4SIP/QPP/evaluate/outputs'
+    csv_path = os.path.join(base_dir, 'QPP', 'raw_data', 'outputs', dataset, f'{split}.csv')
+    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset)
+    
+    # 出力ディレクトリの作成
+    os.makedirs(output_dir, exist_ok=True)
     
     # メトリクス設定（メトリクス名、CSVパス、カラム名）
+    post_retrieval_outputs_dir = os.path.join(base_dir, 'QPP', 'post_retrieval', 'outputs', dataset)
     metric_configs = {
         # 'entropy': {
-        #     'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_entropy.csv',
+        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_entropy.csv'),
         #     'column': 'entropy'
         # },
         # 'unique_titles': {
-        #     'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_unique_titles.csv',
+        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_unique_titles.csv'),
         #     'column': 'num_unique_titles'
         # },
         'nqc': {
-            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_nqc.csv',
+            'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_nqc.csv'),
             'column': 'nqc'
         },
         # 'lci': {
-        #     'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_lci.csv',
+        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_lci.csv'),
         #     'column': 'lci'
         # },
         'similarity': {
-            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_similarity.csv',
+            'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_similarity.csv'),
             'column': 'mean_similarity'
         },
         'wig': {
-            'csv_path': f'/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs/{split}_wig.csv',
+            'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_wig.csv'),
             'column': 'wig'
         },
     }
@@ -93,14 +101,31 @@ def evaluate_post_retrieval(split: str = 'train'):
         positive_class='clarification',
         merge_config=merge_config
     )
+    
+    # PR曲線の可視化
+    print("\n=== Post-retrieval Average Precision算出とPR曲線の可視化 ===")
+    pr_output_path = f'{output_dir}/pr_curves_post_retrieval_{split}.png'
+    ap_scores = plot_pr_curves(
+        csv_path=csv_path,
+        metric_csv_paths=metric_csv_paths,
+        output_path=pr_output_path,
+        positive_class='clarification',
+        merge_config=merge_config
+    )
 
 
-def evaluate_retrieval_data(split: str = 'train'):
+def evaluate_retrieval_data(split: str = 'train', dataset: str = 'INSCIT'):
     """Retrieval data QPP指標の評価"""
+    # ベースパスの設定
+    base_dir = '/home/daiki_shibata/pj/QPP4SIP'
+    
     # 入力ファイルの設定
-    csv_path = f'/home/daiki_shibata/pj/QPP4SIP/QPP/raw_data/outputs/{split}.csv'
-    retrieval_csv_path = f'/home/daiki_shibata/pj/QPP4SIP/QPP/retrieval_data/outputs/dpr_{split}_only_evidence.csv'
-    output_dir = '/home/daiki_shibata/pj/QPP4SIP/QPP/evaluate/outputs'
+    csv_path = os.path.join(base_dir, 'QPP', 'raw_data', 'outputs', dataset, f'{split}.csv')
+    retrieval_csv_path = os.path.join(base_dir, 'QPP', 'retrieval_data', 'outputs', dataset, f'dpr_{split}_only_evidence.csv')
+    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset)
+    
+    # 出力ディレクトリの作成
+    os.makedirs(output_dir, exist_ok=True)
     
     # メトリクス設定（num_evidence_docsから始まる全ての評価指標）
     metric_configs = {
@@ -228,11 +253,32 @@ def evaluate_retrieval_data(split: str = 'train'):
         positive_class='clarification',
         merge_config=merge_config
     )
+    
+    # PR曲線の可視化
+    print("\n=== Retrieval data Average Precision算出とPR曲線の可視化 ===")
+    pr_output_path = f'{output_dir}/pr_curves_retrieval_data_{split}.png'
+    ap_scores = plot_pr_curves(
+        csv_path=csv_path,
+        metric_csv_paths=metric_csv_paths,
+        output_path=pr_output_path,
+        positive_class='clarification',
+        merge_config=merge_config
+    )
 
 
 def main():
     """メインエントリーポイント"""
     parser = argparse.ArgumentParser(description="QPP評価スクリプト")
+    
+    # データセット名（必須）
+    parser.add_argument(
+        '--dataset',
+        type=str,
+        required=True,
+        choices=['INSCIT', 'AmbigNQ'],
+        help='データセット名（INSCIT または AmbigNQ）'
+    )
+    
     parser.add_argument(
         '--mode',
         type=str,
@@ -250,11 +296,15 @@ def main():
     
     args = parser.parse_args()
     
+    print(f"データセット: {args.dataset}")
+    print(f"スプリット: {args.split}")
+    print(f"モード: {args.mode}")
+    
     if args.mode == 'post_retrieval' or args.mode == 'all':
-        evaluate_post_retrieval(split=args.split)
+        evaluate_post_retrieval(split=args.split, dataset=args.dataset)
     
     if args.mode == 'retrieval_data' or args.mode == 'all':
-        evaluate_retrieval_data(split=args.split)
+        evaluate_retrieval_data(split=args.split, dataset=args.dataset)
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 """
-L1正則化付きロジスティック回帰によるclarification分類
+Random Forestによるclarification分類
 """
 import json
 import argparse
@@ -10,7 +10,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, roc_curve, precision_recall_curve, average_precision_score
 from typing import Dict, List, Tuple, Any
@@ -200,7 +200,7 @@ def plot_roc_curves(
     plt.ylim([0.0, 1.05])
     plt.xlabel('False Positive Rate', fontsize=12)
     plt.ylabel('True Positive Rate', fontsize=12)
-    plt.title('ROC Curves - L1 Regularized Logistic Regression', fontsize=14, fontweight='bold')
+    plt.title('ROC Curves - Random Forest', fontsize=14, fontweight='bold')
     plt.legend(loc='lower right', fontsize=11)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -241,7 +241,7 @@ def plot_pr_curves(
     plt.ylim([0.0, 1.05])
     plt.xlabel('Recall', fontsize=12)
     plt.ylabel('Precision', fontsize=12)
-    plt.title('Precision-Recall Curves - L1 Regularized Logistic Regression', fontsize=14, fontweight='bold')
+    plt.title('Precision-Recall Curves - Random Forest', fontsize=14, fontweight='bold')
     plt.legend(loc='lower left', fontsize=11)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -275,7 +275,7 @@ def normalize_features(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="L1正則化付きロジスティック回帰によるclarification分類")
+    parser = argparse.ArgumentParser(description="Random Forestによるclarification分類")
     
     # データセット名（必須）
     parser.add_argument(
@@ -299,6 +299,27 @@ def main():
         help="SIP実験名（デフォルト: データセット名に基づいて自動設定）"
     )
     
+    parser.add_argument(
+        "--n-estimators",
+        type=int,
+        default=100,
+        help="決定木の数（デフォルト: 100）"
+    )
+    
+    parser.add_argument(
+        "--max-depth",
+        type=int,
+        default=None,
+        help="決定木の最大深度（デフォルト: None、制限なし）"
+    )
+    
+    parser.add_argument(
+        "--random-state",
+        type=int,
+        default=42,
+        help="乱数シード（デフォルト: 42）"
+    )
+    
     args = parser.parse_args()
     
     use_base_score = args.use_base_score
@@ -315,7 +336,7 @@ def main():
         sip_experiment_name = f"{args.dataset}_bert-base_lr2e-05_bs16_kfold5"
     
     sip_output_dir = BASE_DIR / "SIP" / "FT-PLM" / "output" / args.dataset / sip_experiment_name
-    output_dir = BASE_DIR / "LogReg" / "LASSO" / "outputs" / args.dataset
+    output_dir = BASE_DIR / "LogReg" / "RandomForest" / "outputs" / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # 出力ファイルの準備（print内容をファイルにも保存）
@@ -327,9 +348,10 @@ def main():
         print(*args, **kwargs)
         print(*args, **kwargs, file=output_buffer)
     
-    print_and_save("=== L1正則化付きロジスティック回帰によるclarification分類 ===\n")
+    print_and_save("=== Random Forestによるclarification分類 ===\n")
     print_and_save(f"データセット: {args.dataset}")
-    print_and_save(f"使用する特徴量: {'ベーススコア + QPPスコア' if use_base_score else 'QPPスコアのみ'}\n")
+    print_and_save(f"使用する特徴量: {'ベーススコア + QPPスコア' if use_base_score else 'QPPスコアのみ'}")
+    print_and_save(f"モデルパラメータ: n_estimators={args.n_estimators}, max_depth={args.max_depth}, random_state={args.random_state}\n")
     
     # 1. データ読み込み
     print_and_save("1. データ読み込み中...")
@@ -423,50 +445,24 @@ def main():
     
     # 4. モデル学習
     print_and_save("\n4. モデル学習中...")
-    model = LogisticRegression(
-        penalty='l1',
-        solver='liblinear',
-        C=1.0,
-        max_iter=1000,
-        random_state=42,
-        class_weight='balanced'
+    model = RandomForestClassifier(
+        n_estimators=args.n_estimators,
+        max_depth=args.max_depth,
+        random_state=args.random_state,
+        class_weight='balanced',
+        n_jobs=-1  # 並列処理を有効化
     )
     
-    # 警告をキャッチして収束状況を確認
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        model.fit(X_train_norm, y_train)
-        
-        # 実際の反復回数を確認
-        actual_iter = model.n_iter_[0] if hasattr(model, 'n_iter_') and len(model.n_iter_) > 0 else 'unknown'
-        print_and_save(f"  - 実際の反復回数: {actual_iter}")
-        
-        # 警告があるかチェック（max_iterに達した場合）
-        if w:
-            for warning in w:
-                if "max_iter" in str(warning.message).lower() or "convergence" in str(warning.message).lower():
-                    print_and_save(f"  ⚠️  警告: {warning.message}")
-                    print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {model.max_iter}）")
-        else:
-            print_and_save("  - 正常に収束しました")
-    
+    model.fit(X_train_norm, y_train)
     print_and_save("  - 学習完了")
     
-    # 特徴量の重要度（係数）を表示
-    print_and_save("\n特徴量の係数:")
+    # 特徴量の重要度を表示
+    print_and_save("\n特徴量の重要度:")
     feature_importance = pd.DataFrame({
         'feature': X_train_norm.columns,
-        'coefficient': model.coef_[0]
-    }).sort_values('coefficient', key=abs, ascending=False)
+        'importance': model.feature_importances_
+    }).sort_values('importance', ascending=False)
     print_and_save(feature_importance.to_string(index=False))
-    
-    # 係数が0の特徴量を表示
-    zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
-    if len(zero_coef_features) > 0:
-        print_and_save(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
-        print_and_save(zero_coef_features[['feature']].to_string(index=False))
-    else:
-        print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
     
     # 5. 評価
     print_and_save("\n5. 評価中...")

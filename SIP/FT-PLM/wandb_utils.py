@@ -193,6 +193,7 @@ def create_config_dict(args) -> Dict:
     """
     config = {
         "task": "clarification_prediction",
+        "dataset": getattr(args, "dataset", ""),
         "model_name": getattr(args, "model_name", "bert-base-uncased"),
         "max_length": getattr(args, "max_length", 512),
         "num_epochs": getattr(args, "num_epochs", 5),
@@ -244,7 +245,10 @@ def get_experiment_name(args) -> str:
     lr = getattr(args, "learning_rate", 2e-5)
     batch_size = getattr(args, "batch_size", 16)
     
-    experiment_name = f"{model_base}_lr{lr}_bs{batch_size}"
+    # データセット名を実験名に含める
+    dataset = getattr(args, "dataset", "")
+    
+    experiment_name = f"{dataset}_{model_base}_lr{lr}_bs{batch_size}"
     
     if getattr(args, "early_stopping", False):
         experiment_name += "_earlystop"

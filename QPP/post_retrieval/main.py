@@ -12,17 +12,18 @@ from methods.nqc import NQC
 from methods.wig import WIG
 import torch
 
-# 入力ディレクトリを固定
-INPUT_DIR = Path("/home/daiki_shibata/pj/QPP4SIP/dataset/INSCIT")
-OUTPUT_DIR = Path("/home/daiki_shibata/pj/QPP4SIP/QPP/post_retrieval/outputs")
 
-
-def compute_similarity(split: str, top_k: int, device: Optional[str] = None):
+def compute_similarity(split: str, dataset: str, top_k: int, device: Optional[str] = None):
     """類似度統計を計算"""
-    dpr_json_path = INPUT_DIR / f"dpr_{split}.json"
-    base_json_path = INPUT_DIR / f"{split}.json"
-    output_json_path = INPUT_DIR / f"{split}_similarity.json"
-    output_csv_path = OUTPUT_DIR / f"{split}_similarity.csv"
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_similarity.json"
+    output_csv_path = output_dir / f"{split}_similarity.csv"
     Similarity.compute_from_files(
         dpr_json_path=str(dpr_json_path),
         base_json_path=str(base_json_path),
@@ -33,12 +34,17 @@ def compute_similarity(split: str, top_k: int, device: Optional[str] = None):
     )
 
 
-def compute_lci(split: str, top_k: int, window: int = 3):
+def compute_lci(split: str, dataset: str, top_k: int, window: int = 3):
     """タイトル列の局所的集中度（LCI）を計算"""
-    dpr_json_path = INPUT_DIR / f"dpr_{split}.json"
-    base_json_path = INPUT_DIR / f"{split}.json"
-    output_json_path = INPUT_DIR / f"{split}_lci.json"
-    output_csv_path = OUTPUT_DIR / f"{split}_lci.csv"
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_lci.json"
+    output_csv_path = output_dir / f"{split}_lci.csv"
     LCI.compute_from_files(
         dpr_json_path=str(dpr_json_path),
         base_json_path=str(base_json_path),
@@ -49,12 +55,17 @@ def compute_lci(split: str, top_k: int, window: int = 3):
     )
 
 
-def compute_entropy(split: str, top_k: int):
+def compute_entropy(split: str, dataset: str, top_k: int):
     """タイトル分布の正規化エントロピーを計算"""
-    dpr_json_path = INPUT_DIR / f"dpr_{split}.json"
-    base_json_path = INPUT_DIR / f"{split}.json"
-    output_json_path = INPUT_DIR / f"{split}_entropy.json"
-    output_csv_path = OUTPUT_DIR / f"{split}_entropy.csv"
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_entropy.json"
+    output_csv_path = output_dir / f"{split}_entropy.csv"
 
     Entropy.compute_from_files(
         dpr_json_path=str(dpr_json_path),
@@ -65,12 +76,17 @@ def compute_entropy(split: str, top_k: int):
     )
 
 
-def compute_unique_titles(split: str, top_k: int):
+def compute_unique_titles(split: str, dataset: str, top_k: int):
     """top_kに含まれるユニークなタイトルの種類数を計算"""
-    dpr_json_path = INPUT_DIR / f"dpr_{split}.json"
-    base_json_path = INPUT_DIR / f"{split}.json"
-    output_json_path = INPUT_DIR / f"{split}_unique_titles.json"
-    output_csv_path = OUTPUT_DIR / f"{split}_unique_titles.csv"
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_unique_titles.json"
+    output_csv_path = output_dir / f"{split}_unique_titles.csv"
 
     UniqueTitles.compute_from_files(
         dpr_json_path=str(dpr_json_path),
@@ -81,12 +97,17 @@ def compute_unique_titles(split: str, top_k: int):
     )
 
 
-def compute_nqc(split: str, top_k: int):
+def compute_nqc(split: str, dataset: str, top_k: int):
     """上位k件のスコアからNQC（Normalized Query Clarity）を計算"""
-    dpr_json_path = INPUT_DIR / f"dpr_{split}.json"
-    base_json_path = INPUT_DIR / f"{split}.json"
-    output_json_path = INPUT_DIR / f"{split}_nqc.json"
-    output_csv_path = OUTPUT_DIR / f"{split}_nqc.csv"
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_nqc.json"
+    output_csv_path = output_dir / f"{split}_nqc.csv"
 
     NQC.compute_from_files(
         dpr_json_path=str(dpr_json_path),
@@ -97,12 +118,17 @@ def compute_nqc(split: str, top_k: int):
     )
 
 
-def compute_wig(split: str, top_k: int, k: int = 20, bg_ratio: float = 0.5):
+def compute_wig(split: str, dataset: str, top_k: int, k: int = 20, bg_ratio: float = 0.5):
     """DPRスコアからWIG（Weighted Information Gain）を計算"""
-    dpr_json_path = INPUT_DIR / f"dpr_{split}.json"
-    base_json_path = INPUT_DIR / f"{split}.json"
-    output_json_path = INPUT_DIR / f"{split}_wig.json"
-    output_csv_path = OUTPUT_DIR / f"{split}_wig.csv"
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_wig.json"
+    output_csv_path = output_dir / f"{split}_wig.csv"
 
     WIG.compute_from_files(
         dpr_json_path=str(dpr_json_path),
@@ -117,6 +143,16 @@ def compute_wig(split: str, top_k: int, k: int = 20, bg_ratio: float = 0.5):
 
 def main():
     parser = argparse.ArgumentParser(description="Post-retrieval QPP分析スクリプト")
+    
+    # データセット名（必須）
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        required=True,
+        choices=["INSCIT", "AmbigNQ"],
+        help="データセット名（INSCIT または AmbigNQ）"
+    )
+    
     parser.add_argument(
         "--metric",
         choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "wig", "all"],
@@ -161,6 +197,10 @@ def main():
     
     args = parser.parse_args()
     
+    print(f"データセット: {args.dataset}")
+    print(f"スプリット: {args.split}")
+    print(f"メトリクス: {args.metric}")
+    
     # デバイスの設定
     if args.device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -171,6 +211,7 @@ def main():
         print("=== 類似度統計を計算 ===")
         compute_similarity(
             split=args.split,
+            dataset=args.dataset,
             top_k=args.top_k,
             device=device
         )
@@ -178,6 +219,7 @@ def main():
         print("=== 局所的集中度（LCI）を計算 ===")
         compute_lci(
             split=args.split,
+            dataset=args.dataset,
             top_k=args.top_k,
             window=args.window
         )
@@ -185,24 +227,28 @@ def main():
         print("=== タイトル分布エントロピーを計算 ===")
         compute_entropy(
             split=args.split,
+            dataset=args.dataset,
             top_k=args.top_k
         )
     if args.metric == "unique_titles" or args.metric == "all":
         print("=== ユニークタイトル数を計算 ===")
         compute_unique_titles(
             split=args.split,
+            dataset=args.dataset,
             top_k=args.top_k
         )
     if args.metric == "nqc" or args.metric == "all":
         print("=== NQC (Normalized Query Clarity) を計算 ===")
         compute_nqc(
             split=args.split,
+            dataset=args.dataset,
             top_k=args.top_k
         )
     if args.metric == "wig" or args.metric == "all":
         print("=== WIG (Weighted Information Gain) を計算 ===")
         compute_wig(
             split=args.split,
+            dataset=args.dataset,
             top_k=args.top_k,
             k=args.wig_k,
             bg_ratio=args.wig_bg_ratio

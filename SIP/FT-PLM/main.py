@@ -14,7 +14,9 @@ from sklearn.metrics import (
     classification_report, 
     confusion_matrix,
     roc_auc_score,
-    roc_curve
+    roc_curve,
+    precision_recall_curve,
+    average_precision_score
 )
 from sklearn.model_selection import StratifiedKFold
 
@@ -564,23 +566,30 @@ def evaluate(args):
     
     # 評価指標の計算
     accuracy = accuracy_score(labels, predictions)
-    precision, recall, f1, _ = precision_recall_fscore_support(labels, predictions, average='binary')
+    precision_score, recall_score, f1, _ = precision_recall_fscore_support(labels, predictions, average='binary')
     
     # AUCの計算（Clarificationクラスの確率を使用）
     prob_clarification = [prob[1] for prob in probabilities_list]
     auc = roc_auc_score(labels, prob_clarification)
     
+    # Average Precisionの計算
+    ap = average_precision_score(labels, prob_clarification)
+    
     # ROC曲線の計算
     fpr, tpr, thresholds = roc_curve(labels, prob_clarification)
+    
+    # Precision-Recall曲線の計算
+    precision, recall, pr_thresholds = precision_recall_curve(labels, prob_clarification)
     
     print("\n評価結果:")
     if fold_models:
         print(f"  (K-foldアンサンブル評価: {len(fold_models)} folds)")
     print(f"  Accuracy: {accuracy:.4f}")
-    print(f"  Precision: {precision:.4f}")
-    print(f"  Recall: {recall:.4f}")
+    print(f"  Precision: {precision_score:.4f}")
+    print(f"  Recall: {recall_score:.4f}")
     print(f"  F1: {f1:.4f}")
     print(f"  AUC: {auc:.4f}")
+    print(f"  Average Precision: {ap:.4f}")
     
     print("\n混同行列:")
     cm = confusion_matrix(labels, predictions)
@@ -613,14 +622,37 @@ def evaluate(args):
     plt.close()
     print(f"\nROC曲線を保存しました: {roc_curve_path}")
     
+    # PR曲線を描画
+    baseline = np.sum(labels) / len(labels)  # ランダム分類器のベースライン
+    
+    plt.figure(figsize=(8, 8))
+    plt.plot(recall, precision, color='darkorange', lw=2, label=f'PR curve (AP = {ap:.4f})')
+    plt.axhline(y=baseline, color='navy', lw=2, linestyle='--', label=f'Random (AP = {baseline:.4f})')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall', fontsize=12)
+    plt.ylabel('Precision', fontsize=12)
+    title = f'Precision-Recall Curve (AP = {ap:.4f})'
+    if fold_models:
+        title += f' - K-fold Ensemble ({len(fold_models)} folds)'
+    plt.title(title, fontsize=14)
+    plt.legend(loc="lower left", fontsize=10)
+    plt.grid(True, alpha=0.3)
+    
+    pr_curve_path = os.path.join(args.output_dir, 'pr_curve.png')
+    plt.savefig(pr_curve_path, dpi=150, bbox_inches='tight')
+    plt.close()
+    print(f"PR曲線を保存しました: {pr_curve_path}")
+    
     # wandbに評価結果を記録
     if args.use_wandb:
         eval_results = {
             'accuracy': accuracy,
-            'precision': precision,
-            'recall': recall,
+            'precision': precision_score,
+            'recall': recall_score,
             'f1': f1,
-            'auc': auc
+            'auc': auc,
+            'average_precision': ap
         }
         log_evaluation_metrics(0, eval_results)
         log_confusion_matrix(labels, predictions)
@@ -727,13 +759,16 @@ def predict(args):
 def main():
     parser = argparse.ArgumentParser(description='Clarification予測モデルのFine Tuning')
     
+    # データセット名（必須）
+    parser.add_argument('--dataset', type=str, required=True,
+                       choices=['INSCIT', 'AmbigNQ'],
+                       help='データセット名（INSCIT または AmbigNQ）')
+    
     # データパス
-    parser.add_argument('--train_path', type=str, 
-                       default='/home/daiki_shibata/pj/QPP4SIP/dataset/INSCIT/train.json',
-                       help='訓練データのパス')
-    parser.add_argument('--dev_path', type=str,
-                       default='/home/daiki_shibata/pj/QPP4SIP/dataset/INSCIT/dev.json',
-                       help='開発データのパス')
+    parser.add_argument('--train_path', type=str, default=None,
+                       help='訓練データのパス（未指定の場合はデータセット名から自動設定）')
+    parser.add_argument('--dev_path', type=str, default=None,
+                       help='開発データのパス（未指定の場合はデータセット名から自動設定）')
     
     # モデル設定
     parser.add_argument('--model_name', type=str, default='bert-base-uncased',
@@ -791,10 +826,24 @@ def main():
     
     args = parser.parse_args()
     
+    # データセット名に応じてデフォルトパスを設定
+    base_dataset_dir = f'/home/daiki_shibata/pj/QPP4SIP/dataset/{args.dataset}'
+    if args.train_path is None:
+        args.train_path = os.path.join(base_dataset_dir, 'train.json')
+    if args.dev_path is None:
+        args.dev_path = os.path.join(base_dataset_dir, 'dev.json')
+    
+    print(f"データセット: {args.dataset}")
+    print(f"訓練データ: {args.train_path}")
+    print(f"開発データ: {args.dev_path}")
+    
     # GPUの指定
     if args.gpu_ids:
         os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_ids
         print(f"使用するGPU: {args.gpu_ids}")
+    
+    # データセット名を含む出力ディレクトリを作成
+    args.output_dir = os.path.join(args.output_dir, args.dataset)
     
     # 実験固有の出力ディレクトリを作成（訓練時のみ）
     if args.mode == 'train':
