@@ -157,9 +157,11 @@ class Similarity(BaseQPPAnalyzer):
         # CSV用のDataFrameを準備
         csv_data = []
         for _, row in similarity_stats.iterrows():
+            # conv_idを文字列として保存（科学記数法を避けるため）
+            conv_id = str(row['conv_id'])
             csv_data.append({
-                'conv_id': row['conv_id'],
-                'turn_id': row['turn_id'],
+                'conv_id': conv_id,
+                'turn_id': int(row['turn_id']),
                 'mean_similarity': row['mean_similarity'] if not np.isnan(row['mean_similarity']) else None,
                 'sum_similarity': row['sum_similarity'] if not np.isnan(row['sum_similarity']) else None,
                 'num_similarity_pairs': int(row['num_pairs']),
@@ -167,6 +169,8 @@ class Similarity(BaseQPPAnalyzer):
             })
         
         csv_df = pd.DataFrame(csv_data)
+        # conv_idを文字列として保存するため、dtypeを指定
+        csv_df['conv_id'] = csv_df['conv_id'].astype(str)
         csv_df.to_csv(output_csv_path, index=False)
         print(f"CSV saved to: {output_csv_path}")
         

@@ -41,7 +41,7 @@ def main():
     print(f"出力ディレクトリ: {output_dir}")
     
     # データの読み込み
-    loader = INSCITDataLoader(str(input_dir))
+    loader = INSCITDataLoader(str(input_dir), dataset=args.dataset)
     data = loader.load_data(args.split)
     print(f"Loaded {len(data)} dialogue turns")
     

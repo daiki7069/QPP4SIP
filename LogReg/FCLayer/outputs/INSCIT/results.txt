@@ -1,0 +1,108 @@
+=== 全結合層によるclarification分類 ===
+
+データセット: INSCIT
+使用する特徴量: ベーススコア + QPPスコア
+ラベル分布の調整: 無効
+隠れ層の次元数: [64, 32]
+Dropout率: 0.1
+バッチサイズ: 32
+エポック数: 50
+学習率: 0.001
+重み減衰: 0.0001
+デバイス: cuda
+wandb使用: 有効
+正規化方法: 訓練データの統計量で正規化（通常）
+
+wandbを初期化しました: プロジェクト=QPP4SIP-FCLayer, 実験名=INSCIT_fc_64_32_lr0.001_bs32_withbase
+
+1. データ読み込み中...
+  - 訓練データ: 1443 サンプル
+  - ベーススコア: 1443 サンプル
+  - similarity: 1443 サンプル
+  - ベーススコア: 502 サンプル
+  - テストデータ: 502 サンプル
+  - similarity: 502 サンプル
+
+2. 特徴量マージ中...
+  - 訓練データ: 1443 サンプル, 2 特徴量
+  - テストデータ: 502 サンプル, 2 特徴量
+  - 特徴量: ['logit_clarification', 'similarity']
+  - 訓練データのラベル分布: {0: 1252, 1: 191}
+  - テストデータのラベル分布: {0: 436, 1: 66}
+
+2.5. ラベル分布の調整: スキップ（--balance-label-distribution が指定されていません）
+
+3. z-score正規化中...
+  - 方法: 訓練データの統計量でテストデータも正規化（通常）
+  - 正規化完了
+
+4. データローダーの作成中...
+  - 訓練データ: 1154 サンプル
+  - 検証データ: 289 サンプル
+  - テストデータ: 502 サンプル
+
+5. モデルの作成中...
+  - 入力次元: 2
+  - モデル構造:
+FullyConnectedClassifier(
+  (network): Sequential(
+    (0): Linear(in_features=2, out_features=64, bias=True)
+    (1): ReLU()
+    (2): Dropout(p=0.1, inplace=False)
+    (3): Linear(in_features=64, out_features=32, bias=True)
+    (4): ReLU()
+    (5): Dropout(p=0.1, inplace=False)
+    (6): Linear(in_features=32, out_features=2, bias=True)
+  )
+)
+
+6. モデル学習中...
+  - 学習完了
+
+7. 評価中...
+
+=== 訓練データの評価 ===
+Accuracy: 0.6861
+F1 Score: 0.2067
+AUC-ROC: 0.5686
+Average Precision: 0.1665
+
+分類レポート:
+                   precision    recall  f1-score   support
+
+not_clarification       0.88      0.74      0.80      1252
+    clarification       0.16      0.31      0.21       191
+
+         accuracy                           0.69      1443
+        macro avg       0.52      0.53      0.51      1443
+     weighted avg       0.78      0.69      0.73      1443
+
+
+=== テストデータの評価 ===
+Accuracy: 0.7510
+F1 Score: 0.2331
+AUC-ROC: 0.6055
+Average Precision: 0.2113
+
+分類レポート:
+                   precision    recall  f1-score   support
+
+not_clarification       0.88      0.82      0.85       436
+    clarification       0.20      0.29      0.23        66
+
+         accuracy                           0.75       502
+        macro avg       0.54      0.55      0.54       502
+     weighted avg       0.79      0.75      0.77       502
+
+
+【訓練データとテストデータの評価指標の比較】
+Accuracy差: +0.0649 (テスト 高)
+F1 Score差: +0.0265 (テスト 高)
+AUC-ROC差: +0.0370 (テスト 高)
+Average Precision差: +0.0449 (テスト 高)
+
+8. ROC曲線を描画中...
+  - ROC曲線を保存しました
+
+9. Precision-Recall曲線を描画中...
+  - PR曲線を保存しました

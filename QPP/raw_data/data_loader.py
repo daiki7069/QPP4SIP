@@ -1,11 +1,11 @@
 """
-INSCITデータ用のデータローダー
+INSCIT/AmbigNQデータ用のデータローダー
 JSONファイルを読み込み、CSVに変換する
 """
 import json
 import pandas as pd
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 
@@ -20,8 +20,9 @@ class DialogueTurn:
 
 
 class INSCITDataLoader:
-    def __init__(self, data_dir: str):
+    def __init__(self, data_dir: str, dataset: str = "INSCIT"):
         self.data_dir = Path(data_dir)
+        self.dataset = dataset
     
     def load_data(self, split: str = "dev") -> List[DialogueTurn]:
         """
@@ -41,6 +42,13 @@ class INSCITDataLoader:
         with open(file_path, 'r', encoding='utf-8') as f:
             raw_data = json.load(f)
         
+        if self.dataset == "AmbigNQ":
+            return self._load_ambignq_data(raw_data)
+        else:
+            return self._load_inscit_data(raw_data)
+    
+    def _load_inscit_data(self, raw_data: Dict) -> List[DialogueTurn]:
+        """INSCIT形式のデータを読み込む"""
         dialogue_turns = []
         
         for dialogue_id, dialogue_data in raw_data.items():
@@ -75,6 +83,45 @@ class INSCITDataLoader:
                 
                 # 次のターンのために履歴を更新
                 dialogue_history += f"Q: {query}\nA: {response}\n"
+        
+        return dialogue_turns
+    
+    def _load_ambignq_data(self, raw_data: List) -> List[DialogueTurn]:
+        """AmbigNQ形式のデータを読み込む（会話のリストのリスト）"""
+        dialogue_turns = []
+        
+        for conversation in raw_data:
+            for turn in conversation:
+                # クエリの取得
+                query = turn.get('query', '')
+                
+                # 回答の取得（リストまたは文字列）
+                answer = turn.get('answer', [])
+                if isinstance(answer, list):
+                    response = ' | '.join(answer) if answer else ''
+                else:
+                    response = str(answer) if answer else ''
+                
+                # レスポンスタイプの取得
+                response_type = turn.get('response_type', '')
+                
+                # 会話履歴の取得
+                dialogue_history_list = turn.get('dialogue_history', [])
+                if isinstance(dialogue_history_list, list):
+                    dialogue_history = '\n'.join(dialogue_history_list)
+                else:
+                    dialogue_history = str(dialogue_history_list) if dialogue_history_list else ''
+                
+                dialogue_turn = DialogueTurn(
+                    dialogue_id=str(turn.get('conv_id', '')),
+                    turn_id=str(turn.get('turn_id', '')),
+                    query=query,
+                    response=response,
+                    response_type=response_type,
+                    dialogue_history=dialogue_history
+                )
+                
+                dialogue_turns.append(dialogue_turn)
         
         return dialogue_turns
     

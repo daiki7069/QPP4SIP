@@ -1,17 +1,30 @@
 """
-L1正則化付きロジスティック回帰によるclarification分類
+全結合層（Fully Connected Layer）によるclarification分類
 """
 import argparse
-import warnings
 import sys
+import os
 from io import StringIO
+from pathlib import Path
 import pandas as pd
 import numpy as np
-from pathlib import Path
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, average_precision_score
+import torch
+from torch.utils.data import DataLoader
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import (
+    accuracy_score, f1_score, roc_auc_score, classification_report,
+    average_precision_score
+)
 
+try:
+    import wandb
+except ImportError:
+    wandb = None
+
+# モジュールのインポート
 from module import (
+    FullyConnectedClassifier,
+    FeatureDataset,
     load_json_data,
     extract_labels,
     extract_base_scores,
@@ -21,17 +34,20 @@ from module import (
     normalize_features,
     plot_roc_curves,
     plot_pr_curves,
-    plot_single_metric_roc_curves,
-    plot_single_metric_pr_curves
+    FCTrainer
+)
+from module.wandb_utils import (
+    init_wandb,
+    create_config_dict,
+    get_experiment_name
 )
 
-
-# パス設定（main関数内で動的に設定）
+# パス設定
 BASE_DIR = Path("/home/daiki_shibata/pj/QPP4SIP")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="L1正則化付きロジスティック回帰によるclarification分類")
+    parser = argparse.ArgumentParser(description="全結合層によるclarification分類")
     
     # データセット名（必須）
     parser.add_argument(
@@ -73,6 +89,79 @@ def main():
         help="訓練データとテストデータをそれぞれ個別に正規化する（各々が平均0、標準偏差1になる、デフォルト: False）"
     )
     
+    # モデルハイパーパラメータ
+    parser.add_argument(
+        "--hidden-dims",
+        type=int,
+        nargs='+',
+        default=[64, 32],
+        help="隠れ層の次元数（デフォルト: [64, 32]）"
+    )
+    
+    parser.add_argument(
+        "--dropout",
+        type=float,
+        default=0.1,
+        help="Dropout率（デフォルト: 0.1）"
+    )
+    
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=32,
+        help="バッチサイズ（デフォルト: 32）"
+    )
+    
+    parser.add_argument(
+        "--num-epochs",
+        type=int,
+        default=50,
+        help="エポック数（デフォルト: 50）"
+    )
+    
+    parser.add_argument(
+        "--learning-rate",
+        type=float,
+        default=0.001,
+        help="学習率（デフォルト: 0.001）"
+    )
+    
+    parser.add_argument(
+        "--weight-decay",
+        type=float,
+        default=0.0001,
+        help="重み減衰（L2正則化、デフォルト: 0.0001）"
+    )
+    
+    parser.add_argument(
+        "--device",
+        type=str,
+        default="cuda" if torch.cuda.is_available() else "cpu",
+        help="使用デバイス（デフォルト: cuda if available else cpu）"
+    )
+    
+    # wandb関連
+    parser.add_argument(
+        "--use-wandb",
+        action="store_true",
+        help="wandbを使用して実験を記録する（デフォルト: False）"
+    )
+    
+    parser.add_argument(
+        "--wandb-project",
+        type=str,
+        default="QPP4SIP-FCLayer",
+        help="wandbプロジェクト名（デフォルト: QPP4SIP-FCLayer）"
+    )
+    
+    parser.add_argument(
+        "--wandb-mode",
+        type=str,
+        default="online",
+        choices=["online", "offline", "disabled"],
+        help="wandbのモード（デフォルト: online）"
+    )
+    
     parser.add_argument(
         "--hide-train-curves",
         action="store_true",
@@ -101,7 +190,7 @@ def main():
         sip_experiment_name = f"{args.dataset}_bert-base_lr2e-05_bs16_kfold5"
     
     sip_output_dir = BASE_DIR / "SIP" / "FT-PLM" / "output" / args.dataset / sip_experiment_name
-    output_dir = BASE_DIR / "LogReg" / "LASSO" / "outputs" / args.dataset
+    output_dir = BASE_DIR / "LogReg" / "FCLayer" / "outputs" / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # 出力ファイルの準備（print内容をファイルにも保存）
@@ -113,10 +202,18 @@ def main():
         print(*args, **kwargs)
         print(*args, **kwargs, file=output_buffer)
     
-    print_and_save("=== L1正則化付きロジスティック回帰によるclarification分類 ===\n")
+    print_and_save("=== 全結合層によるclarification分類 ===\n")
     print_and_save(f"データセット: {args.dataset}")
     print_and_save(f"使用する特徴量: {'ベーススコア + QPPスコア' if use_base_score else 'QPPスコアのみ'}")
     print_and_save(f"ラベル分布の調整: {'有効' if args.balance_label_distribution else '無効'}")
+    print_and_save(f"隠れ層の次元数: {args.hidden_dims}")
+    print_and_save(f"Dropout率: {args.dropout}")
+    print_and_save(f"バッチサイズ: {args.batch_size}")
+    print_and_save(f"エポック数: {args.num_epochs}")
+    print_and_save(f"学習率: {args.learning_rate}")
+    print_and_save(f"重み減衰: {args.weight_decay}")
+    print_and_save(f"デバイス: {args.device}")
+    print_and_save(f"wandb使用: {'有効' if args.use_wandb else '無効'}")
     
     # 正規化方法の表示
     if args.use_separate_normalization:
@@ -138,7 +235,6 @@ def main():
             "="*80 + "\n"
         )
         print_and_save(warning_msg)
-        # 標準エラー出力にも警告を出力（目立つように）
         print(warning_msg, file=sys.stderr)
     elif args.use_combined_normalization:
         warning_msg = (
@@ -150,10 +246,24 @@ def main():
             "="*80 + "\n"
         )
         print_and_save(warning_msg)
-        # 標準エラー出力にも警告を出力（目立つように）
         print(warning_msg, file=sys.stderr)
     
     print_and_save()
+    
+    # wandbの初期化
+    wandb_run = None
+    if args.use_wandb:
+        config_dict = create_config_dict(args)
+        experiment_name = get_experiment_name(args)
+        wandb_mode = os.getenv("WANDB_MODE", args.wandb_mode)
+        wandb_run = init_wandb(
+            project_name=args.wandb_project,
+            experiment_name=experiment_name,
+            config_dict=config_dict,
+            mode=wandb_mode
+        )
+        print_and_save(f"wandbを初期化しました: プロジェクト={args.wandb_project}, 実験名={experiment_name}")
+        print_and_save()
     
     # 1. データ読み込み
     print_and_save("1. データ読み込み中...")
@@ -174,7 +284,7 @@ def main():
         train_base_scores = extract_base_scores(train_pred_data)
         print_and_save(f"  - ベーススコア: {len(train_base_scores)} サンプル")
     else:
-        train_base_scores = {}  # 空の辞書を渡す（使用しない）
+        train_base_scores = {}
     
     for metric_name, scores in train_qpp_scores.items():
         print_and_save(f"  - {metric_name}: {len(scores)} サンプル")
@@ -192,7 +302,7 @@ def main():
         dev_base_scores = extract_base_scores(dev_pred_data)
         print_and_save(f"  - ベーススコア: {len(dev_base_scores)} サンプル")
     else:
-        dev_base_scores = {}  # 空の辞書を渡す（使用しない）
+        dev_base_scores = {}
     
     dev_qpp_scores = load_qpp_scores('dev', qpp_output_dir)
     
@@ -231,134 +341,92 @@ def main():
     else:
         print_and_save("\n2.5. ラベル分布の調整: スキップ（--balance-label-distribution が指定されていません）")
     
-    # データ分布の確認（正規化前）
-    print_and_save("\n【データ分布の確認（正規化前）】")
-    print_and_save("訓練データの特徴量統計（正規化前）:")
-    print_and_save(X_train.describe().to_string())
-    print_and_save("\nテストデータの特徴量統計（正規化前）:")
-    print_and_save(X_test.describe().to_string())
-    print_and_save(f"\n訓練データのラベル分布: {y_train.value_counts().to_dict()} (正例率: {y_train.mean():.4f})")
-    print_and_save(f"テストデータのラベル分布: {y_test.value_counts().to_dict()} (正例率: {y_test.mean():.4f})")
-    
     # 3. 前処理: z-score正規化
     print_and_save("\n3. z-score正規化中...")
     if args.use_separate_normalization:
         print_and_save("  - 方法: 訓練データとテストデータをそれぞれ個別に正規化")
-        print_and_save("  ⚠️  注意: 各データセットが独立に正規化されるため、分布の違いは排除されますが、実際の予測タスクでは使用できません。")
     elif args.use_combined_normalization:
         print_and_save("  - 方法: 訓練データとテストデータを結合してから正規化（リーク前提）")
-        print_and_save("  ⚠️  警告: データリークが発生しています！実際の予測タスクでは使用しないでください。")
     else:
         print_and_save("  - 方法: 訓練データの統計量でテストデータも正規化（通常）")
-    X_train_norm, X_test_norm = normalize_features(
+    X_train_norm, X_test_norm, scalers = normalize_features(
         X_train, X_test, 
         use_combined_normalization=args.use_combined_normalization,
         use_separate_normalization=args.use_separate_normalization
     )
     print_and_save("  - 正規化完了")
     
-    # データ分布の確認（正規化後）
-    print_and_save("\n【データ分布の確認（正規化後）】")
-    print_and_save("訓練データの特徴量統計（正規化後）:")
-    print_and_save(X_train_norm.describe().to_string())
-    print_and_save("\nテストデータの特徴量統計（正規化後）:")
-    print_and_save(X_test_norm.describe().to_string())
+    # 4. データローダーの作成
+    print_and_save("\n4. データローダーの作成中...")
     
-    if args.use_combined_normalization:
-        # 結合正規化の場合、結合データ全体の統計も表示
-        X_combined_norm = pd.concat([X_train_norm, X_test_norm], axis=0, ignore_index=True)
-        print_and_save("\n結合データ全体の特徴量統計（正規化後）:")
-        print_and_save(X_combined_norm.describe().to_string())
-        print_and_save("\n→ 結合正規化により、結合データ全体の平均≈0, 標準偏差≈1になるはず")
-    
-    # 分布の違いを数値で確認（正規化前）
-    print_and_save("\n【分布の違いの分析（正規化前）】")
-    for col in X_train.columns:
-        train_mean = X_train[col].mean()
-        test_mean = X_test[col].mean()
-        train_std = X_train[col].std()
-        test_std = X_test[col].std()
-        mean_diff = abs(train_mean - test_mean) / (abs(train_mean) + 1e-10)
-        std_diff = abs(train_std - test_std) / (abs(train_std) + 1e-10)
-        print_and_save(f"{col}:")
-        print_and_save(f"  平均の差: 訓練={train_mean:.4f}, テスト={test_mean:.4f}, 相対差={mean_diff:.4f}")
-        print_and_save(f"  標準偏差の差: 訓練={train_std:.4f}, テスト={test_std:.4f}, 相対差={std_diff:.4f}")
-    
-    # 分布の違いを数値で確認（正規化後）
-    print_and_save("\n【分布の違いの分析（正規化後）】")
-    for col in X_train_norm.columns:
-        train_norm_mean = X_train_norm[col].mean()
-        test_norm_mean = X_test_norm[col].mean()
-        train_norm_std = X_train_norm[col].std()
-        test_norm_std = X_test_norm[col].std()
-        mean_diff_norm = abs(train_norm_mean - test_norm_mean)
-        std_diff_norm = abs(train_norm_std - test_norm_std)
-        print_and_save(f"{col}:")
-        print_and_save(f"  平均: 訓練={train_norm_mean:.6f}, テスト={test_norm_mean:.6f}, 差={mean_diff_norm:.6f}")
-        print_and_save(f"  標準偏差: 訓練={train_norm_std:.6f}, テスト={test_norm_std:.6f}, 差={std_diff_norm:.6f}")
-        
-        if args.use_combined_normalization:
-            # 結合正規化の場合、結合データ全体の統計も表示
-            X_combined_norm = pd.concat([X_train_norm, X_test_norm], axis=0, ignore_index=True)
-            combined_mean = X_combined_norm[col].mean()
-            combined_std = X_combined_norm[col].std()
-            print_and_save(f"  結合データ全体: 平均={combined_mean:.6f}, 標準偏差={combined_std:.6f}")
-            print_and_save(f"  → 結合正規化により、結合データ全体の平均≈0, 標準偏差≈1になるはず")
-    
-    # 4. モデル学習
-    print_and_save("\n4. モデル学習中...")
-    model = LogisticRegression(
-        penalty='l1',
-        solver='liblinear',
-        C=1.0,
-        max_iter=1000,
-        random_state=42,
-        class_weight='balanced'
+    # 訓練データを訓練と検証に分割（80:20）
+    X_train_split, X_val_split, y_train_split, y_val_split = train_test_split(
+        X_train_norm.values, y_train.values, test_size=0.2, random_state=42, stratify=y_train.values
     )
     
-    # 警告をキャッチして収束状況を確認
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
-        model.fit(X_train_norm, y_train)
-        
-        # 実際の反復回数を確認
-        actual_iter = model.n_iter_[0] if hasattr(model, 'n_iter_') and len(model.n_iter_) > 0 else 'unknown'
-        print_and_save(f"  - 実際の反復回数: {actual_iter}")
-        
-        # 警告があるかチェック（max_iterに達した場合）
-        if w:
-            for warning in w:
-                if "max_iter" in str(warning.message).lower() or "convergence" in str(warning.message).lower():
-                    print_and_save(f"  ⚠️  警告: {warning.message}")
-                    print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {model.max_iter}）")
-        else:
-            print_and_save("  - 正常に収束しました")
+    train_dataset = FeatureDataset(X_train_split, y_train_split)
+    val_dataset = FeatureDataset(X_val_split, y_val_split)
+    test_dataset = FeatureDataset(X_test_norm.values, y_test.values)
     
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False)
+    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
+    
+    print_and_save(f"  - 訓練データ: {len(train_dataset)} サンプル")
+    print_and_save(f"  - 検証データ: {len(val_dataset)} サンプル")
+    print_and_save(f"  - テストデータ: {len(test_dataset)} サンプル")
+    
+    # 5. モデルの作成
+    print_and_save("\n5. モデルの作成中...")
+    input_dim = X_train_norm.shape[1]
+    model = FullyConnectedClassifier(
+        input_dim=input_dim,
+        hidden_dims=args.hidden_dims,
+        dropout=args.dropout
+    )
+    print_and_save(f"  - 入力次元: {input_dim}")
+    print_and_save(f"  - モデル構造:")
+    print_and_save(str(model))
+    
+    # 6. モデル学習
+    print_and_save("\n6. モデル学習中...")
+    device = torch.device(args.device)
+    
+    # クラス重みの計算
+    class_counts = y_train.value_counts().to_dict()
+    class_counts = {int(k): int(v) for k, v in class_counts.items()}
+    
+    # Trainerの作成
+    trainer = FCTrainer(
+        model=model,
+        train_loader=train_loader,
+        val_loader=val_loader,
+        device=device,
+        num_epochs=args.num_epochs,
+        learning_rate=args.learning_rate,
+        weight_decay=args.weight_decay,
+        use_class_weights=True,
+        class_counts=class_counts,
+        early_stop_patience=10,
+        use_wandb=args.use_wandb
+    )
+    
+    # 訓練実行
+    model, train_losses, val_losses = trainer.train()
     print_and_save("  - 学習完了")
     
-    # 特徴量の重要度（係数）を表示
-    print_and_save("\n特徴量の係数:")
-    feature_importance = pd.DataFrame({
-        'feature': X_train_norm.columns,
-        'coefficient': model.coef_[0]
-    }).sort_values('coefficient', key=abs, ascending=False)
-    print_and_save(feature_importance.to_string(index=False))
+    # 学習曲線の描画
+    trainer.plot_loss_curves(output_dir)
     
-    # 係数が0の特徴量を表示
-    zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
-    if len(zero_coef_features) > 0:
-        print_and_save(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
-        print_and_save(zero_coef_features[['feature']].to_string(index=False))
-    else:
-        print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
+    # 7. 評価
+    print_and_save("\n7. 評価中...")
     
-    # 5. 評価
-    print_and_save("\n5. 評価中...")
-    y_train_pred = model.predict(X_train_norm)
-    y_test_pred = model.predict(X_test_norm)
+    # 訓練データ全体で評価
+    train_full_dataset = FeatureDataset(X_train_norm.values, y_train.values)
+    train_full_loader = DataLoader(train_full_dataset, batch_size=args.batch_size, shuffle=False)
     
-    y_train_proba = model.predict_proba(X_train_norm)[:, 1]
-    y_test_proba = model.predict_proba(X_test_norm)[:, 1]
+    y_train_pred, y_train_proba = trainer.evaluate(train_full_loader, split="train")
+    y_test_pred, y_test_proba = trainer.evaluate(test_loader, split="test")
     
     # 訓練データの評価
     train_acc = accuracy_score(y_train, y_train_pred)
@@ -395,18 +463,8 @@ def main():
     print_and_save(f"AUC-ROC差: {test_auc - train_auc:+.4f} (テスト {'高' if test_auc > train_auc else '低'})")
     print_and_save(f"Average Precision差: {test_ap - train_ap:+.4f} (テスト {'高' if test_ap > train_ap else '低'})")
     
-    if test_auc > train_auc or test_ap > train_ap:
-        print_and_save("\n【注意】テストデータの評価指標が訓練データよりも高い場合、以下の可能性があります:")
-        print_and_save("  1. 訓練データとテストデータの分布が異なる（データ分布のシフト）")
-        print_and_save("  2. ラベル分布の違い（正例率の違い）")
-        print_and_save("  3. モデルが単純で過学習が起きにくい（特徴量が少ない場合など）")
-        print_and_save("  4. テストデータの方が「簡単」なケースが多い可能性")
-        if args.use_separate_normalization:
-            print_and_save("  5. 個別正規化を使用しているため、分布の違いは排除されていますが、")
-            print_and_save("     それでもテストが高い場合は、分布以外の要因（データの質、ラベル分布など）が考えられます")
-    
-    # 6. ROC曲線の描画
-    print_and_save("\n6. ROC曲線を描画中...")
+    # 8. ROC曲線の描画
+    print_and_save("\n8. ROC曲線を描画中...")
     feature_names = list(X_train_norm.columns)
     plot_roc_curves(
         y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc, output_dir,
@@ -418,8 +476,8 @@ def main():
     )
     print_and_save("  - ROC曲線を保存しました")
     
-    # 7. PR曲線の描画
-    print_and_save("\n7. Precision-Recall曲線を描画中...")
+    # 9. PR曲線の描画
+    print_and_save("\n9. Precision-Recall曲線を描画中...")
     plot_pr_curves(
         y_train, y_train_proba, y_test, y_test_proba, train_ap, test_ap, output_dir,
         hide_train=args.hide_train_curves,
@@ -446,9 +504,12 @@ def main():
         print_and_save("⚠️  実際の予測タスクでは使用できません。")
         print_and_save("="*80)
     
+    # wandbを終了
+    if wandb_run is not None:
+        wandb.finish()
+    
     print_and_save("\n=== 完了 ===")
 
 
 if __name__ == "__main__":
     main()
-

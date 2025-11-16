@@ -57,8 +57,10 @@ def visualize_all_metrics(
         merged_df = merged_df.dropna(subset=[column_name])
         
         # ボックスプロットを作成
-        response_types = merged_df[response_type_col].unique()
-        data_to_plot = [merged_df[merged_df[response_type_col] == rt][column_name].values 
+        # [SEP]で分割されている場合があるので、最初の部分を取得して正規化
+        merged_df['response_type_clean'] = merged_df[response_type_col].str.split(' [SEP] ', regex=False).str[0].str.strip()
+        response_types = merged_df['response_type_clean'].unique()
+        data_to_plot = [merged_df[merged_df['response_type_clean'] == rt][column_name].values 
                        for rt in response_types]
         
         bp = axes[idx].boxplot(data_to_plot, labels=response_types, patch_artist=True)

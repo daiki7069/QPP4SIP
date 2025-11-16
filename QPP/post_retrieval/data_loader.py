@@ -44,20 +44,60 @@ class DPRResultLoader:
             raw_data = json.load(f)
         
         turn_data_list = []
-        for item in raw_data:
-            documents = []
-            for rank, ctx in enumerate(item['ctxs'], 1):
-                doc = RetrievedDocument(
-                    id=ctx['id'], title=ctx['title'], text=ctx['text'],
-                    score=float(ctx['score']), has_answer=ctx['has_answer'], rank=rank
-                )
-                documents.append(doc)
-            
-            turn_data = TurnData(
-                question=item['question'], answers=item['answers'],
-                conv_id=item['conv_id'], turn_id=item['turn_id'], documents=documents
-            )
-            turn_data_list.append(turn_data)
+        
+        # データ形式の判定: 会話のリストのリスト（INSCIT形式）か、フラットなリストか
+        if isinstance(raw_data, list) and len(raw_data) > 0:
+            # 最初の要素がリストかどうかで判定
+            if isinstance(raw_data[0], list):
+                # 会話のリストのリスト形式（新しい形式）
+                for conversation in raw_data:
+                    for turn in conversation:
+                        documents = []
+                        # ctxsが存在する場合のみ処理
+                        if 'ctxs' in turn and isinstance(turn['ctxs'], list):
+                            for rank, ctx in enumerate(turn['ctxs'], 1):
+                                doc = RetrievedDocument(
+                                    id=ctx['id'], title=ctx['title'], text=ctx['text'],
+                                    score=float(ctx['score']), has_answer=ctx['has_answer'], rank=rank
+                                )
+                                documents.append(doc)
+                        
+                        # questionまたはqueryフィールドから質問を取得
+                        question = turn.get('query', turn.get('question', ''))
+                        # answersまたはanswerフィールドから回答を取得
+                        answers = turn.get('answer', turn.get('answers', []))
+                        if not isinstance(answers, list):
+                            answers = [answers] if answers else []
+                        
+                        turn_data = TurnData(
+                            question=question, answers=answers,
+                            conv_id=str(turn['conv_id']), turn_id=str(turn['turn_id']), documents=documents
+                        )
+                        turn_data_list.append(turn_data)
+            else:
+                # フラットなリスト形式（古い形式）
+                for item in raw_data:
+                    documents = []
+                    if 'ctxs' in item and isinstance(item['ctxs'], list):
+                        for rank, ctx in enumerate(item['ctxs'], 1):
+                            doc = RetrievedDocument(
+                                id=ctx['id'], title=ctx['title'], text=ctx['text'],
+                                score=float(ctx['score']), has_answer=ctx['has_answer'], rank=rank
+                            )
+                            documents.append(doc)
+                    
+                    # questionまたはqueryフィールドから質問を取得
+                    question = item.get('query', item.get('question', ''))
+                    # answersまたはanswerフィールドから回答を取得
+                    answers = item.get('answer', item.get('answers', []))
+                    if not isinstance(answers, list):
+                        answers = [answers] if answers else []
+                    
+                    turn_data = TurnData(
+                        question=question, answers=answers,
+                        conv_id=str(item['conv_id']), turn_id=str(item.get('turn_id', '')), documents=documents
+                    )
+                    turn_data_list.append(turn_data)
         
         return turn_data_list
     
@@ -67,20 +107,60 @@ class DPRResultLoader:
             raw_data = json.load(f)
         
         turn_data_list = []
-        for item in raw_data:
-            documents = []
-            for rank, ctx in enumerate(item['ctxs'], 1):
-                doc = RetrievedDocument(
-                    id=ctx['id'], title=ctx['title'], text=ctx['text'],
-                    score=float(ctx['score']), has_answer=ctx['has_answer'], rank=rank
-                )
-                documents.append(doc)
-            
-            turn_data = TurnData(
-                question=item['question'], answers=item['answers'],
-                conv_id=item['conv_id'], turn_id=str(item['turn_id']), documents=documents
-            )
-            turn_data_list.append(turn_data)
+        
+        # データ形式の判定: 会話のリストのリスト（INSCIT形式）か、フラットなリストか
+        if isinstance(raw_data, list) and len(raw_data) > 0:
+            # 最初の要素がリストかどうかで判定
+            if isinstance(raw_data[0], list):
+                # 会話のリストのリスト形式（新しい形式）
+                for conversation in raw_data:
+                    for turn in conversation:
+                        documents = []
+                        # ctxsが存在する場合のみ処理
+                        if 'ctxs' in turn and isinstance(turn['ctxs'], list):
+                            for rank, ctx in enumerate(turn['ctxs'], 1):
+                                doc = RetrievedDocument(
+                                    id=ctx['id'], title=ctx['title'], text=ctx['text'],
+                                    score=float(ctx['score']), has_answer=ctx['has_answer'], rank=rank
+                                )
+                                documents.append(doc)
+                        
+                        # questionまたはqueryフィールドから質問を取得
+                        question = turn.get('query', turn.get('question', ''))
+                        # answersまたはanswerフィールドから回答を取得
+                        answers = turn.get('answer', turn.get('answers', []))
+                        if not isinstance(answers, list):
+                            answers = [answers] if answers else []
+                        
+                        turn_data = TurnData(
+                            question=question, answers=answers,
+                            conv_id=str(turn['conv_id']), turn_id=str(turn['turn_id']), documents=documents
+                        )
+                        turn_data_list.append(turn_data)
+            else:
+                # フラットなリスト形式（古い形式）
+                for item in raw_data:
+                    documents = []
+                    if 'ctxs' in item and isinstance(item['ctxs'], list):
+                        for rank, ctx in enumerate(item['ctxs'], 1):
+                            doc = RetrievedDocument(
+                                id=ctx['id'], title=ctx['title'], text=ctx['text'],
+                                score=float(ctx['score']), has_answer=ctx['has_answer'], rank=rank
+                            )
+                            documents.append(doc)
+                    
+                    # questionまたはqueryフィールドから質問を取得
+                    question = item.get('query', item.get('question', ''))
+                    # answersまたはanswerフィールドから回答を取得
+                    answers = item.get('answer', item.get('answers', []))
+                    if not isinstance(answers, list):
+                        answers = [answers] if answers else []
+                    
+                    turn_data = TurnData(
+                        question=question, answers=answers,
+                        conv_id=str(item['conv_id']), turn_id=str(item.get('turn_id', '')), documents=documents
+                    )
+                    turn_data_list.append(turn_data)
         
         return turn_data_list
 

@@ -1,5 +1,5 @@
 """
-L1正則化付きロジスティック回帰によるclarification分類
+BOLASSO（Bootstrap Lasso）によるロジスティック回帰によるclarification分類
 """
 import argparse
 import warnings
@@ -21,8 +21,8 @@ from module import (
     normalize_features,
     plot_roc_curves,
     plot_pr_curves,
-    plot_single_metric_roc_curves,
-    plot_single_metric_pr_curves
+    bolasso_feature_selection,
+    cross_validate_bolasso
 )
 
 
@@ -31,7 +31,7 @@ BASE_DIR = Path("/home/daiki_shibata/pj/QPP4SIP")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="L1正則化付きロジスティック回帰によるclarification分類")
+    parser = argparse.ArgumentParser(description="BOLASSO（Bootstrap Lasso）によるロジスティック回帰によるclarification分類")
     
     # データセット名（必須）
     parser.add_argument(
@@ -55,22 +55,46 @@ def main():
         help="SIP実験名（デフォルト: データセット名に基づいて自動設定）"
     )
     
+    # BOLASSO特有のパラメータ
+    parser.add_argument(
+        "--n-bootstrap",
+        type=int,
+        default=100,
+        help="ブートストラップサンプルの数（デフォルト: 100）"
+    )
+    
+    parser.add_argument(
+        "--selection-threshold",
+        type=float,
+        default=0.5,
+        help="特徴量選択の閾値（0.0-1.0、デフォルト: 0.5、50%%以上のモデルで選択された特徴量を使用）"
+    )
+    
+    parser.add_argument(
+        "--C",
+        type=float,
+        default=1.0,
+        help="LASSOの正則化パラメータC（デフォルト: 1.0）"
+    )
+    
+    # 交差検証のオプション
+    parser.add_argument(
+        "--use-cv",
+        action="store_true",
+        help="交差検証を使用して特徴量選択を行う（デフォルト: False）"
+    )
+    
+    parser.add_argument(
+        "--n-folds",
+        type=int,
+        default=5,
+        help="交差検証のフォールド数（--use-cvが指定された場合のみ有効、デフォルト: 5）"
+    )
+    
     parser.add_argument(
         "--balance-label-distribution",
         action="store_true",
         help="訓練データのラベル分布をテストデータと同じ正例率に調整する（デフォルト: False）"
-    )
-    
-    parser.add_argument(
-        "--use-combined-normalization",
-        action="store_true",
-        help="訓練データとテストデータを結合してから正規化する（リーク前提、デフォルト: False）"
-    )
-    
-    parser.add_argument(
-        "--use-separate-normalization",
-        action="store_true",
-        help="訓練データとテストデータをそれぞれ個別に正規化する（各々が平均0、標準偏差1になる、デフォルト: False）"
     )
     
     parser.add_argument(
@@ -101,7 +125,7 @@ def main():
         sip_experiment_name = f"{args.dataset}_bert-base_lr2e-05_bs16_kfold5"
     
     sip_output_dir = BASE_DIR / "SIP" / "FT-PLM" / "output" / args.dataset / sip_experiment_name
-    output_dir = BASE_DIR / "LogReg" / "LASSO" / "outputs" / args.dataset
+    output_dir = BASE_DIR / "LogReg" / "BOLASSO" / "outputs" / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # 出力ファイルの準備（print内容をファイルにも保存）
@@ -113,46 +137,16 @@ def main():
         print(*args, **kwargs)
         print(*args, **kwargs, file=output_buffer)
     
-    print_and_save("=== L1正則化付きロジスティック回帰によるclarification分類 ===\n")
+    print_and_save("=== BOLASSO（Bootstrap Lasso）によるロジスティック回帰によるclarification分類 ===\n")
     print_and_save(f"データセット: {args.dataset}")
     print_and_save(f"使用する特徴量: {'ベーススコア + QPPスコア' if use_base_score else 'QPPスコアのみ'}")
+    print_and_save(f"ブートストラップサンプル数: {args.n_bootstrap}")
+    print_and_save(f"特徴量選択閾値: {args.selection_threshold}")
+    print_and_save(f"LASSO正則化パラメータC: {args.C}")
+    print_and_save(f"交差検証: {'使用' if args.use_cv else '不使用'}")
+    if args.use_cv:
+        print_and_save(f"交差検証フォールド数: {args.n_folds}")
     print_and_save(f"ラベル分布の調整: {'有効' if args.balance_label_distribution else '無効'}")
-    
-    # 正規化方法の表示
-    if args.use_separate_normalization:
-        normalization_method = "訓練データとテストデータをそれぞれ個別に正規化"
-    elif args.use_combined_normalization:
-        normalization_method = "結合データで正規化（リーク前提）"
-    else:
-        normalization_method = "訓練データの統計量で正規化（通常）"
-    print_and_save(f"正規化方法: {normalization_method}")
-    
-    if args.use_separate_normalization:
-        warning_msg = (
-            "\n" + "="*80 + "\n"
-            "⚠️  注意: 個別正規化が有効になっています！\n"
-            "⚠️  このオプションは訓練データとテストデータをそれぞれ個別に正規化します。\n"
-            "⚠️  各データセットが独立に正規化されるため、分布の違いは排除されます。\n"
-            "⚠️  実際の予測タスクでは使用できません（テストデータの統計量は未知です）。\n"
-            "⚠️  分布の違いによる影響を確認するための実験的なオプションです。\n"
-            "="*80 + "\n"
-        )
-        print_and_save(warning_msg)
-        # 標準エラー出力にも警告を出力（目立つように）
-        print(warning_msg, file=sys.stderr)
-    elif args.use_combined_normalization:
-        warning_msg = (
-            "\n" + "="*80 + "\n"
-            "⚠️  警告: リーク前提の正規化が有効になっています！\n"
-            "⚠️  このオプションは訓練データとテストデータを結合してから正規化します。\n"
-            "⚠️  実際の予測タスクでは使用できません（データリークが発生します）。\n"
-            "⚠️  分布の違いによる影響を確認するための実験的なオプションです。\n"
-            "="*80 + "\n"
-        )
-        print_and_save(warning_msg)
-        # 標準エラー出力にも警告を出力（目立つように）
-        print(warning_msg, file=sys.stderr)
-    
     print_and_save()
     
     # 1. データ読み込み
@@ -240,21 +234,9 @@ def main():
     print_and_save(f"\n訓練データのラベル分布: {y_train.value_counts().to_dict()} (正例率: {y_train.mean():.4f})")
     print_and_save(f"テストデータのラベル分布: {y_test.value_counts().to_dict()} (正例率: {y_test.mean():.4f})")
     
-    # 3. 前処理: z-score正規化
+    # 3. 前処理: z-score正規化（特徴量選択の前に正規化）
     print_and_save("\n3. z-score正規化中...")
-    if args.use_separate_normalization:
-        print_and_save("  - 方法: 訓練データとテストデータをそれぞれ個別に正規化")
-        print_and_save("  ⚠️  注意: 各データセットが独立に正規化されるため、分布の違いは排除されますが、実際の予測タスクでは使用できません。")
-    elif args.use_combined_normalization:
-        print_and_save("  - 方法: 訓練データとテストデータを結合してから正規化（リーク前提）")
-        print_and_save("  ⚠️  警告: データリークが発生しています！実際の予測タスクでは使用しないでください。")
-    else:
-        print_and_save("  - 方法: 訓練データの統計量でテストデータも正規化（通常）")
-    X_train_norm, X_test_norm = normalize_features(
-        X_train, X_test, 
-        use_combined_normalization=args.use_combined_normalization,
-        use_separate_normalization=args.use_separate_normalization
-    )
+    X_train_norm, X_test_norm, scalers = normalize_features(X_train, X_test)
     print_and_save("  - 正規化完了")
     
     # データ分布の確認（正規化後）
@@ -264,15 +246,8 @@ def main():
     print_and_save("\nテストデータの特徴量統計（正規化後）:")
     print_and_save(X_test_norm.describe().to_string())
     
-    if args.use_combined_normalization:
-        # 結合正規化の場合、結合データ全体の統計も表示
-        X_combined_norm = pd.concat([X_train_norm, X_test_norm], axis=0, ignore_index=True)
-        print_and_save("\n結合データ全体の特徴量統計（正規化後）:")
-        print_and_save(X_combined_norm.describe().to_string())
-        print_and_save("\n→ 結合正規化により、結合データ全体の平均≈0, 標準偏差≈1になるはず")
-    
-    # 分布の違いを数値で確認（正規化前）
-    print_and_save("\n【分布の違いの分析（正規化前）】")
+    # 分布の違いを数値で確認
+    print_and_save("\n【分布の違いの分析】")
     for col in X_train.columns:
         train_mean = X_train[col].mean()
         test_mean = X_test[col].mean()
@@ -283,34 +258,49 @@ def main():
         print_and_save(f"{col}:")
         print_and_save(f"  平均の差: 訓練={train_mean:.4f}, テスト={test_mean:.4f}, 相対差={mean_diff:.4f}")
         print_and_save(f"  標準偏差の差: 訓練={train_std:.4f}, テスト={test_std:.4f}, 相対差={std_diff:.4f}")
-    
-    # 分布の違いを数値で確認（正規化後）
-    print_and_save("\n【分布の違いの分析（正規化後）】")
-    for col in X_train_norm.columns:
+        
+        # 正規化後の分布も確認
         train_norm_mean = X_train_norm[col].mean()
         test_norm_mean = X_test_norm[col].mean()
         train_norm_std = X_train_norm[col].std()
         test_norm_std = X_test_norm[col].std()
-        mean_diff_norm = abs(train_norm_mean - test_norm_mean)
-        std_diff_norm = abs(train_norm_std - test_norm_std)
-        print_and_save(f"{col}:")
-        print_and_save(f"  平均: 訓練={train_norm_mean:.6f}, テスト={test_norm_mean:.6f}, 差={mean_diff_norm:.6f}")
-        print_and_save(f"  標準偏差: 訓練={train_norm_std:.6f}, テスト={test_norm_std:.6f}, 差={std_diff_norm:.6f}")
-        
-        if args.use_combined_normalization:
-            # 結合正規化の場合、結合データ全体の統計も表示
-            X_combined_norm = pd.concat([X_train_norm, X_test_norm], axis=0, ignore_index=True)
-            combined_mean = X_combined_norm[col].mean()
-            combined_std = X_combined_norm[col].std()
-            print_and_save(f"  結合データ全体: 平均={combined_mean:.6f}, 標準偏差={combined_std:.6f}")
-            print_and_save(f"  → 結合正規化により、結合データ全体の平均≈0, 標準偏差≈1になるはず")
+        print_and_save(f"  正規化後 - 平均: 訓練={train_norm_mean:.4f}, テスト={test_norm_mean:.4f}")
+        print_and_save(f"  正規化後 - 標準偏差: 訓練={train_norm_std:.4f}, テスト={test_norm_std:.4f}")
     
-    # 4. モデル学習
-    print_and_save("\n4. モデル学習中...")
-    model = LogisticRegression(
+    # 4. BOLASSO特徴量選択
+    print_and_save("\n4. BOLASSO特徴量選択中...")
+    
+    if args.use_cv:
+        # 交差検証を使用
+        selected_features, cv_results = cross_validate_bolasso(
+            X_train_norm, y_train, args.n_folds, args.n_bootstrap, args.C,
+            args.selection_threshold, 42, print_and_save
+        )
+    else:
+        # 通常のBOLASSO（全訓練データを使用）
+        selected_features = bolasso_feature_selection(
+            X_train_norm, y_train, args.n_bootstrap, args.C,
+            args.selection_threshold, 42, print_and_save
+        )
+        cv_results = None
+    
+    if len(selected_features) == 0:
+        print_and_save("\n⚠️  警告: 選択された特徴量がありません。全ての特徴量を使用します。")
+        selected_features = list(X_train_norm.columns)
+    
+    # 選択された特徴量のみを使用
+    X_train_selected = X_train_norm[selected_features]
+    X_test_selected = X_test_norm[selected_features]
+    
+    print_and_save(f"\n  - 最終的に使用する特徴量: {len(selected_features)}個")
+    print_and_save(f"  - 特徴量リスト: {selected_features}")
+    
+    # 5. 最終モデル学習（選択された特徴量で）
+    print_and_save("\n5. 最終モデル学習中...")
+    final_model = LogisticRegression(
         penalty='l1',
         solver='liblinear',
-        C=1.0,
+        C=args.C,
         max_iter=1000,
         random_state=42,
         class_weight='balanced'
@@ -319,10 +309,10 @@ def main():
     # 警告をキャッチして収束状況を確認
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        model.fit(X_train_norm, y_train)
+        final_model.fit(X_train_selected, y_train)
         
         # 実際の反復回数を確認
-        actual_iter = model.n_iter_[0] if hasattr(model, 'n_iter_') and len(model.n_iter_) > 0 else 'unknown'
+        actual_iter = final_model.n_iter_[0] if hasattr(final_model, 'n_iter_') and len(final_model.n_iter_) > 0 else 'unknown'
         print_and_save(f"  - 実際の反復回数: {actual_iter}")
         
         # 警告があるかチェック（max_iterに達した場合）
@@ -330,7 +320,7 @@ def main():
             for warning in w:
                 if "max_iter" in str(warning.message).lower() or "convergence" in str(warning.message).lower():
                     print_and_save(f"  ⚠️  警告: {warning.message}")
-                    print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {model.max_iter}）")
+                    print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {final_model.max_iter}）")
         else:
             print_and_save("  - 正常に収束しました")
     
@@ -339,26 +329,18 @@ def main():
     # 特徴量の重要度（係数）を表示
     print_and_save("\n特徴量の係数:")
     feature_importance = pd.DataFrame({
-        'feature': X_train_norm.columns,
-        'coefficient': model.coef_[0]
+        'feature': selected_features,
+        'coefficient': final_model.coef_[0]
     }).sort_values('coefficient', key=abs, ascending=False)
     print_and_save(feature_importance.to_string(index=False))
     
-    # 係数が0の特徴量を表示
-    zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
-    if len(zero_coef_features) > 0:
-        print_and_save(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
-        print_and_save(zero_coef_features[['feature']].to_string(index=False))
-    else:
-        print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
+    # 6. 評価
+    print_and_save("\n6. 評価中...")
+    y_train_pred = final_model.predict(X_train_selected)
+    y_test_pred = final_model.predict(X_test_selected)
     
-    # 5. 評価
-    print_and_save("\n5. 評価中...")
-    y_train_pred = model.predict(X_train_norm)
-    y_test_pred = model.predict(X_test_norm)
-    
-    y_train_proba = model.predict_proba(X_train_norm)[:, 1]
-    y_test_proba = model.predict_proba(X_test_norm)[:, 1]
+    y_train_proba = final_model.predict_proba(X_train_selected)[:, 1]
+    y_test_proba = final_model.predict_proba(X_test_selected)[:, 1]
     
     # 訓練データの評価
     train_acc = accuracy_score(y_train, y_train_pred)
@@ -401,30 +383,27 @@ def main():
         print_and_save("  2. ラベル分布の違い（正例率の違い）")
         print_and_save("  3. モデルが単純で過学習が起きにくい（特徴量が少ない場合など）")
         print_and_save("  4. テストデータの方が「簡単」なケースが多い可能性")
-        if args.use_separate_normalization:
-            print_and_save("  5. 個別正規化を使用しているため、分布の違いは排除されていますが、")
-            print_and_save("     それでもテストが高い場合は、分布以外の要因（データの質、ラベル分布など）が考えられます")
     
-    # 6. ROC曲線の描画
-    print_and_save("\n6. ROC曲線を描画中...")
-    feature_names = list(X_train_norm.columns)
+    # 7. ROC曲線の描画
+    print_and_save("\n7. ROC曲線を描画中...")
+    feature_names = list(X_train_selected.columns)
     plot_roc_curves(
-        y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc, output_dir,
+        y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc, output_dir, 
         hide_train=args.hide_train_curves,
-        X_train=X_train_norm if args.show_single_metric_curves else None,
-        X_test=X_test_norm if args.show_single_metric_curves else None,
+        X_train=X_train_selected if args.show_single_metric_curves else None,
+        X_test=X_test_selected if args.show_single_metric_curves else None,
         show_single_metrics=args.show_single_metric_curves,
         feature_names=feature_names
     )
     print_and_save("  - ROC曲線を保存しました")
     
-    # 7. PR曲線の描画
-    print_and_save("\n7. Precision-Recall曲線を描画中...")
+    # 8. PR曲線の描画
+    print_and_save("\n8. Precision-Recall曲線を描画中...")
     plot_pr_curves(
         y_train, y_train_proba, y_test, y_test_proba, train_ap, test_ap, output_dir,
         hide_train=args.hide_train_curves,
-        X_train=X_train_norm if args.show_single_metric_curves else None,
-        X_test=X_test_norm if args.show_single_metric_curves else None,
+        X_train=X_train_selected if args.show_single_metric_curves else None,
+        X_test=X_test_selected if args.show_single_metric_curves else None,
         show_single_metrics=args.show_single_metric_curves,
         feature_names=feature_names
     )
@@ -434,17 +413,6 @@ def main():
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(output_buffer.getvalue())
     print_and_save(f"\n結果をファイルに保存しました: {output_file}")
-    
-    if args.use_separate_normalization:
-        print_and_save("\n" + "="*80)
-        print_and_save("⚠️  最終注意: この結果は個別正規化を使用しています！")
-        print_and_save("⚠️  実際の予測タスクでは使用できません。")
-        print_and_save("="*80)
-    elif args.use_combined_normalization:
-        print_and_save("\n" + "="*80)
-        print_and_save("⚠️  最終警告: この結果はリーク前提の正規化を使用しています！")
-        print_and_save("⚠️  実際の予測タスクでは使用できません。")
-        print_and_save("="*80)
     
     print_and_save("\n=== 完了 ===")
 

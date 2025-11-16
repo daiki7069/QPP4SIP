@@ -51,7 +51,7 @@ def create_binary_labels(response_types: pd.Series, positive_class: str = 'clari
         二値ラベルの配列（1: 正例, 0: 負例）
     """
     # [SEP]で分割されている場合があるので、最初の部分を取得
-    response_types_clean = response_types.str.split(' [SEP] ').str[0].str.strip()
+    response_types_clean = response_types.str.split(' [SEP] ', regex=False).str[0].str.strip()
     
     # 正例を1、それ以外を0に変換
     binary_labels = (response_types_clean == positive_class).astype(int).values
