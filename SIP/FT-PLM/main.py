@@ -6,6 +6,7 @@ queryを入力として、response_typeがclarifyかどうかを予測する
 import argparse
 import json
 import os
+from datetime import datetime
 from typing import Dict, List
 import numpy as np
 from sklearn.metrics import (
@@ -624,7 +625,54 @@ def evaluate(args):
     print(cm)
     
     print("\n分類レポート:")
-    print(classification_report(labels, predictions, target_names=['Not Clarification', 'Clarification']))
+    classification_report_str = classification_report(labels, predictions, target_names=['Not Clarification', 'Clarification'])
+    print(classification_report_str)
+    
+    # 評価結果をテキストファイルに保存
+    results_file_path = os.path.join(args.output_dir, 'evaluation_results.txt')
+    with open(results_file_path, 'w', encoding='utf-8') as f:
+        f.write("=" * 80 + "\n")
+        f.write("評価結果\n")
+        f.write("=" * 80 + "\n\n")
+        
+        if fold_models:
+            f.write(f"評価モード: K-foldアンサンブル評価 ({len(fold_models)} folds)\n")
+            f.write(f"使用したfold: {', '.join([f'fold_{num}' for num, _ in fold_models])}\n\n")
+        else:
+            f.write("評価モード: 単一モデル評価\n\n")
+        
+        f.write("基本統計指標:\n")
+        f.write(f"  Accuracy:  {accuracy:.6f}\n")
+        f.write(f"  Precision: {precision_score:.6f}\n")
+        f.write(f"  Recall:    {recall_score:.6f}\n")
+        f.write(f"  F1 Score:  {f1:.6f}\n")
+        f.write(f"  AUC:       {auc:.6f}\n")
+        f.write(f"  Average Precision: {ap:.6f}\n\n")
+        
+        f.write("混同行列:\n")
+        f.write(f"  True Negative (TN):  {cm[0][0]}\n")
+        f.write(f"  False Positive (FP): {cm[0][1]}\n")
+        f.write(f"  False Negative (FN): {cm[1][0]}\n")
+        f.write(f"  True Positive (TP):   {cm[1][1]}\n\n")
+        f.write("混同行列 (表形式):\n")
+        f.write("                Predicted\n")
+        f.write("                0      1\n")
+        f.write(f"Actual  0      {cm[0][0]:5d}  {cm[0][1]:5d}\n")
+        f.write(f"        1      {cm[1][0]:5d}  {cm[1][1]:5d}\n\n")
+        
+        f.write("分類レポート:\n")
+        f.write(classification_report_str)
+        f.write("\n")
+        
+        f.write("=" * 80 + "\n")
+        f.write(f"評価日時: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"データセット: {args.dataset}\n")
+        f.write(f"評価データ: {args.dev_path}\n")
+        if args.model_path:
+            f.write(f"モデルパス: {args.model_path}\n")
+        f.write("=" * 80 + "\n")
+    
+    print(f"\n評価結果を保存しました: {results_file_path}")
     
     # ROC曲線を保存
     import matplotlib

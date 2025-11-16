@@ -121,14 +121,93 @@ def extract_answers(annotations: List[Dict[str, Any]]) -> List[str]:
     return unique_answers
 
 
+def map_response_type(ambigqa_type: str) -> str:
+    """
+    AmbigQAのresponse typeをINSCITのresponse_typeにマッピング
+    
+    Args:
+        ambigqa_type: AmbigQAのtype（例: "singleAnswer", "multipleQAs"）
+        
+    Returns:
+        INSCIT形式のresponse_type
+    """
+    # AmbigQAのtypeをINSCITのresponse_typeにマッピング
+    type_mapping = {
+        "singleAnswer": "directAnswer",
+        "multipleQAs": "clarification",  # multipleQAsはclarificationにマッピング
+    }
+    return type_mapping.get(ambigqa_type, "directAnswer")
+
+
+def extract_answers_and_types(annotations: List[Dict[str, Any]]) -> tuple[List[str], List[str]]:
+    """
+    annotationsから回答とresponse_typeを抽出
+    
+    Args:
+        annotations: AmbigQAのannotationsリスト
+        
+    Returns:
+        (回答のリスト, response_typeのリスト)
+    """
+    answers = []
+    response_types = []
+    
+    for ann in annotations:
+        # response_typeを取得
+        ann_type = ann.get("type", "singleAnswer")
+        mapped_type = map_response_type(ann_type)
+        response_types.append(mapped_type)
+        
+        # answerを取得
+        if ann_type == "multipleQAs":
+            # multipleQAsの場合はqaPairsから回答を抽出
+            if "qaPairs" in ann:
+                for qa_pair in ann["qaPairs"]:
+                    if "answer" in qa_pair:
+                        if isinstance(qa_pair["answer"], list):
+                            answers.extend(qa_pair["answer"])
+                        else:
+                            answers.append(qa_pair["answer"])
+        elif "answer" in ann:
+            # 通常の場合はanswerフィールドから取得
+            if isinstance(ann["answer"], list):
+                answers.extend(ann["answer"])
+            else:
+                answers.append(ann["answer"])
+    
+    # 重複除去（順序は保持）
+    seen = set()
+    unique_answers = []
+    for ans in answers:
+        if ans not in seen:
+            seen.add(ans)
+            unique_answers.append(ans)
+    
+    # response_typeの重複除去
+    unique_types = list(dict.fromkeys(response_types))  # 順序を保持しながら重複除去
+    
+    return unique_answers, unique_types
+
+
 def create_inscit_format(
     questions: List[Dict[str, Any]],
     predictions: List[List[int]],
     passages: Dict[int, Dict[str, str]],
     top_k: int = 100
-) -> List[Dict[str, Any]]:
+) -> List[List[Dict[str, Any]]]:
     """
     AmbigQAデータをINSCIT形式に変換
+    
+    INSCIT形式:
+    - 最上位は会話のリスト（各会話はターンのリスト）
+    - 各ターンは以下のキーを持つ:
+      - conv_id: 会話ID
+      - turn_id: ターンID（整数、1始まり）
+      - query: 質問文
+      - answer: 回答のリスト
+      - response_type: レスポンスタイプ（複数ある場合は " [SEP] " で結合）
+      - dialogue_history: 対話履歴（文字列のリスト、AmbigNQの場合は空）
+      - ctxs: 検索されたpassageのリスト（オプション、musicモデルでは使用しない）
     
     Args:
         questions: 質問データのリスト
@@ -137,7 +216,7 @@ def create_inscit_format(
         top_k: 使用するpassageの最大数
         
     Returns:
-        INSCIT形式のデータリスト
+        INSCIT形式のデータ（会話のリストのリスト）
     """
     if len(questions) != len(predictions):
         raise ValueError(
@@ -145,7 +224,7 @@ def create_inscit_format(
             f"must have the same length"
         )
     
-    inscit_data = []
+    conversations: List[List[Dict[str, Any]]] = []
     missing_passages = 0
     total_passages = 0
     
@@ -158,9 +237,12 @@ def create_inscit_format(
         # 質問文
         q_text = question.get("question", "")
         
-        # 回答を抽出
+        # 回答とresponse_typeを抽出
         annotations = question.get("annotations", [])
-        answers = extract_answers(annotations)
+        answers, response_types = extract_answers_and_types(annotations)
+        
+        # response_typeを結合（複数ある場合は " [SEP] " で結合）
+        response_type_joined = " [SEP] ".join(response_types) if response_types else ""
         
         # 対応するpassage IDリストを取得
         passage_ids = predictions[i][:top_k]  # top_kまで使用
@@ -183,23 +265,27 @@ def create_inscit_format(
                 missing_passages += 1
                 print(f"[WARN] Missing passage ID: {passage_id} for question {q_id}")
         
-        # INSCIT形式のエントリを作成
-        inscit_entry = {
-            "question": q_text,
-            "answers": answers,
-            "conv_id": str(q_id),  # 質問IDをconv_idとして使用
-            "turn_id": "0",  # 全て0で埋める
-            "ctxs": ctxs
+        # 各質問を1つの会話として扱い、1ターンだけの会話を作成
+        turn = {
+            "conv_id": str(q_id),
+            "turn_id": 1,  # 最初のターン
+            "query": q_text,
+            "answer": answers,
+            "response_type": response_type_joined,
+            "dialogue_history": [],  # AmbigNQは各質問が独立しているため空
+            "ctxs": ctxs  # 検索されたpassageのリスト（musicモデルでは使用しないが、データ形式として保持）
         }
         
-        inscit_data.append(inscit_entry)
+        # 1ターンだけの会話として追加
+        conversations.append([turn])
     
     print(f"[INFO] Conversion complete:")
-    print(f"  - Total questions: {len(inscit_data)}")
+    print(f"  - Total conversations: {len(conversations)}")
+    print(f"  - Total turns: {sum(len(conv) for conv in conversations)}")
     print(f"  - Total passages: {total_passages}")
     print(f"  - Missing passages: {missing_passages}")
     
-    return inscit_data
+    return conversations
 
 
 def main():
