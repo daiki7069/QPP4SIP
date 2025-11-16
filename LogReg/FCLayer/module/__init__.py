@@ -11,6 +11,7 @@ from .utils import (
     merge_features,
     balance_label_distribution,
     normalize_features,
+    get_feature_dir_name,
     plot_roc_curves,
     plot_pr_curves
 )
@@ -26,6 +27,7 @@ __all__ = [
     'merge_features',
     'balance_label_distribution',
     'normalize_features',
+    'get_feature_dir_name',
     'plot_roc_curves',
     'plot_pr_curves',
     'FCTrainer',

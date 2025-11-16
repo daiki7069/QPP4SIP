@@ -19,6 +19,7 @@ from module import (
     merge_features,
     balance_label_distribution,
     normalize_features,
+    get_feature_dir_name,
     plot_roc_curves,
     plot_pr_curves,
     plot_single_metric_roc_curves,
@@ -408,6 +409,13 @@ def main():
     # 6. ROC曲線の描画
     print_and_save("\n6. ROC曲線を描画中...")
     feature_names = list(X_train_norm.columns)
+    
+    # 特徴量名に基づいて出力ディレクトリとファイルパスを設定
+    feature_dir_name = get_feature_dir_name(feature_names)
+    feature_output_dir = output_dir / feature_dir_name
+    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = feature_output_dir / "results.txt"
+    
     plot_roc_curves(
         y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc, output_dir,
         hide_train=args.hide_train_curves,

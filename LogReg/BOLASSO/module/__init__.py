@@ -13,6 +13,7 @@ from .preprocessing import (
     normalize_features
 )
 from .visualization import (
+    get_feature_dir_name,
     plot_roc_curves,
     plot_pr_curves
 )
@@ -34,6 +35,7 @@ __all__ = [
     'balance_label_distribution',
     'normalize_features',
     # visualization
+    'get_feature_dir_name',
     'plot_roc_curves',
     'plot_pr_curves',
     # bolasso
