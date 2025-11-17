@@ -48,6 +48,14 @@ def evaluate_post_retrieval(split: str = 'train', dataset: str = 'INSCIT'):
         #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_wig.csv'),
         #     'column': 'wig'
         # },
+        # 'acc': {
+        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_coherency.csv'),
+        #     'column': 'acc'
+        # },
+        # 'wacc': {
+        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_coherency.csv'),
+        #     'column': 'wacc'
+        # },
     }
     
     # マージ設定

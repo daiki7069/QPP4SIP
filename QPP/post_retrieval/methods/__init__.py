@@ -7,6 +7,7 @@ from .lci import LCI
 from .entropy import Entropy
 from .unique_titles import UniqueTitles
 from .similarity import Similarity
+from .coherency import Coherency
 
 __all__ = [
     'BaseQPPAnalyzer',
@@ -15,5 +16,6 @@ __all__ = [
     'Entropy',
     'UniqueTitles',
     'Similarity',
+    'Coherency',
 ]
 

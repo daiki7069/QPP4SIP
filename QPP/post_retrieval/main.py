@@ -10,6 +10,7 @@ from methods.entropy import Entropy
 from methods.unique_titles import UniqueTitles
 from methods.nqc import NQC
 from methods.wig import WIG
+from methods.coherency import Coherency
 import torch
 
 
@@ -141,6 +142,30 @@ def compute_wig(split: str, dataset: str, top_k: int, k: int = 20, bg_ratio: flo
     )
 
 
+def compute_coherency(split: str, dataset: str, top_k: int, top_t: Optional[int] = None, use_weighted: bool = True, device: Optional[str] = None):
+    """文書間ネットワークを構築し、ACC/WACCを計算"""
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_coherency.json"
+    output_csv_path = output_dir / f"{split}_coherency.csv"
+
+    Coherency.compute_from_files(
+        dpr_json_path=str(dpr_json_path),
+        base_json_path=str(base_json_path),
+        output_json_path=str(output_json_path),
+        output_csv_path=output_csv_path,
+        top_k=top_k,
+        top_t=top_t,
+        use_weighted=use_weighted,
+        device=device
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Post-retrieval QPP分析スクリプト")
     
@@ -155,8 +180,8 @@ def main():
     
     parser.add_argument(
         "--metric",
-        choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "wig", "all"],
-        help="実行モード: 'similarity' (類似度統計), 'lci' (局所的集中度), 'entropy' (エントロピー), 'unique_titles' (ユニークタイトル数), 'nqc' (Normalized Query Clarity), 'wig' (Weighted Information Gain), または 'all' (全て)"
+        choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "wig", "coherency", "all"],
+        help="実行モード: 'similarity' (類似度統計), 'lci' (局所的集中度), 'entropy' (エントロピー), 'unique_titles' (ユニークタイトル数), 'nqc' (Normalized Query Clarity), 'wig' (Weighted Information Gain), 'coherency' (ACC/WACC), または 'all' (全て)"
     )
     parser.add_argument(
         "--split",
@@ -193,6 +218,24 @@ def main():
         type=float,
         default=0.5,
         help="WIG計算の背景モデルとして使う割合 (wigモードのみ, デフォルト: 0.5)"
+    )
+    parser.add_argument(
+        "--top_t",
+        type=int,
+        default=None,
+        help="ネットワーク構築の対象とする上位t文書 (coherencyモードのみ, デフォルト: top_kと同じ)"
+    )
+    parser.add_argument(
+        "--use_weighted",
+        action="store_true",
+        default=True,
+        help="重み付きエッジを使用するかどうか (coherencyモードのみ, デフォルト: True)"
+    )
+    parser.add_argument(
+        "--no_weighted",
+        action="store_false",
+        dest="use_weighted",
+        help="重み付きエッジを使用しない (coherencyモードのみ)"
     )
     
     args = parser.parse_args()
@@ -252,6 +295,16 @@ def main():
             top_k=args.top_k,
             k=args.wig_k,
             bg_ratio=args.wig_bg_ratio
+        )
+    if args.metric == "coherency" or args.metric == "all":
+        print("=== Coherency (ACC/WACC) を計算 ===")
+        compute_coherency(
+            split=args.split,
+            dataset=args.dataset,
+            top_k=args.top_k,
+            top_t=args.top_t,
+            use_weighted=args.use_weighted,
+            device=device
         )
 
 
