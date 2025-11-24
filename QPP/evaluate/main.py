@@ -32,10 +32,10 @@ def evaluate_post_retrieval(split: str = 'train', dataset: str = 'INSCIT'):
         #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_unique_titles.csv'),
         #     'column': 'num_unique_titles'
         # },
-        # 'nqc': {
-        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_nqc.csv'),
-        #     'column': 'nqc'
-        # },
+        'nqc': {
+            'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_nqc.csv'),
+            'column': 'nqc'
+        },
         # 'lci': {
         #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_lci.csv'),
         #     'column': 'lci'
@@ -44,14 +44,14 @@ def evaluate_post_retrieval(split: str = 'train', dataset: str = 'INSCIT'):
             'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_similarity.csv'),
             'column': 'mean_similarity'
         },
-        # 'wig': {
-        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_wig.csv'),
-        #     'column': 'wig'
-        # },
-        # 'acc': {
-        #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_coherency.csv'),
-        #     'column': 'acc'
-        # },
+        'wig': {
+            'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_wig.csv'),
+            'column': 'wig'
+        },
+        'acc': {
+            'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_coherency.csv'),
+            'column': 'acc'
+        },
         # 'wacc': {
         #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_coherency.csv'),
         #     'column': 'wacc'

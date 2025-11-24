@@ -11,6 +11,7 @@ from methods.unique_titles import UniqueTitles
 from methods.nqc import NQC
 from methods.wig import WIG
 from methods.coherency import Coherency
+from methods.clarity import Clarity
 import torch
 
 
@@ -20,6 +21,10 @@ def compute_similarity(split: str, dataset: str, top_k: int, device: Optional[st
     input_dir = base_dir / "dataset" / dataset
     output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # キャッシュディレクトリを構築（dataset/splitで分離）
+    cache_dir = base_dir / "QPP" / "post_retrieval" / ".embedding_cache" / dataset / split
+    cache_dir.mkdir(parents=True, exist_ok=True)
     
     dpr_json_path = input_dir / f"dpr_{split}.json"
     base_json_path = input_dir / f"{split}.json"
@@ -31,7 +36,8 @@ def compute_similarity(split: str, dataset: str, top_k: int, device: Optional[st
         output_json_path=str(output_json_path),
         output_csv_path=output_csv_path,
         top_k=top_k,
-        device=device
+        device=device,
+        cache_dir=str(cache_dir)
     )
 
 
@@ -149,6 +155,10 @@ def compute_coherency(split: str, dataset: str, top_k: int, top_t: Optional[int]
     output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # キャッシュディレクトリを構築（dataset/splitで分離）
+    cache_dir = base_dir / "QPP" / "post_retrieval" / ".embedding_cache" / dataset / split
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    
     dpr_json_path = input_dir / f"dpr_{split}.json"
     base_json_path = input_dir / f"{split}.json"
     output_json_path = input_dir / f"{split}_coherency.json"
@@ -162,7 +172,39 @@ def compute_coherency(split: str, dataset: str, top_k: int, top_t: Optional[int]
         top_k=top_k,
         top_t=top_t,
         use_weighted=use_weighted,
-        device=device
+        device=device,
+        cache_dir=str(cache_dir)
+    )
+
+
+def compute_clarity(split: str, dataset: str, top_k: int, use_scores: bool = True, device: Optional[str] = None):
+    """クエリの語彙分布とコレクション全体の語彙分布のKLダイバージェンス（Clarity）を計算"""
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # コレクション語頻度のキャッシュディレクトリ
+    collection_cache_dir = base_dir / "QPP" / "post_retrieval" / ".collection_cache"
+    collection_cache_dir.mkdir(parents=True, exist_ok=True)
+    collection_freq_cache_path = str(collection_cache_dir / f"{dataset}_collection_freq.pkl")
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_clarity.json"
+    output_csv_path = output_dir / f"{split}_clarity.csv"
+
+    Clarity.compute_from_files(
+        dpr_json_path=str(dpr_json_path),
+        base_json_path=str(base_json_path),
+        output_json_path=str(output_json_path),
+        output_csv_path=output_csv_path,
+        dataset=dataset,
+        top_k=top_k,
+        use_scores=use_scores,
+        collection_freq_cache_path=collection_freq_cache_path,
+        device=device,
+        cache_dir=None
     )
 
 
@@ -180,8 +222,8 @@ def main():
     
     parser.add_argument(
         "--metric",
-        choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "wig", "coherency", "all"],
-        help="実行モード: 'similarity' (類似度統計), 'lci' (局所的集中度), 'entropy' (エントロピー), 'unique_titles' (ユニークタイトル数), 'nqc' (Normalized Query Clarity), 'wig' (Weighted Information Gain), 'coherency' (ACC/WACC), または 'all' (全て)"
+        choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "wig", "coherency", "clarity", "all"],
+        help="実行モード: 'similarity' (類似度統計), 'lci' (局所的集中度), 'entropy' (エントロピー), 'unique_titles' (ユニークタイトル数), 'nqc' (Normalized Query Clarity), 'wig' (Weighted Information Gain), 'coherency' (ACC/WACC), 'clarity' (Query Clarity), または 'all' (全て)"
     )
     parser.add_argument(
         "--split",
@@ -236,6 +278,18 @@ def main():
         action="store_false",
         dest="use_weighted",
         help="重み付きエッジを使用しない (coherencyモードのみ)"
+    )
+    parser.add_argument(
+        "--use_scores",
+        action="store_true",
+        default=True,
+        help="DPRスコアを使用してP(d|Q)を計算するかどうか (clarityモードのみ, デフォルト: True)"
+    )
+    parser.add_argument(
+        "--no_scores",
+        action="store_false",
+        dest="use_scores",
+        help="DPRスコアを使用しない（均等重み） (clarityモードのみ)"
     )
     
     args = parser.parse_args()
@@ -304,6 +358,15 @@ def main():
             top_k=args.top_k,
             top_t=args.top_t,
             use_weighted=args.use_weighted,
+            device=device
+        )
+    if args.metric == "clarity" or args.metric == "all":
+        print("=== Clarity (Query Clarity) を計算 ===")
+        compute_clarity(
+            split=args.split,
+            dataset=args.dataset,
+            top_k=args.top_k,
+            use_scores=args.use_scores,
             device=device
         )
 

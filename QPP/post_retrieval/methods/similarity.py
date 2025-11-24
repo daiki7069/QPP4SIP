@@ -122,7 +122,8 @@ class Similarity(BaseQPPAnalyzer):
         output_json_path: str,
         output_csv_path: Optional[str] = None,
         top_k: Optional[int] = None,
-        device: Optional[str] = None
+        device: Optional[str] = None,
+        cache_dir: Optional[str] = None
     ) -> None:
         """
         DPR結果ファイルから類似度統計を計算し、ベースJSONに追記して出力
@@ -134,14 +135,18 @@ class Similarity(BaseQPPAnalyzer):
             output_csv_path: 出力先のCSVファイルパス（Noneの場合は自動生成）
             top_k: 上位k件の文書のみを処理（Noneの場合は全件、最大100件）
             device: 使用するデバイス（Noneの場合は自動選択）
+            cache_dir: キャッシュディレクトリのパス（Noneの場合はキャッシュを使用しない）
         """
         print(f"Loading DPR results from: {dpr_json_path}")
         turn_data_list = DPRResultLoader(dpr_json_path).load_data()
         print(f"Loaded {len(turn_data_list)} turns")
         
         print("Computing document embeddings and similarity statistics...")
-        # キャッシュディレクトリを設定（デフォルトは.embedding_cache）
-        cache_dir = Path(".embedding_cache")
+        # キャッシュディレクトリを設定
+        if cache_dir is None:
+            cache_dir = Path(".embedding_cache")
+        else:
+            cache_dir = Path(cache_dir)
         analyzer = cls(turn_data_list, device=device, cache_dir=str(cache_dir))
         
         # 類似度統計を計算

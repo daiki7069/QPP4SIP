@@ -228,7 +228,8 @@ class Coherency(BaseQPPAnalyzer):
         top_k: Optional[int] = None,
         top_t: Optional[int] = None,
         use_weighted: bool = True,
-        device: Optional[str] = None
+        device: Optional[str] = None,
+        cache_dir: Optional[str] = None
     ) -> None:
         """
         DPR結果ファイルからCoherency (ACC/WACC)を計算し、ベースJSONに追記して出力
@@ -242,14 +243,18 @@ class Coherency(BaseQPPAnalyzer):
             top_t: ネットワーク構築の対象とする上位t文書（Noneの場合はtop_kと同じ）
             use_weighted: 重み付きエッジを使用するかどうか
             device: 使用するデバイス（Noneの場合は自動選択）
+            cache_dir: キャッシュディレクトリのパス（Noneの場合はキャッシュを使用しない）
         """
         print(f"Loading DPR results from: {dpr_json_path}")
         turn_data_list = DPRResultLoader(dpr_json_path).load_data()
         print(f"Loaded {len(turn_data_list)} turns")
         
         print("Computing document embeddings and coherency metrics...")
-        # キャッシュディレクトリを設定（デフォルトは.embedding_cache）
-        cache_dir = Path(".embedding_cache")
+        # キャッシュディレクトリを設定
+        if cache_dir is None:
+            cache_dir = Path(".embedding_cache")
+        else:
+            cache_dir = Path(cache_dir)
         analyzer = cls(turn_data_list, device=device, cache_dir=str(cache_dir))
         
         # Coherencyを計算

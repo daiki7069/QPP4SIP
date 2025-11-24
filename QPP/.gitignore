@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Collection cache
+post_retrieval/.collection_cache/*
+
+*.log

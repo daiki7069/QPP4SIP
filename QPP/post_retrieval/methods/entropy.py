@@ -77,8 +77,8 @@ class Entropy(BaseQPPAnalyzer):
                 })
                 continue
             
-            # タイトル列を抽出
-            titles = [self._extract_title_from_id(doc.id) for doc in documents]
+            # タイトル列を抽出（doc.titleを直接使用）
+            titles = [doc.title for doc in documents]
             
             # エントロピーを計算
             entropy = self._title_entropy(titles)
