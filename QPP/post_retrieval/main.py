@@ -9,6 +9,8 @@ from methods.lci import LCI
 from methods.entropy import Entropy
 from methods.unique_titles import UniqueTitles
 from methods.nqc import NQC
+from methods.smv import SMV
+from methods.nsv import NSV
 from methods.wig import WIG
 from methods.coherency import Coherency
 from methods.clarity import Clarity
@@ -125,6 +127,48 @@ def compute_nqc(split: str, dataset: str, top_k: int):
     )
 
 
+def compute_smv(split: str, dataset: str, top_k: int):
+    """上位k件のスコアからSMV（Score Magnitude Variance）を計算"""
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_smv.json"
+    output_csv_path = output_dir / f"{split}_smv.csv"
+
+    SMV.compute_from_files(
+        dpr_json_path=str(dpr_json_path),
+        base_json_path=str(base_json_path),
+        output_json_path=str(output_json_path),
+        output_csv_path=output_csv_path,
+        top_k=top_k
+    )
+
+
+def compute_nsv_metric(split: str, dataset: str, top_k: int):
+    """上位k件のスコアからNSV（Normalized Score Variance / N(σ)）を計算"""
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_nsv.json"
+    output_csv_path = output_dir / f"{split}_nsv.csv"
+
+    NSV.compute_from_files(
+        dpr_json_path=str(dpr_json_path),
+        base_json_path=str(base_json_path),
+        output_json_path=str(output_json_path),
+        output_csv_path=output_csv_path,
+        top_k=top_k
+    )
+
+
 def compute_wig(split: str, dataset: str, top_k: int, k: int = 20, bg_ratio: float = 0.5):
     """DPRスコアからWIG（Weighted Information Gain）を計算"""
     base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
@@ -208,6 +252,64 @@ def compute_clarity(split: str, dataset: str, top_k: int, use_scores: bool = Tru
     )
 
 
+def compute_bertqpp_bi(split: str, dataset: str, top_k: int, model_path: Optional[str] = None, device: Optional[str] = None):
+    """BERT-QPP bi-encoder形式でQPPスコアを計算"""
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # キャッシュディレクトリを構築（dataset/splitで分離）
+    cache_dir = base_dir / "QPP" / "post_retrieval" / ".embedding_cache" / dataset / split
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_bertqpp_bi.json"
+    output_csv_path = output_dir / f"{split}_bertqpp_bi.csv"
+    
+    BERTQPPBiEncoder.compute_from_files(
+        dpr_json_path=str(dpr_json_path),
+        base_json_path=str(base_json_path),
+        output_json_path=str(output_json_path),
+        output_csv_path=output_csv_path,
+        model_path=model_path,
+        top_k=1,  # BERT-QPPは通常最初のドキュメントのみを使用
+        use_first_doc_only=True,
+        device=device,
+        cache_dir=str(cache_dir)
+    )
+
+
+def compute_bertqpp_cross(split: str, dataset: str, top_k: int, model_path: Optional[str] = None, device: Optional[str] = None):
+    """BERT-QPP cross-encoder形式でQPPスコアを計算"""
+    base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+    input_dir = base_dir / "dataset" / dataset
+    output_dir = base_dir / "QPP" / "post_retrieval" / "outputs" / dataset
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # キャッシュディレクトリを構築（dataset/splitで分離）
+    cache_dir = base_dir / "QPP" / "post_retrieval" / ".embedding_cache" / dataset / split
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    dpr_json_path = input_dir / f"dpr_{split}.json"
+    base_json_path = input_dir / f"{split}.json"
+    output_json_path = input_dir / f"{split}_bertqpp_cross.json"
+    output_csv_path = output_dir / f"{split}_bertqpp_cross.csv"
+    
+    BERTQPPCrossEncoder.compute_from_files(
+        dpr_json_path=str(dpr_json_path),
+        base_json_path=str(base_json_path),
+        output_json_path=str(output_json_path),
+        output_csv_path=output_csv_path,
+        model_path=model_path,
+        top_k=1,  # BERT-QPPは通常最初のドキュメントのみを使用
+        use_first_doc_only=True,
+        device=device,
+        cache_dir=str(cache_dir)
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description="Post-retrieval QPP分析スクリプト")
     
@@ -222,8 +324,22 @@ def main():
     
     parser.add_argument(
         "--metric",
-        choices=["similarity", "lci", "entropy", "unique_titles", "nqc", "wig", "coherency", "clarity", "all"],
-        help="実行モード: 'similarity' (類似度統計), 'lci' (局所的集中度), 'entropy' (エントロピー), 'unique_titles' (ユニークタイトル数), 'nqc' (Normalized Query Clarity), 'wig' (Weighted Information Gain), 'coherency' (ACC/WACC), 'clarity' (Query Clarity), または 'all' (全て)"
+        choices=[
+            "similarity",
+            "lci",
+            "entropy",
+            "unique_titles",
+            "nqc",
+            "smv",
+            "nsv",
+            "wig",
+            "coherency",
+            "clarity",
+            "bertqpp_bi",
+            "bertqpp_cross",
+            "all"
+        ],
+        help="実行モード: 'similarity', 'lci', 'entropy', 'unique_titles', 'nqc', 'smv', 'nsv', 'wig', 'coherency', 'clarity', 'bertqpp_bi', 'bertqpp_cross', または 'all'"
     )
     parser.add_argument(
         "--split",
@@ -291,6 +407,12 @@ def main():
         dest="use_scores",
         help="DPRスコアを使用しない（均等重み） (clarityモードのみ)"
     )
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        default=None,
+        help="BERT-QPP用のファインチューニング済みモデルのパス (bertqpp_bi/bertqpp_crossモードのみ, デフォルト: bert-base-uncasedを使用)"
+    )
     
     args = parser.parse_args()
     
@@ -341,6 +463,20 @@ def main():
             dataset=args.dataset,
             top_k=args.top_k
         )
+    if args.metric == "smv" or args.metric == "all":
+        print("=== SMV (Score Magnitude Variance) を計算 ===")
+        compute_smv(
+            split=args.split,
+            dataset=args.dataset,
+            top_k=args.top_k
+        )
+    if args.metric == "nsv" or args.metric == "all":
+        print("=== NSV (Normalized Score Variance / N(σ)) を計算 ===")
+        compute_nsv_metric(
+            split=args.split,
+            dataset=args.dataset,
+            top_k=args.top_k
+        )
     if args.metric == "wig" or args.metric == "all":
         print("=== WIG (Weighted Information Gain) を計算 ===")
         compute_wig(
@@ -367,6 +503,24 @@ def main():
             dataset=args.dataset,
             top_k=args.top_k,
             use_scores=args.use_scores,
+            device=device
+        )
+    if args.metric == "bertqpp_bi" or args.metric == "all":
+        print("=== BERT-QPP (bi-encoder) を計算 ===")
+        compute_bertqpp_bi(
+            split=args.split,
+            dataset=args.dataset,
+            top_k=args.top_k,
+            model_path=args.model_path,
+            device=device
+        )
+    if args.metric == "bertqpp_cross" or args.metric == "all":
+        print("=== BERT-QPP (cross-encoder) を計算 ===")
+        compute_bertqpp_cross(
+            split=args.split,
+            dataset=args.dataset,
+            top_k=args.top_k,
+            model_path=args.model_path,
             device=device
         )
 

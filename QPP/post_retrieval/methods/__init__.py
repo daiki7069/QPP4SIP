@@ -8,6 +8,8 @@ from .entropy import Entropy
 from .unique_titles import UniqueTitles
 from .similarity import Similarity
 from .coherency import Coherency
+from .smv import SMV
+from .nsv import NSV
 
 __all__ = [
     'BaseQPPAnalyzer',
@@ -17,5 +19,7 @@ __all__ = [
     'UniqueTitles',
     'Similarity',
     'Coherency',
+    'SMV',
+    'NSV',
 ]
 

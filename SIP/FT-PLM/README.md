@@ -146,7 +146,7 @@ python main.py --mode evaluate \
 
 #### K-fold交差検証モデルの評価
 
-K-fold交差検証で訓練したモデルを評価する場合、`--output_dir`または`--model_path`にK-foldディレクトリを指定すると、自動的に全foldのモデルでアンサンブル評価が実行されます：
+K-fold交差検証で訓練したモデルを評価する場合、または`--model_path`にK-foldディレクトリを指定すると、自動的に全foldのモデルでアンサンブル評価が実行されます：
 
 ```bash
 python main.py --mode evaluate \

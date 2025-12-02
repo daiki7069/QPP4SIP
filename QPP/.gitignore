@@ -13,3 +13,10 @@ wheels/
 post_retrieval/.collection_cache/*
 
 *.log
+
+# Model files (too large for Git)
+*.pth
+*.pkl
+*.pt
+*.ckpt
+*.h5

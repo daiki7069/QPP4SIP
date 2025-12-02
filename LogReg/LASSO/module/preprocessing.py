@@ -3,7 +3,7 @@
 """
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from typing import Tuple
 
 
@@ -83,20 +83,28 @@ def normalize_features(
     X_train: pd.DataFrame,
     X_test: pd.DataFrame,
     use_combined_normalization: bool = False,
-    use_separate_normalization: bool = False
+    use_separate_normalization: bool = False,
+    use_minmax_normalization: bool = False
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    各特徴量を個別にz-score正規化
+    各特徴量を個別に正規化（z-score正規化または[0,1]正規化）
     
     Args:
         X_train: 訓練データの特徴量
         X_test: テストデータの特徴量
         use_combined_normalization: Trueの場合、訓練データとテストデータを結合してから正規化（リーク前提）
-        use_separate_normalization: Trueの場合、訓練データとテストデータをそれぞれ個別に正規化（各々が平均0、標準偏差1になる）
+        use_separate_normalization: Trueの場合、訓練データとテストデータをそれぞれ個別に正規化
+        use_minmax_normalization: Trueの場合、[0,1]正規化（Min-Max正規化）を使用。Falseの場合はz-score正規化
     
     Returns:
         (X_train_norm, X_test_norm)
     """
+    # 使用するスケーラーを選択
+    if use_minmax_normalization:
+        ScalerClass = MinMaxScaler
+    else:
+        ScalerClass = StandardScaler
+    
     if use_separate_normalization:
         # 個別正規化：訓練データとテストデータをそれぞれ個別に正規化
         X_train_norm = X_train.copy()
@@ -106,12 +114,12 @@ def normalize_features(
         scalers_test = {}
         for column in X_train.columns:
             # 訓練データを個別に正規化
-            scaler_train = StandardScaler()
+            scaler_train = ScalerClass()
             X_train_norm[column] = scaler_train.fit_transform(X_train[[column]]).flatten()
             scalers_train[column] = scaler_train
             
             # テストデータを個別に正規化
-            scaler_test = StandardScaler()
+            scaler_test = ScalerClass()
             X_test_norm[column] = scaler_test.fit_transform(X_test[[column]]).flatten()
             scalers_test[column] = scaler_test
         
@@ -123,7 +131,7 @@ def normalize_features(
         
         scalers = {}
         for column in X_train.columns:
-            scaler = StandardScaler()
+            scaler = ScalerClass()
             X_combined_norm[column] = scaler.fit_transform(X_combined[[column]]).flatten()
             scalers[column] = scaler
         
@@ -140,7 +148,7 @@ def normalize_features(
         
         scalers = {}
         for column in X_train.columns:
-            scaler = StandardScaler()
+            scaler = ScalerClass()
             X_train_norm[column] = scaler.fit_transform(X_train[[column]]).flatten()
             X_test_norm[column] = scaler.transform(X_test[[column]]).flatten()
             scalers[column] = scaler

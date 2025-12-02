@@ -6,25 +6,21 @@ from typing import Dict, Tuple
 
 
 def merge_features(
-    base_scores: Dict[Tuple[str, int], float],
-    qpp_scores: Dict[str, Dict[Tuple[str, int], float]],
-    labels: Dict[Tuple[str, int], int],
-    use_base_score: bool = False
+    all_scores: Dict[str, Dict[Tuple[str, int], float]],
+    labels: Dict[Tuple[str, int], int]
 ) -> Tuple[pd.DataFrame, pd.Series]:
     """
     全ての特徴量をマージしてDataFrameを作成
     戻り値: (features_df, labels_series)
     
     Args:
-        use_base_score: Trueの場合、ベーススコア（logit_clarification）も使用する
+        all_scores: 全てのスコア（base、post、nspを含む）の辞書
+                    {feature_name: {(conv_id, turn_id): score}}
+        labels: ラベルの辞書
     """
     # 全てのキーを収集
-    if use_base_score:
-        all_keys = set(base_scores.keys())
-    else:
-        all_keys = set()
-    
-    for metric_scores in qpp_scores.values():
+    all_keys = set()
+    for metric_scores in all_scores.values():
         all_keys.update(metric_scores.keys())
     all_keys = all_keys.intersection(set(labels.keys()))
     
@@ -37,13 +33,9 @@ def merge_features(
             'turn_id': turn_id,
         }
         
-        # ベーススコアを追加（オプション）
-        if use_base_score:
-            row['logit_clarification'] = base_scores.get(key)
-        
-        # QPPスコアを追加
-        for metric_name in qpp_scores.keys():
-            row[metric_name] = qpp_scores[metric_name].get(key)
+        # 全てのスコアを追加
+        for feature_name in all_scores.keys():
+            row[feature_name] = all_scores[feature_name].get(key)
         
         # ラベルを追加
         row['label'] = labels.get(key)
@@ -54,7 +46,7 @@ def merge_features(
     
     # データが空の場合はエラー
     if len(df) == 0:
-        raise ValueError("No data found after merging features. Check if keys match between QPP scores and labels.")
+        raise ValueError("No data found after merging features. Check if keys match between scores and labels.")
     
     # labelカラムが存在するか確認
     if 'label' not in df.columns:
@@ -62,10 +54,7 @@ def merge_features(
     
     # 特徴量とラベルを分離
     # 理論的な特徴量カラム
-    if use_base_score:
-        theoretical_feature_columns = ['logit_clarification'] + list(qpp_scores.keys())
-    else:
-        theoretical_feature_columns = list(qpp_scores.keys())
+    theoretical_feature_columns = list(all_scores.keys())
     
     # 実際にDataFrameに存在する特徴量カラムのみを使用
     # conv_id, turn_id, labelは除外

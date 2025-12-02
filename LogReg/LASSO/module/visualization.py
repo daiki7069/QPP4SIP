@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import List, Optional
-from sklearn.metrics import roc_curve, precision_recall_curve, roc_auc_score, average_precision_score
+from sklearn.metrics import roc_curve, precision_recall_curve, roc_auc_score, average_precision_score, f1_score
 
 
 def get_feature_dir_name(feature_names: Optional[List[str]]) -> str:
@@ -291,4 +291,288 @@ def plot_single_metric_pr_curves(
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 保存先: {output_path}")
     plt.close()
+
+
+def plot_threshold_f1_curves(
+    y_train: pd.Series,
+    y_train_proba: np.ndarray,
+    y_test: pd.Series,
+    y_test_proba: np.ndarray,
+    output_dir: Path,
+    hide_train: bool = False,
+    X_train: pd.DataFrame = None,
+    X_test: pd.DataFrame = None,
+    show_single_metrics: bool = False,
+    feature_names: Optional[List[str]] = None
+) -> None:
+    """閾値とF1スコアの関係を描画して保存"""
+    # 特徴量名からディレクトリ名を生成
+    feature_dir_name = get_feature_dir_name(feature_names)
+    feature_output_dir = output_dir / feature_dir_name
+    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 閾値の範囲を設定（0から1まで0.01刻み）
+    thresholds = np.arange(0.0, 1.01, 0.01)
+    
+    # プロット
+    figsize = (12, 10) if show_single_metrics else (10, 8)
+    plt.figure(figsize=figsize)
+    
+    # モデルのF1スコアを計算
+    train_f1_scores = []
+    test_f1_scores = []
+    
+    for threshold in thresholds:
+        # 訓練データ
+        y_train_pred = (y_train_proba >= threshold).astype(int)
+        train_f1 = f1_score(y_train, y_train_pred)
+        train_f1_scores.append(train_f1)
+        
+        # テストデータ
+        y_test_pred = (y_test_proba >= threshold).astype(int)
+        test_f1 = f1_score(y_test, y_test_pred)
+        test_f1_scores.append(test_f1)
+    
+    # モデルのF1曲線
+    if not hide_train:
+        plt.plot(thresholds, train_f1_scores, label=f'Model Train (Max F1 = {max(train_f1_scores):.4f})', 
+                linewidth=2.5, color='blue')
+    plt.plot(thresholds, test_f1_scores, label=f'Model Test (Max F1 = {max(test_f1_scores):.4f})', 
+            linewidth=2.5, color='red')
+    
+    # 最適な閾値をマーク
+    best_test_threshold_idx = np.argmax(test_f1_scores)
+    best_test_threshold = thresholds[best_test_threshold_idx]
+    best_test_f1 = test_f1_scores[best_test_threshold_idx]
+    plt.plot(best_test_threshold, best_test_f1, 'ro', markersize=10, 
+            label=f'Best Test Threshold = {best_test_threshold:.2f} (F1 = {best_test_f1:.4f})')
+    
+    if not hide_train:
+        best_train_threshold_idx = np.argmax(train_f1_scores)
+        best_train_threshold = thresholds[best_train_threshold_idx]
+        best_train_f1 = train_f1_scores[best_train_threshold_idx]
+        plt.plot(best_train_threshold, best_train_f1, 'bo', markersize=10, 
+                label=f'Best Train Threshold = {best_train_threshold:.2f} (F1 = {best_train_f1:.4f})')
+    
+    # 各特徴量単体のF1曲線（オプション）
+    if show_single_metrics and X_train is not None and X_test is not None:
+        for feature_name in X_train.columns:
+            # 訓練データ
+            train_scores = X_train[feature_name].values
+            train_f1_single_scores = []
+            
+            if not hide_train:
+                for threshold in thresholds:
+                    # 特徴量の値を[0,1]に正規化（既に正規化されている前提）
+                    y_train_pred_single = (train_scores >= threshold).astype(int)
+                    train_f1_single = f1_score(y_train, y_train_pred_single)
+                    train_f1_single_scores.append(train_f1_single)
+                
+                max_train_f1_single = max(train_f1_single_scores)
+                plt.plot(thresholds, train_f1_single_scores, 
+                        label=f'{feature_name} (Train, Max F1 = {max_train_f1_single:.4f})', 
+                        linewidth=1.5, linestyle='--', alpha=0.6)
+            
+            # テストデータ
+            test_scores = X_test[feature_name].values
+            test_f1_single_scores = []
+            for threshold in thresholds:
+                y_test_pred_single = (test_scores >= threshold).astype(int)
+                test_f1_single = f1_score(y_test, y_test_pred_single)
+                test_f1_single_scores.append(test_f1_single)
+            
+            max_test_f1_single = max(test_f1_single_scores)
+            plt.plot(thresholds, test_f1_single_scores, 
+                    label=f'{feature_name} (Test, Max F1 = {max_test_f1_single:.4f})', 
+                    linewidth=1.5, alpha=0.7)
+    
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Threshold', fontsize=12)
+    plt.ylabel('F1 Score', fontsize=12)
+    title = 'Threshold vs F1 Score - Model and Single Metrics' if show_single_metrics else 'Threshold vs F1 Score - L1 Regularized Logistic Regression'
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.legend(loc='lower left', fontsize=9 if show_single_metrics else 11, ncol=1)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    # 保存
+    output_path = feature_output_dir / 'threshold_f1_curves.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - 保存先: {output_path}")
+    plt.close()
+
+
+def plot_feature_distributions(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    output_dir: Path,
+    hide_train: bool = False,
+    feature_names: Optional[List[str]] = None,
+    y_train: pd.Series = None,
+    y_test: pd.Series = None,
+    y_train_proba: np.ndarray = None,
+    y_test_proba: np.ndarray = None
+) -> None:
+    """各特徴量のスコア分布と統合モデルの予測確率分布を描画して保存（全体分布とラベルごとの分布を別々のグラフに）"""
+    # 特徴量名からディレクトリ名を生成
+    feature_dir_name = get_feature_dir_name(feature_names)
+    feature_output_dir = output_dir / feature_dir_name
+    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # カラーマップを生成（特徴量が多い場合に備えて）
+    try:
+        from matplotlib import cm
+        colormap = cm.get_cmap('tab20')
+    except:
+        colormap = plt.cm.get_cmap('tab20')
+    
+    # 1. 全体の分布を描画
+    plt.figure(figsize=(14, 8))
+    
+    # 各特徴量の分布をプロット
+    for idx, feature_name in enumerate(X_train.columns):
+        color = colormap(idx / max(len(X_train.columns) - 1, 1))
+        
+        # 訓練データ
+        if not hide_train:
+            train_values = X_train[feature_name].values
+            plt.hist(train_values, bins=50, alpha=0.4, label=f'{feature_name} (Train)', 
+                    color=color, linestyle='--', linewidth=1.5, histtype='step', density=True)
+        
+        # テストデータ
+        test_values = X_test[feature_name].values
+        plt.hist(test_values, bins=50, alpha=0.6, label=f'{feature_name} (Test)', 
+                color=color, linewidth=2, histtype='step', density=True)
+    
+    # 統合モデルの予測確率分布を追加
+    if y_train_proba is not None and y_test_proba is not None:
+        model_color = 'black'
+        
+        # 訓練データの予測確率
+        if not hide_train:
+            plt.hist(y_train_proba, bins=50, alpha=0.5, label='Combined Model (Train)', 
+                    color=model_color, linestyle='--', linewidth=2.5, histtype='step', density=True)
+        
+        # テストデータの予測確率
+        plt.hist(y_test_proba, bins=50, alpha=0.7, label='Combined Model (Test)', 
+                color=model_color, linewidth=3, histtype='step', density=True)
+    
+    plt.xlabel('Feature Value / Prediction Probability', fontsize=12)
+    plt.ylabel('Density', fontsize=12)
+    title = 'Feature Score and Combined Model Distributions (All)' if not hide_train else 'Feature Score and Combined Model Distributions (All, Test Only)'
+    plt.title(title, fontsize=14, fontweight='bold')
+    plt.legend(loc='upper right', fontsize=8, ncol=2 if len(X_train.columns) <= 5 else 3)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    # 保存
+    output_path = feature_output_dir / 'feature_distributions.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - 保存先: {output_path}")
+    plt.close()
+    
+    # 2. ラベルごとの分布を描画（y_trainとy_testが存在する場合のみ）
+    if y_train is not None and y_test is not None:
+        # サブプロットの数を計算（特徴量数 + 統合モデル）
+        n_features = len(X_train.columns)
+        n_plots = n_features + (1 if y_train_proba is not None and y_test_proba is not None else 0)
+        
+        # サブプロットのレイアウトを決定（2列または3列）
+        n_cols = 3 if n_plots > 6 else 2
+        n_rows = (n_plots + n_cols - 1) // n_cols
+        
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
+        if n_plots == 1:
+            axes = [axes]
+        else:
+            axes = axes.flatten()
+        
+        # 各特徴量の分布をプロット（ラベルごと）
+        for idx, feature_name in enumerate(X_train.columns):
+            ax = axes[idx]
+            color = colormap(idx / max(len(X_train.columns) - 1, 1))
+            gray_color = 'gray'
+            
+            # 訓練データ（ラベルごと）
+            if not hide_train:
+                train_values_pos = X_train[y_train == 1][feature_name].values
+                train_values_neg = X_train[y_train == 0][feature_name].values
+                if len(train_values_pos) > 0:
+                    ax.hist(train_values_pos, bins=50, alpha=0.5, 
+                            label='Train (Pos)', 
+                            color=color, linestyle='--', linewidth=1.5, histtype='step', density=True)
+                if len(train_values_neg) > 0:
+                    ax.hist(train_values_neg, bins=50, alpha=0.5, 
+                            label='Train (Neg)', 
+                            color=gray_color, linestyle='--', linewidth=1.5, histtype='step', density=True)
+            
+            # テストデータ（ラベルごと）
+            test_values_pos = X_test[y_test == 1][feature_name].values
+            test_values_neg = X_test[y_test == 0][feature_name].values
+            if len(test_values_pos) > 0:
+                ax.hist(test_values_pos, bins=50, alpha=0.7, 
+                        label='Test (Pos)', 
+                        color=color, linestyle='-', linewidth=2, histtype='step', density=True)
+            if len(test_values_neg) > 0:
+                ax.hist(test_values_neg, bins=50, alpha=0.7, 
+                        label='Test (Neg)', 
+                        color=gray_color, linestyle='-', linewidth=2, histtype='step', density=True)
+            
+            ax.set_xlabel('Feature Value', fontsize=10)
+            ax.set_ylabel('Density', fontsize=10)
+            ax.set_title(feature_name, fontsize=11, fontweight='bold')
+            ax.legend(loc='upper right', fontsize=8)
+            ax.grid(True, alpha=0.3)
+        
+        # 統合モデルの予測確率分布（ラベルごと）
+        if y_train_proba is not None and y_test_proba is not None:
+            ax = axes[n_features]
+            model_color = 'black'
+            gray_color = 'gray'
+            
+            # 訓練データの予測確率（ラベルごと）
+            if not hide_train:
+                train_proba_pos = y_train_proba[y_train == 1]
+                train_proba_neg = y_train_proba[y_train == 0]
+                if len(train_proba_pos) > 0:
+                    ax.hist(train_proba_pos, bins=50, alpha=0.5, 
+                            label='Train (Pos)', 
+                            color=model_color, linestyle='--', linewidth=2.5, histtype='step', density=True)
+                if len(train_proba_neg) > 0:
+                    ax.hist(train_proba_neg, bins=50, alpha=0.5, 
+                            label='Train (Neg)', 
+                            color=gray_color, linestyle='--', linewidth=2.5, histtype='step', density=True)
+            
+            # テストデータの予測確率（ラベルごと）
+            test_proba_pos = y_test_proba[y_test == 1]
+            test_proba_neg = y_test_proba[y_test == 0]
+            if len(test_proba_pos) > 0:
+                ax.hist(test_proba_pos, bins=50, alpha=0.7, 
+                        label='Test (Pos)', 
+                        color=model_color, linestyle='-', linewidth=3, histtype='step', density=True)
+            if len(test_proba_neg) > 0:
+                ax.hist(test_proba_neg, bins=50, alpha=0.7, 
+                        label='Test (Neg)', 
+                        color=gray_color, linestyle='-', linewidth=3, histtype='step', density=True)
+            
+            ax.set_xlabel('Prediction Probability', fontsize=10)
+            ax.set_ylabel('Density', fontsize=10)
+            ax.set_title('Combined Model', fontsize=11, fontweight='bold')
+            ax.legend(loc='upper right', fontsize=8)
+            ax.grid(True, alpha=0.3)
+        
+        # 余分なサブプロットを非表示
+        for idx in range(n_plots, len(axes)):
+            axes[idx].set_visible(False)
+        
+        plt.suptitle('Feature Score and Combined Model Distributions (by Label)', 
+                    fontsize=14, fontweight='bold', y=1.0)
+        plt.tight_layout()
+        
+        # 保存
+        output_path = feature_output_dir / 'feature_distributions_by_label.png'
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        print(f"  - 保存先: {output_path}")
+        plt.close()
 

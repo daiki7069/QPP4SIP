@@ -10,12 +10,15 @@ import numpy as np
 from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, average_precision_score
+from scipy.optimize import minimize
+from scipy.special import expit
 
 from module import (
     load_json_data,
     extract_labels,
-    extract_base_scores,
     load_qpp_scores,
+    load_base_scores,
+    find_common_nsp_top_k,
     merge_features,
     balance_label_distribution,
     normalize_features,
@@ -23,12 +26,107 @@ from module import (
     plot_roc_curves,
     plot_pr_curves,
     plot_single_metric_roc_curves,
-    plot_single_metric_pr_curves
+    plot_single_metric_pr_curves,
+    plot_threshold_f1_curves,
+    plot_feature_distributions
 )
 
 
 # パス設定（main関数内で動的に設定）
 BASE_DIR = Path("/home/daiki_shibata/pj/QPP4SIP")
+
+
+class NonNegativeLogisticRegression:
+    """非負制約付きL1正則化ロジスティック回帰"""
+    
+    def __init__(self, C=1.0, max_iter=1000, random_state=42, class_weight='balanced', tol=1e-7):
+        self.C = C
+        self.max_iter = max_iter
+        self.random_state = random_state
+        self.class_weight = class_weight
+        self.tol = tol
+        self.coef_ = None
+        self.intercept_ = None
+        self.n_iter_ = None
+        
+    def _logistic_loss(self, params, X, y, sample_weights):
+        """ロジスティック損失関数（L1正則化付き）"""
+        n_features = X.shape[1]
+        w = params[:n_features]
+        b = params[n_features]
+        
+        # 予測
+        z = X @ w + b
+        y_pred = expit(z)
+        
+        # ロジスティック損失
+        loss = -np.sum(sample_weights * (y * np.log(y_pred + 1e-15) + (1 - y) * np.log(1 - y_pred + 1e-15)))
+        
+        # L1正則化
+        l1_penalty = (1.0 / self.C) * np.sum(np.abs(w))
+        
+        return loss + l1_penalty
+    
+    def fit(self, X, y):
+        """モデルの学習"""
+        np.random.seed(self.random_state)
+        
+        # クラス重みの計算
+        if self.class_weight == 'balanced':
+            from sklearn.utils.class_weight import compute_sample_weight
+            sample_weights = compute_sample_weight('balanced', y)
+        else:
+            sample_weights = np.ones(len(y))
+        
+        n_features = X.shape[1]
+        n_samples = X.shape[0]
+        
+        # 初期値（小さい正の値）
+        initial_w = np.random.uniform(0.01, 0.1, n_features)
+        initial_b = 0.0
+        initial_params = np.concatenate([initial_w, [initial_b]])
+        
+        # 非負制約（係数のみ、切片は制約なし）
+        bounds = [(0, None)] * n_features + [(None, None)]
+        
+        # 最適化
+        result = minimize(
+            self._logistic_loss,
+            initial_params,
+            args=(X.values, y.values, sample_weights),
+            method='L-BFGS-B',
+            bounds=bounds,
+            options={
+                'maxiter': self.max_iter,
+                'ftol': self.tol,
+                'gtol': self.tol,
+                'disp': False
+            }
+        )
+        
+        # 収束状況を保存
+        self.optimization_result_ = result
+        self.coef_ = result.x[:n_features].reshape(1, -1)
+        self.intercept_ = result.x[n_features]
+        self.n_iter_ = [result.nit]
+        
+        return self
+    
+    def predict_proba(self, X):
+        """予測確率を返す"""
+        if isinstance(X, pd.DataFrame):
+            X_array = X.values
+        else:
+            X_array = X
+        z = X_array @ self.coef_[0] + self.intercept_
+        proba_positive = expit(z)
+        proba_negative = 1 - proba_positive
+        return np.column_stack([proba_negative, proba_positive])
+    
+    def predict(self, X):
+        """予測ラベルを返す"""
+        proba = self.predict_proba(X)
+        return (proba[:, 1] >= 0.5).astype(int)
 
 
 def main():
@@ -43,18 +141,6 @@ def main():
         help="データセット名（INSCIT または AmbigNQ）"
     )
     
-    parser.add_argument(
-        "--use-base-score",
-        action="store_true",
-        help="ベーススコア（logit_clarification）も特徴量として使用する（デフォルト: False、QPPスコアのみ使用）"
-    )
-    
-    parser.add_argument(
-        "--sip-experiment-name",
-        type=str,
-        default=None,
-        help="SIP実験名（デフォルト: データセット名に基づいて自動設定）"
-    )
     
     parser.add_argument(
         "--balance-label-distribution",
@@ -75,6 +161,12 @@ def main():
     )
     
     parser.add_argument(
+        "--use-minmax-normalization",
+        action="store_true",
+        help="[0,1]正規化（Min-Max正規化）を使用する（デフォルト: False、z-score正規化を使用）"
+    )
+    
+    parser.add_argument(
         "--hide-train-curves",
         action="store_true",
         help="訓練データの曲線を非表示にする（デフォルト: False）"
@@ -86,22 +178,32 @@ def main():
         help="入力に使った指標単体での曲線も表示する（デフォルト: False）"
     )
     
-    args = parser.parse_args()
+    parser.add_argument(
+        "--non-negative-coefficients",
+        action="store_true",
+        help="係数を非負に制約する（デフォルト: False）"
+    )
     
-    use_base_score = args.use_base_score
+    parser.add_argument(
+        "--max-iter",
+        type=int,
+        default=1000,
+        help="最大反復回数（デフォルト: 1000）"
+    )
+    
+    parser.add_argument(
+        "--tol",
+        type=float,
+        default=1e-8,
+        help="収束判定の閾値（デフォルト: 1e-4、より厳しくする場合は1e-7など）"
+    )
+    
+    args = parser.parse_args()
     
     # パスの動的設定
     dataset_dir = BASE_DIR / "dataset" / args.dataset
     qpp_output_dir = BASE_DIR / "QPP" / "post_retrieval" / "outputs" / args.dataset
-    
-    # SIP実験名の設定
-    if args.sip_experiment_name:
-        sip_experiment_name = args.sip_experiment_name
-    else:
-        # デフォルトの実験名（データセット名に基づく）
-        sip_experiment_name = f"{args.dataset}_bert-base_lr2e-05_bs16_kfold5"
-    
-    sip_output_dir = BASE_DIR / "SIP" / "FT-PLM" / "output" / args.dataset / sip_experiment_name
+    nsp_output_dir = BASE_DIR / "QPP" / "next_sentence_prediction" / "outputs" / args.dataset
     output_dir = BASE_DIR / "LogReg" / "LASSO" / "outputs" / args.dataset
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -114,18 +216,30 @@ def main():
         print(*args, **kwargs)
         print(*args, **kwargs, file=output_buffer)
     
+    # 訓練データとテストデータで共通して存在するNSPのtop_k値を検出
+    nsp_top_k = None
+    if nsp_output_dir.exists():
+        nsp_top_k = find_common_nsp_top_k(nsp_output_dir, splits=['train', 'dev'])
+        if nsp_top_k is not None:
+            print_and_save(f"NSP top_k値: {nsp_top_k} (trainとdevで共通)")
+        else:
+            print_and_save("Warning: trainとdevで共通するNSP top_k値が見つかりませんでした")
+    
     print_and_save("=== L1正則化付きロジスティック回帰によるclarification分類 ===\n")
     print_and_save(f"データセット: {args.dataset}")
-    print_and_save(f"使用する特徴量: {'ベーススコア + QPPスコア' if use_base_score else 'QPPスコアのみ'}")
+    print_and_save(f"使用する特徴量: QPPスコア（post + nsp + base）")
+    print_and_save(f"  ベース実験: data_loader内のコメントアウトで選択")
     print_and_save(f"ラベル分布の調整: {'有効' if args.balance_label_distribution else '無効'}")
+    print_and_save(f"非負制約: {'有効' if args.non_negative_coefficients else '無効'}")
     
     # 正規化方法の表示
+    normalization_type = "[0,1]正規化（Min-Max）" if args.use_minmax_normalization else "z-score正規化"
     if args.use_separate_normalization:
-        normalization_method = "訓練データとテストデータをそれぞれ個別に正規化"
+        normalization_method = f"訓練データとテストデータをそれぞれ個別に{normalization_type}"
     elif args.use_combined_normalization:
-        normalization_method = "結合データで正規化（リーク前提）"
+        normalization_method = f"結合データで{normalization_type}（リーク前提）"
     else:
-        normalization_method = "訓練データの統計量で正規化（通常）"
+        normalization_method = f"訓練データの統計量で{normalization_type}（通常）"
     print_and_save(f"正規化方法: {normalization_method}")
     
     if args.use_separate_normalization:
@@ -161,50 +275,54 @@ def main():
     
     # 訓練データ
     train_json_path = dataset_dir / "train.json"
-    train_pred_json_path = sip_output_dir / "train_with_predictions.json"
-    
     train_data = load_json_data(train_json_path)
     train_labels = extract_labels(train_data)
-    train_qpp_scores = load_qpp_scores('train', qpp_output_dir)
     
     print_and_save(f"  - 訓練データ: {len(train_labels)} サンプル")
     
-    # ベーススコアの読み込み（使用する場合のみ）
-    if use_base_score:
-        train_pred_data = load_json_data(train_pred_json_path)
-        train_base_scores = extract_base_scores(train_pred_data)
-        print_and_save(f"  - ベーススコア: {len(train_base_scores)} サンプル")
-    else:
-        train_base_scores = {}  # 空の辞書を渡す（使用しない）
+    # 全てのスコアを読み込む（post、nsp、base）
+    train_all_scores = {}
     
+    # Post-retrievalとNSPスコアを読み込む
+    train_qpp_scores = load_qpp_scores('train', qpp_output_dir, nsp_output_dir=nsp_output_dir, nsp_top_k=nsp_top_k)
+    train_all_scores.update(train_qpp_scores)
     for metric_name, scores in train_qpp_scores.items():
         print_and_save(f"  - {metric_name}: {len(scores)} サンプル")
     
+    # ベーススコアを読み込む（data_loader内のコメントアウトで選択）
+    train_base_scores = load_base_scores('train', args.dataset, BASE_DIR, base_experiment_names=None)
+    if train_base_scores:
+        train_all_scores.update(train_base_scores)
+        for feature_name, scores in train_base_scores.items():
+            print_and_save(f"  - {feature_name}: {len(scores)} サンプル")
+    
     # テストデータ
     dev_json_path = dataset_dir / "dev.json"
-    dev_pred_json_path = sip_output_dir / "dev_with_predictions.json"
-    
     dev_data = load_json_data(dev_json_path)
     dev_labels = extract_labels(dev_data)
     
-    # ベーススコアの読み込み（使用する場合のみ）
-    if use_base_score:
-        dev_pred_data = load_json_data(dev_pred_json_path)
-        dev_base_scores = extract_base_scores(dev_pred_data)
-        print_and_save(f"  - ベーススコア: {len(dev_base_scores)} サンプル")
-    else:
-        dev_base_scores = {}  # 空の辞書を渡す（使用しない）
-    
-    dev_qpp_scores = load_qpp_scores('dev', qpp_output_dir)
-    
     print_and_save(f"  - テストデータ: {len(dev_labels)} サンプル")
+    
+    # 全てのスコアを読み込む（post、nsp、base）
+    dev_all_scores = {}
+    
+    # Post-retrievalとNSPスコアを読み込む
+    dev_qpp_scores = load_qpp_scores('dev', qpp_output_dir, nsp_output_dir=nsp_output_dir, nsp_top_k=nsp_top_k)
+    dev_all_scores.update(dev_qpp_scores)
     for metric_name, scores in dev_qpp_scores.items():
         print_and_save(f"  - {metric_name}: {len(scores)} サンプル")
     
+    # ベーススコアを読み込む（data_loader内のコメントアウトで選択）
+    dev_base_scores = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None)
+    if dev_base_scores:
+        dev_all_scores.update(dev_base_scores)
+        for feature_name, scores in dev_base_scores.items():
+            print_and_save(f"  - {feature_name}: {len(scores)} サンプル")
+    
     # 2. 特徴量マージ
     print_and_save("\n2. 特徴量マージ中...")
-    X_train, y_train = merge_features(train_base_scores, train_qpp_scores, train_labels, use_base_score=use_base_score)
-    X_test, y_test = merge_features(dev_base_scores, dev_qpp_scores, dev_labels, use_base_score=use_base_score)
+    X_train, y_train = merge_features(train_all_scores, train_labels)
+    X_test, y_test = merge_features(dev_all_scores, dev_labels)
     
     print_and_save(f"  - 訓練データ: {len(X_train)} サンプル, {len(X_train.columns)} 特徴量")
     print_and_save(f"  - テストデータ: {len(X_test)} サンプル, {len(X_test.columns)} 特徴量")
@@ -241,8 +359,9 @@ def main():
     print_and_save(f"\n訓練データのラベル分布: {y_train.value_counts().to_dict()} (正例率: {y_train.mean():.4f})")
     print_and_save(f"テストデータのラベル分布: {y_test.value_counts().to_dict()} (正例率: {y_test.mean():.4f})")
     
-    # 3. 前処理: z-score正規化
-    print_and_save("\n3. z-score正規化中...")
+    # 3. 前処理: 正規化
+    normalization_type_name = "[0,1]正規化（Min-Max）" if args.use_minmax_normalization else "z-score正規化"
+    print_and_save(f"\n3. {normalization_type_name}中...")
     if args.use_separate_normalization:
         print_and_save("  - 方法: 訓練データとテストデータをそれぞれ個別に正規化")
         print_and_save("  ⚠️  注意: 各データセットが独立に正規化されるため、分布の違いは排除されますが、実際の予測タスクでは使用できません。")
@@ -254,7 +373,8 @@ def main():
     X_train_norm, X_test_norm = normalize_features(
         X_train, X_test, 
         use_combined_normalization=args.use_combined_normalization,
-        use_separate_normalization=args.use_separate_normalization
+        use_separate_normalization=args.use_separate_normalization,
+        use_minmax_normalization=args.use_minmax_normalization
     )
     print_and_save("  - 正規化完了")
     
@@ -308,32 +428,61 @@ def main():
     
     # 4. モデル学習
     print_and_save("\n4. モデル学習中...")
-    model = LogisticRegression(
-        penalty='l1',
-        solver='liblinear',
-        C=1.0,
-        max_iter=1000,
-        random_state=42,
-        class_weight='balanced'
-    )
-    
-    # 警告をキャッチして収束状況を確認
-    with warnings.catch_warnings(record=True) as w:
-        warnings.simplefilter("always")
+    if args.non_negative_coefficients:
+        print_and_save("  - 非負制約付きモデルを使用します")
+        print_and_save(f"  - 最大反復回数: {args.max_iter}")
+        model = NonNegativeLogisticRegression(
+            C=1.0,
+            max_iter=args.max_iter,
+            random_state=42,
+            class_weight='balanced',
+            tol=args.tol
+        )
         model.fit(X_train_norm, y_train)
-        
-        # 実際の反復回数を確認
         actual_iter = model.n_iter_[0] if hasattr(model, 'n_iter_') and len(model.n_iter_) > 0 else 'unknown'
         print_and_save(f"  - 実際の反復回数: {actual_iter}")
         
-        # 警告があるかチェック（max_iterに達した場合）
-        if w:
-            for warning in w:
-                if "max_iter" in str(warning.message).lower() or "convergence" in str(warning.message).lower():
-                    print_and_save(f"  ⚠️  警告: {warning.message}")
-                    print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {model.max_iter}）")
+        # 収束状況をチェック
+        if hasattr(model, 'optimization_result_'):
+            result = model.optimization_result_
+            if not result.success:
+                print_and_save(f"  ⚠️  警告: 最適化が収束しませんでした")
+                print_and_save(f"  ⚠️  メッセージ: {result.message}")
+                if actual_iter >= args.max_iter:
+                    print_and_save(f"  ⚠️  最大反復回数（{args.max_iter}）に達しました")
+                    print_and_save(f"  ⚠️  --max-iterを増やすことを検討してください")
+            else:
+                print_and_save("  - 正常に収束しました")
         else:
-            print_and_save("  - 正常に収束しました")
+            print_and_save("  - 学習完了（収束状況の確認ができませんでした）")
+    else:
+        model = LogisticRegression(
+            penalty='l1',
+            solver='liblinear',
+            C=1.0,
+            max_iter=args.max_iter,
+            random_state=42,
+            class_weight='balanced',
+            tol=args.tol
+        )
+        
+        # 警告をキャッチして収束状況を確認
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            model.fit(X_train_norm, y_train)
+            
+            # 実際の反復回数を確認
+            actual_iter = model.n_iter_[0] if hasattr(model, 'n_iter_') and len(model.n_iter_) > 0 else 'unknown'
+            print_and_save(f"  - 実際の反復回数: {actual_iter}")
+            
+            # 警告があるかチェック（max_iterに達した場合）
+            if w:
+                for warning in w:
+                    if "max_iter" in str(warning.message).lower() or "convergence" in str(warning.message).lower():
+                        print_and_save(f"  ⚠️  警告: {warning.message}")
+                        print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {model.max_iter}）")
+            else:
+                print_and_save("  - 正常に収束しました")
     
     print_and_save("  - 学習完了")
     
@@ -416,12 +565,17 @@ def main():
     feature_output_dir.mkdir(parents=True, exist_ok=True)
     output_file = feature_output_dir / "results.txt"
     
+    # baseスコアや複数特徴量がある場合は自動的に単一指標も表示
+    has_base_scores = any('logit_clarification' in name for name in feature_names)
+    has_multiple_features = len(feature_names) > 1
+    show_single = args.show_single_metric_curves or has_base_scores or has_multiple_features
+    
     plot_roc_curves(
         y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc, output_dir,
         hide_train=args.hide_train_curves,
-        X_train=X_train_norm if args.show_single_metric_curves else None,
-        X_test=X_test_norm if args.show_single_metric_curves else None,
-        show_single_metrics=args.show_single_metric_curves,
+        X_train=X_train_norm if show_single else None,
+        X_test=X_test_norm if show_single else None,
+        show_single_metrics=show_single,
         feature_names=feature_names
     )
     print_and_save("  - ROC曲線を保存しました")
@@ -431,12 +585,37 @@ def main():
     plot_pr_curves(
         y_train, y_train_proba, y_test, y_test_proba, train_ap, test_ap, output_dir,
         hide_train=args.hide_train_curves,
-        X_train=X_train_norm if args.show_single_metric_curves else None,
-        X_test=X_test_norm if args.show_single_metric_curves else None,
-        show_single_metrics=args.show_single_metric_curves,
+        X_train=X_train_norm if show_single else None,
+        X_test=X_test_norm if show_single else None,
+        show_single_metrics=show_single,
         feature_names=feature_names
     )
     print_and_save("  - PR曲線を保存しました")
+    
+    # 8. 閾値とF1スコアの関係の描画
+    print_and_save("\n8. 閾値とF1スコアの関係を描画中...")
+    plot_threshold_f1_curves(
+        y_train, y_train_proba, y_test, y_test_proba, output_dir,
+        hide_train=args.hide_train_curves,
+        X_train=X_train_norm if show_single else None,
+        X_test=X_test_norm if show_single else None,
+        show_single_metrics=show_single,
+        feature_names=feature_names
+    )
+    print_and_save("  - 閾値とF1スコアの関係を保存しました")
+    
+    # 9. 特徴量のスコア分布の描画
+    print_and_save("\n9. 特徴量のスコア分布を描画中...")
+    plot_feature_distributions(
+        X_train_norm, X_test_norm, output_dir,
+        hide_train=args.hide_train_curves,
+        feature_names=feature_names,
+        y_train=y_train,
+        y_test=y_test,
+        y_train_proba=y_train_proba,
+        y_test_proba=y_test_proba
+    )
+    print_and_save("  - 特徴量のスコア分布を保存しました")
     
     # 結果をファイルに保存
     with open(output_file, 'w', encoding='utf-8') as f:

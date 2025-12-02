@@ -5,7 +5,9 @@ from .data_loader import (
     load_json_data,
     extract_labels,
     extract_base_scores,
-    load_qpp_scores
+    load_qpp_scores,
+    load_base_scores,
+    find_common_nsp_top_k
 )
 from .feature_merger import merge_features
 from .preprocessing import (
@@ -17,7 +19,9 @@ from .visualization import (
     plot_roc_curves,
     plot_pr_curves,
     plot_single_metric_roc_curves,
-    plot_single_metric_pr_curves
+    plot_single_metric_pr_curves,
+    plot_threshold_f1_curves,
+    plot_feature_distributions
 )
 
 __all__ = [
@@ -26,6 +30,8 @@ __all__ = [
     'extract_labels',
     'extract_base_scores',
     'load_qpp_scores',
+    'load_base_scores',
+    'find_common_nsp_top_k',
     # feature_merger
     'merge_features',
     # preprocessing
@@ -37,5 +43,7 @@ __all__ = [
     'plot_pr_curves',
     'plot_single_metric_roc_curves',
     'plot_single_metric_pr_curves',
+    'plot_threshold_f1_curves',
+    'plot_feature_distributions',
 ]
 

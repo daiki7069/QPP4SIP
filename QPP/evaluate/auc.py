@@ -64,7 +64,8 @@ def plot_roc_curves(
     metric_csv_paths: Dict[str, str],
     output_path: str,
     positive_class: str = 'clarification',
-    merge_config: Optional[Dict] = None
+    merge_config: Optional[Dict] = None,
+    metric_column_map: Optional[Dict[str, str]] = None
 ) -> Dict[str, float]:
     """
     複数のQPPメトリクスについてROC曲線を描画し、AUCを計算する
@@ -75,6 +76,7 @@ def plot_roc_curves(
         output_path: 出力画像のパス
         positive_class: 正例とするresponse_type（デフォルト: 'clarification'）
         merge_config: マージ設定（Noneの場合はデフォルト値を使用）
+        metric_column_map: メトリクス名とカラム名のマッピング（Noneの場合は自動推測）
     
     Returns:
         メトリクス名とAUC値の辞書
@@ -120,7 +122,11 @@ def plot_roc_curves(
         
         # スコアカラムを取得（メトリクス名に応じて）
         score_col = None
-        if metric_name == 'nqc':
+        
+        # metric_column_mapが指定されている場合はそれを使用
+        if metric_column_map and metric_name in metric_column_map:
+            score_col = metric_column_map[metric_name]
+        elif metric_name == 'nqc':
             score_col = 'nqc'
         elif metric_name == 'entropy':
             score_col = 'entropy'
@@ -130,6 +136,14 @@ def plot_roc_curves(
             score_col = 'lci'
         elif metric_name == 'similarity':
             score_col = 'mean_similarity'
+        elif metric_name == 'wig':
+            score_col = 'wig'
+        elif metric_name == 'acc':
+            score_col = 'acc'
+        elif metric_name == 'wacc':
+            score_col = 'wacc'
+        elif metric_name == 'clarity':
+            score_col = 'clarity'
         else:
             # メトリクス名がカラム名と一致する場合
             if metric_name in merged_df.columns:
@@ -232,7 +246,8 @@ def plot_pr_curves(
     metric_csv_paths: Dict[str, str],
     output_path: str,
     positive_class: str = 'clarification',
-    merge_config: Optional[Dict] = None
+    merge_config: Optional[Dict] = None,
+    metric_column_map: Optional[Dict[str, str]] = None
 ) -> Dict[str, float]:
     """
     複数のQPPメトリクスについてPrecision-Recall曲線を描画し、Average Precisionを計算する
@@ -243,6 +258,7 @@ def plot_pr_curves(
         output_path: 出力画像のパス
         positive_class: 正例とするresponse_type（デフォルト: 'clarification'）
         merge_config: マージ設定（Noneの場合はデフォルト値を使用）
+        metric_column_map: メトリクス名とカラム名のマッピング（Noneの場合は自動推測）
     
     Returns:
         メトリクス名とAverage Precision値の辞書
@@ -291,7 +307,11 @@ def plot_pr_curves(
         
         # スコアカラムを取得（メトリクス名に応じて）
         score_col = None
-        if metric_name == 'nqc':
+        
+        # metric_column_mapが指定されている場合はそれを使用
+        if metric_column_map and metric_name in metric_column_map:
+            score_col = metric_column_map[metric_name]
+        elif metric_name == 'nqc':
             score_col = 'nqc'
         elif metric_name == 'entropy':
             score_col = 'entropy'
@@ -301,6 +321,14 @@ def plot_pr_curves(
             score_col = 'lci'
         elif metric_name == 'similarity':
             score_col = 'mean_similarity'
+        elif metric_name == 'wig':
+            score_col = 'wig'
+        elif metric_name == 'acc':
+            score_col = 'acc'
+        elif metric_name == 'wacc':
+            score_col = 'wacc'
+        elif metric_name == 'clarity':
+            score_col = 'clarity'
         else:
             # メトリクス名がカラム名と一致する場合
             if metric_name in merged_df.columns:
