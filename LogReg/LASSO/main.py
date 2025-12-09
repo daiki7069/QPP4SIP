@@ -33,11 +33,6 @@ from module import (
     plot_correlation_heatmaps
 )
 from module.bootstrap import (
-    generate_bootstrap_samples,
-    save_bootstrap_samples,
-    load_bootstrap_samples,
-    evaluate_bootstrap,
-    save_bootstrap_results,
     delong_test
 )
 
@@ -211,17 +206,11 @@ def main():
     )
     
     parser.add_argument(
-        "--use-cv",
-        action="store_true",
-        default=True,
-        help="trainとdevを統合してk分割クロスバリデーションを行う（デフォルト: True、--no-cvで無効化）"
-    )
-    
-    parser.add_argument(
         "--no-cv",
         action="store_false",
         dest="use_cv",
-        help="クロスバリデーションを無効化（train/devを分離して評価）"
+        default=True,
+        help="クロスバリデーションを無効化（train/devを分離して評価）。デフォルトではCVが有効（trainとdevの分布が異なるため）"
     )
     
     parser.add_argument(
@@ -237,26 +226,6 @@ def main():
         default="dpr",
         choices=["dpr", "bm25"],
         help="検索手法 (dpr または bm25, デフォルト: dpr)"
-    )
-    
-    parser.add_argument(
-        "--bootstrap",
-        action="store_true",
-        help="ブートストラップ評価を実行する（デフォルト: False）"
-    )
-    
-    parser.add_argument(
-        "--bootstrap-iterations",
-        type=int,
-        default=1000,
-        help="ブートストラップの反復回数（デフォルト: 1000）"
-    )
-    
-    parser.add_argument(
-        "--bootstrap-samples-path",
-        type=str,
-        default=None,
-        help="既存のブートストラップサンプル（インデックス）のパス（指定すると再利用、Noneの場合は新規生成）"
     )
     
     parser.add_argument(
@@ -601,53 +570,6 @@ def main():
         print_and_save(f"\n全Fold統合テストデータ:")
         print_and_save(f"  AUC-ROC: {all_test_auc:.4f}")
         print_and_save(f"  Average Precision: {all_test_ap:.4f}")
-        
-        # ブートストラップ評価（オプション、全fold統合データに対して）
-        if args.bootstrap:
-            print_and_save("\n5.5. ブートストラップ評価中（CV統合データ）...")
-            feature_names = list(X_combined.columns)
-            feature_dir_name = get_feature_dir_name(feature_names)
-            feature_output_dir = output_dir / feature_dir_name
-            feature_output_dir.mkdir(parents=True, exist_ok=True)
-            
-            # ブートストラップサンプルの生成または読み込み
-            bootstrap_samples_path = feature_output_dir / "bootstrap_samples.pkl"
-            if args.bootstrap_samples_path and Path(args.bootstrap_samples_path).exists():
-                print_and_save(f"  - 既存のブートストラップサンプルを読み込み: {args.bootstrap_samples_path}")
-                bootstrap_samples = load_bootstrap_samples(Path(args.bootstrap_samples_path))
-            else:
-                print_and_save(f"  - ブートストラップサンプルを生成中（反復回数: {args.bootstrap_iterations}）...")
-                bootstrap_samples = generate_bootstrap_samples(
-                    n_samples=len(all_test_labels),
-                    n_iterations=args.bootstrap_iterations,
-                    random_state=42
-                )
-                save_bootstrap_samples(bootstrap_samples, bootstrap_samples_path)
-                print_and_save(f"  - ブートストラップサンプルを保存: {bootstrap_samples_path}")
-            
-            # ブートストラップ評価を実行
-            print_and_save(f"  - ブートストラップ評価を実行中...")
-            bootstrap_results = evaluate_bootstrap(
-                y_true=np.array(all_test_labels),
-                y_pred_proba=np.array(all_test_proba),
-                bootstrap_samples=bootstrap_samples,
-                feature_combination_name=feature_dir_name
-            )
-            
-            # 結果を保存
-            bootstrap_results_path = feature_output_dir / "bootstrap_results.csv"
-            save_bootstrap_results(bootstrap_results, bootstrap_results_path)
-            print_and_save(f"  - ブートストラップ結果を保存: {bootstrap_results_path}")
-            
-            # サマリーを表示
-            print_and_save(f"\n  ブートストラップ結果のサマリー:")
-            for metric in ['auc', 'ap', 'f1', 'accuracy']:
-                metric_values = bootstrap_results[bootstrap_results['metric_name'] == metric]['value'].values
-                mean_val = np.mean(metric_values)
-                std_val = np.std(metric_values)
-                ci_lower = np.percentile(metric_values, 2.5)
-                ci_upper = np.percentile(metric_values, 97.5)
-                print_and_save(f"    {metric.upper()}: {mean_val:.4f} ± {std_val:.4f} (95% CI: [{ci_lower:.4f}, {ci_upper:.4f}])")
         
         # 特徴量名に基づいて出力ディレクトリとファイルパスを設定
         feature_names = list(X_combined.columns)
@@ -1168,52 +1090,6 @@ def main():
                 'y_pred_proba': y_test_proba
             }).to_csv(predictions_path, index=False)
             print_and_save(f"  - 回帰モデル同士の比較用に予測結果を保存: {predictions_path}")
-        
-        # ブートストラップ評価（オプション）
-        if args.bootstrap:
-            print_and_save("\n5.5. ブートストラップ評価中...")
-            feature_dir_name = get_feature_dir_name(feature_names)
-            feature_output_dir = output_dir / feature_dir_name
-            feature_output_dir.mkdir(parents=True, exist_ok=True)
-            
-            # ブートストラップサンプルの生成または読み込み
-            bootstrap_samples_path = feature_output_dir / "bootstrap_samples.pkl"
-            if args.bootstrap_samples_path and Path(args.bootstrap_samples_path).exists():
-                print_and_save(f"  - 既存のブートストラップサンプルを読み込み: {args.bootstrap_samples_path}")
-                bootstrap_samples = load_bootstrap_samples(Path(args.bootstrap_samples_path))
-            else:
-                print_and_save(f"  - ブートストラップサンプルを生成中（反復回数: {args.bootstrap_iterations}）...")
-                bootstrap_samples = generate_bootstrap_samples(
-                    n_samples=len(y_test),
-                    n_iterations=args.bootstrap_iterations,
-                    random_state=42
-                )
-                save_bootstrap_samples(bootstrap_samples, bootstrap_samples_path)
-                print_and_save(f"  - ブートストラップサンプルを保存: {bootstrap_samples_path}")
-            
-            # ブートストラップ評価を実行
-            print_and_save(f"  - ブートストラップ評価を実行中...")
-            bootstrap_results = evaluate_bootstrap(
-                y_true=y_test.values,
-                y_pred_proba=y_test_proba,
-                bootstrap_samples=bootstrap_samples,
-                feature_combination_name=feature_dir_name
-            )
-            
-            # 結果を保存
-            bootstrap_results_path = feature_output_dir / "bootstrap_results.csv"
-            save_bootstrap_results(bootstrap_results, bootstrap_results_path)
-            print_and_save(f"  - ブートストラップ結果を保存: {bootstrap_results_path}")
-            
-            # サマリーを表示
-            print_and_save(f"\n  ブートストラップ結果のサマリー:")
-            for metric in ['auc', 'ap', 'f1', 'accuracy']:
-                metric_values = bootstrap_results[bootstrap_results['metric_name'] == metric]['value'].values
-                mean_val = np.mean(metric_values)
-                std_val = np.std(metric_values)
-                ci_lower = np.percentile(metric_values, 2.5)
-                ci_upper = np.percentile(metric_values, 97.5)
-                print_and_save(f"    {metric.upper()}: {mean_val:.4f} ± {std_val:.4f} (95% CI: [{ci_lower:.4f}, {ci_upper:.4f}])")
         
     # クロスバリデーションの場合は、評価結果をスキップ（既にCV結果を表示済み）
     if not args.use_cv:
