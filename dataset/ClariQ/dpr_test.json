@@ -1,0 +1,673 @@
+[
+  [
+    {
+      "conv_id": "201",
+      "turn_id": 1,
+      "query": "I would like to know more about raspberry pi",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "202",
+      "turn_id": 1,
+      "query": "Give me information on uss carl vinson.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "204",
+      "turn_id": 1,
+      "query": "What is most importan rule of golf",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "206",
+      "turn_id": 1,
+      "query": "I'm looking for wind power",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "207",
+      "turn_id": 1,
+      "query": "Tell me about bph treatment",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "208",
+      "turn_id": 1,
+      "query": "tell me more about Doctor Zhivago",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "209",
+      "turn_id": 1,
+      "query": "I'm interested to know about land surveyor",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "210",
+      "turn_id": 1,
+      "query": "golf gps",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "212",
+      "turn_id": 1,
+      "query": "Tell me about home theater systems.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "213",
+      "turn_id": 1,
+      "query": "I'm looking for information on carpal tunnel syndrome",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "215",
+      "turn_id": 1,
+      "query": "Info on maryland department of natural resources",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "216",
+      "turn_id": 1,
+      "query": "which are famous movies where Nicolas Cage appeared?",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "218",
+      "turn_id": 1,
+      "query": "Tell me information about solar water fountains.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "220",
+      "turn_id": 1,
+      "query": "I'm interested in NBA records",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "222",
+      "turn_id": 1,
+      "query": "I'm looking for information on male menopause",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "225",
+      "turn_id": 1,
+      "query": "I'm looking for black and gold.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "226",
+      "turn_id": 1,
+      "query": "Tell me about traverse city.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "230",
+      "turn_id": 1,
+      "query": "tell me about world's biggest dog",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "233",
+      "turn_id": 1,
+      "query": "Tell me about hair dye.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "235",
+      "turn_id": 1,
+      "query": "How do you get a ham radio license?",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "237",
+      "turn_id": 1,
+      "query": "Find me information about a lump in the throat.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "242",
+      "turn_id": 1,
+      "query": "cannellini beans",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "243",
+      "turn_id": 1,
+      "query": "Find information about afghanistan flag",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "244",
+      "turn_id": 1,
+      "query": "old town scottsdale",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "245",
+      "turn_id": 1,
+      "query": "roosevelt island",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "247",
+      "turn_id": 1,
+      "query": "Tell me about rain main.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "248",
+      "turn_id": 1,
+      "query": "What is the shelf life of an egg?",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "249",
+      "turn_id": 1,
+      "query": "What is an occupational therapist?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "253",
+      "turn_id": 1,
+      "query": "What treatments are available for a tooth abscess?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "254",
+      "turn_id": 1,
+      "query": "Tell me about barrett's esophagus",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "255",
+      "turn_id": 1,
+      "query": "Tell me about teddy bears.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "257",
+      "turn_id": 1,
+      "query": "Find information about holes by louis sachar",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "258",
+      "turn_id": 1,
+      "query": "Find information on hip roof",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "259",
+      "turn_id": 1,
+      "query": "What is special about Carpenter bees?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "260",
+      "turn_id": 1,
+      "query": "Tell me about american revolution.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "265",
+      "turn_id": 1,
+      "query": "What were the worst tornadoes in the USA?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "267",
+      "turn_id": 1,
+      "query": "What are the lyrics to feliz navidad?",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "268",
+      "turn_id": 1,
+      "query": "What are the benefits of running?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "269",
+      "turn_id": 1,
+      "query": "Find information about marshall county schools.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "270",
+      "turn_id": 1,
+      "query": "I'm interested in sun tzu",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "271",
+      "turn_id": 1,
+      "query": "Tell me about halloween activities for middle school",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "272",
+      "turn_id": 1,
+      "query": "How can I interpret my dreams",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "273",
+      "turn_id": 1,
+      "query": "Give me information on wilson's disease.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "274",
+      "turn_id": 1,
+      "query": "Find information on golf instruction.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "275",
+      "turn_id": 1,
+      "query": "Tell me about USS Cole.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "276",
+      "turn_id": 1,
+      "query": "how has african american music influence history",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "277",
+      "turn_id": 1,
+      "query": "What is bewitched cast?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "278",
+      "turn_id": 1,
+      "query": "Find information about mister rogers",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "279",
+      "turn_id": 1,
+      "query": "Tell me about game theory.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "281",
+      "turn_id": 1,
+      "query": "What is a ketogenic diet?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "282",
+      "turn_id": 1,
+      "query": "Tell me about nasa interplanetary missions",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "285",
+      "turn_id": 1,
+      "query": "I'm interested in magnesium rich foods",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "288",
+      "turn_id": 1,
+      "query": "I'm interested in Fidel Castro",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "289",
+      "turn_id": 1,
+      "query": "tell me about benefits of yoga",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "290",
+      "turn_id": 1,
+      "query": "Tell me about norway spruce.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "291",
+      "turn_id": 1,
+      "query": "tell me about sangre de cristo mountains",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "294",
+      "turn_id": 1,
+      "query": "tell me more flowering plants",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "297",
+      "turn_id": 1,
+      "query": "Tell me about altitude sickness.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "298",
+      "turn_id": 1,
+      "query": "I'm interested in the topic of medical care and jehovah's witnesses",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "299",
+      "turn_id": 1,
+      "query": "What is pink slime in ground beef",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "300",
+      "turn_id": 1,
+      "query": "How to compute the mean of a set of numbers",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ]
+]

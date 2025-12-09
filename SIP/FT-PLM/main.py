@@ -439,6 +439,219 @@ def find_kfold_models(model_dir):
     return fold_models
 
 
+def transfer_evaluate(args):
+    """
+    転移学習評価フェーズ
+    別データセットで訓練したモデルを別データセットで評価する
+    trainデータとdevデータの両方に対して予測を実行
+    """
+    print("=" * 50)
+    print("転移学習評価フェーズ")
+    print("=" * 50)
+    
+    # 訓練データセットと検証データセットを確認
+    train_dataset = args.train_dataset
+    eval_dataset = args.dataset
+    
+    print(f"訓練データセット: {train_dataset}")
+    print(f"評価データセット: {eval_dataset}")
+    
+    # 訓練データセットのモデルパスを取得
+    # args.output_dirは評価データセット用なので、訓練データセット用に変更
+    base_output_dir = os.path.dirname(args.output_dir)  # 親ディレクトリ（output）
+    train_output_dir = os.path.join(base_output_dir, train_dataset)
+    train_experiment_dir = os.path.join(train_output_dir, args.experiment_name)
+    
+    if not os.path.exists(train_experiment_dir):
+        print(f"エラー: 訓練モデルのディレクトリが見つかりません: {train_experiment_dir}")
+        print("  --train_datasetと--experiment_nameを正しく指定してください。")
+        return
+    
+    print(f"訓練モデルのディレクトリ: {train_experiment_dir}")
+    
+    # K-foldモデルの検出
+    fold_models = find_kfold_models(train_experiment_dir)
+    
+    if not fold_models:
+        print("エラー: K-foldモデルが見つかりません。")
+        print("  転移学習評価にはK-foldモデルが必要です。")
+        return
+    
+    print(f"K-foldモデルを検出しました: {len(fold_models)} folds")
+    
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    # 全foldのモデルを読み込み
+    models = []
+    tokenizers = []
+    for fold_num, fold_model_path in fold_models:
+        print(f"  Fold {fold_num}のモデルを読み込んでいます: {fold_model_path}")
+        tokenizer = AutoTokenizer.from_pretrained(fold_model_path)
+        model = AutoModelForSequenceClassification.from_pretrained(fold_model_path)
+        model.eval()
+        model.to(device)
+        models.append(model)
+        tokenizers.append(tokenizer)
+    
+    # 最初のfoldのトークナイザーを使用
+    tokenizer = tokenizers[0]
+    
+    # 出力ディレクトリの作成（評価データセット用）
+    # LASSO側との互換性のため、SIP/FT-PLM/output/{eval_dataset}/{experiment_name}の形式で保存
+    # experiment_nameは {eval_dataset}_transfer_from_{train_dataset} の形式
+    experiment_name = f"{eval_dataset}_transfer_from_{train_dataset}"
+    output_dir = os.path.join(args.output_dir, experiment_name)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    from dataset import is_clarification
+    
+    # trainデータとdevデータの両方に対して予測を実行
+    for split_name, data_path in [('train', args.train_path), ('dev', args.dev_path)]:
+        if data_path is None or not os.path.exists(data_path):
+            print(f"\n警告: {split_name}データのパスが指定されていないか、ファイルが存在しません: {data_path}")
+            continue
+        
+        print(f"\n{'='*50}")
+        print(f"{split_name.upper()}データの予測を実行中...")
+        print(f"{'='*50}")
+        
+        # データの読み込み
+        print(f"{split_name}データを読み込んでいます...")
+        with open(data_path, 'r', encoding='utf-8') as f:
+            original_data = json.load(f)
+        
+        split_data = load_data(data_path)
+        print(f"{split_name}データ数: {len(split_data)}")
+        
+        # ラベルの抽出
+        labels = [1 if is_clarification(item['response_type']) else 0 for item in split_data]
+        
+        # データセットの作成
+        split_dataset_obj = ClarificationDataset(split_data, tokenizer, max_length=args.max_length)
+        split_loader = DataLoader(split_dataset_obj, batch_size=args.batch_size, shuffle=False)
+        
+        # 全foldで予測を実行
+        print(f"全foldで{split_name}データの予測を実行しています...")
+        all_fold_probs = []
+        all_fold_logits = []
+        
+        for fold_idx, model in enumerate(models):
+            print(f"  Fold {fold_models[fold_idx][0]}で予測中...")
+            fold_probs = []
+            fold_logits = []
+            
+            with torch.no_grad():
+                for batch in split_loader:
+                    input_ids = batch['input_ids'].to(device)
+                    attention_mask = batch['attention_mask'].to(device)
+                    
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                    logits = outputs.logits
+                    batch_probs = torch.softmax(logits, dim=1).cpu().numpy()
+                    batch_logits_np = logits.cpu().numpy()
+                    fold_probs.append(batch_probs)
+                    fold_logits.append(batch_logits_np)
+            
+            # バッチを結合
+            fold_probs = np.concatenate(fold_probs, axis=0)
+            fold_logits = np.concatenate(fold_logits, axis=0)
+            all_fold_probs.append(fold_probs)
+            all_fold_logits.append(fold_logits)
+        
+        # 確率とlogitの平均を計算（アンサンブル）
+        print(f"アンサンブル予測を計算しています...")
+        ensemble_probs = np.mean(all_fold_probs, axis=0)
+        ensemble_logits = np.mean(all_fold_logits, axis=0)
+        
+        # 予測ラベルの取得
+        predictions = np.argmax(ensemble_probs, axis=1)
+        
+        # 評価指標の計算（devデータの場合のみ）
+        if split_name == 'dev':
+            accuracy = accuracy_score(labels, predictions)
+            precision_score, recall_score, f1, _ = precision_recall_fscore_support(labels, predictions, average='binary')
+            
+            # AUCの計算
+            prob_clarification = ensemble_probs[:, 1]
+            auc = roc_auc_score(labels, prob_clarification)
+            
+            # Average Precisionの計算
+            ap = average_precision_score(labels, prob_clarification)
+            
+            print(f"\n{split_name.upper()}データの転移学習評価結果:")
+            print(f"  訓練データセット: {train_dataset}")
+            print(f"  評価データセット: {eval_dataset}")
+            print(f"  Accuracy: {accuracy:.4f}")
+            print(f"  Precision: {precision_score:.4f}")
+            print(f"  Recall: {recall_score:.4f}")
+            print(f"  F1: {f1:.4f}")
+            print(f"  AUC: {auc:.4f}")
+            print(f"  Average Precision: {ap:.4f}")
+        
+        # 予測結果を元のJSON構造に追加
+        flat_idx = 0
+        for conversation in original_data:
+            for turn in conversation:
+                if flat_idx < len(split_data):
+                    turn['prob_not_clarification'] = float(ensemble_probs[flat_idx][0])
+                    turn['prob_clarification'] = float(ensemble_probs[flat_idx][1])
+                    turn['logit_not_clarification'] = float(ensemble_logits[flat_idx][0])
+                    turn['logit_clarification'] = float(ensemble_logits[flat_idx][1])
+                    turn['predicted_label'] = int(predictions[flat_idx])
+                    flat_idx += 1
+        
+        # JSONファイルとして保存
+        # LASSO側との互換性のため、{split}_with_predictions.jsonの形式で保存
+        output_filename = f'{split_name}_with_predictions.json'
+        output_json_path = os.path.join(output_dir, output_filename)
+        
+        with open(output_json_path, 'w', encoding='utf-8') as f:
+            json.dump(original_data, f, ensure_ascii=False, indent=2)
+        
+        print(f"\n予測結果を追加したJSONファイルを保存しました: {output_json_path}")
+        
+        # TSV形式も保存（オプション、LASSO側では使用しないが、デバッグ用に保存）
+        output_tsv_path = os.path.join(output_dir, f'{split_name}_transfer_predictions.txt')
+        with open(output_tsv_path, 'w', encoding='utf-8') as f:
+            # ヘッダー行
+            f.write("query\ttrue_label\tpredicted_label\tprob_not_clarification\tprob_clarification\tlogit_not_clarification\tlogit_clarification\ttrue_response_type\n")
+            
+            # データ行
+            for i, item in enumerate(split_data):
+                query = item['query'].replace('\t', ' ').replace('\n', ' ')
+                true_label = int(labels[i])
+                predicted_label = int(predictions[i])
+                prob_not_clarification = float(ensemble_probs[i][0])
+                prob_clarification = float(ensemble_probs[i][1])
+                logit_not_clarification = float(ensemble_logits[i][0])
+                logit_clarification = float(ensemble_logits[i][1])
+                true_response_type = item['response_type'].replace('\t', ' ').replace('\n', ' ')
+                
+                f.write(f"{query}\t{true_label}\t{predicted_label}\t{prob_not_clarification:.6f}\t{prob_clarification:.6f}\t{logit_not_clarification:.6f}\t{logit_clarification:.6f}\t{true_response_type}\n")
+        
+        print(f"TSV形式の予測結果を保存しました: {output_tsv_path}")
+        
+        # 評価結果をテキストファイルに保存（devデータの場合のみ）
+        if split_name == 'dev':
+            results_path = os.path.join(output_dir, 'transfer_evaluation_results.txt')
+            with open(results_path, 'w', encoding='utf-8') as f:
+                f.write("転移学習評価結果\n")
+                f.write("=" * 50 + "\n")
+                f.write(f"訓練データセット: {train_dataset}\n")
+                f.write(f"評価データセット: {eval_dataset}\n")
+                f.write(f"実験名: {args.experiment_name}\n")
+                f.write(f"K-fold数: {len(fold_models)}\n")
+                f.write("\n")
+                f.write(f"Accuracy: {accuracy:.4f}\n")
+                f.write(f"Precision: {precision_score:.4f}\n")
+                f.write(f"Recall: {recall_score:.4f}\n")
+                f.write(f"F1: {f1:.4f}\n")
+                f.write(f"AUC: {auc:.4f}\n")
+                f.write(f"Average Precision: {ap:.4f}\n")
+            
+            print(f"評価結果を保存しました: {results_path}")
+
+
 def evaluate(args):
     """
     評価フェーズ
@@ -893,10 +1106,17 @@ def main():
                        help='ROC曲線を画像ファイルとして保存')
     
     # モード選択
-    parser.add_argument('--mode', type=str, choices=['train', 'evaluate', 'predict'],
+    parser.add_argument('--mode', type=str, choices=['train', 'evaluate', 'predict', 'transfer_evaluate'],
                        default='train', help='実行モード')
     parser.add_argument('--query', type=str, default=None,
                        help='推論モード時のクエリ')
+    
+    # 転移学習用の設定
+    parser.add_argument('--train_dataset', type=str, default=None,
+                       choices=['INSCIT', 'AmbigNQ'],
+                       help='転移学習評価時に使用する訓練データセット名')
+    parser.add_argument('--experiment_name', type=str, default=None,
+                       help='転移学習評価時に使用する実験名（訓練時の実験名と一致させる）')
     
     # wandb設定
     parser.add_argument('--use_wandb', action='store_true',
@@ -920,6 +1140,16 @@ def main():
     print(f"データセット: {args.dataset}")
     print(f"訓練データ: {args.train_path}")
     print(f"開発データ: {args.dev_path}")
+    
+    # 転移学習評価モードの場合の設定
+    if args.mode == 'transfer_evaluate':
+        if args.train_dataset is None:
+            print("エラー: 転移学習評価モードでは--train_datasetを指定してください。")
+            return
+        if args.experiment_name is None:
+            print("エラー: 転移学習評価モードでは--experiment_nameを指定してください。")
+            print("  例: --experiment_name INSCIT_bert-base_lr2e-05_bs16_kfold5")
+            return
     
     # GPUの指定
     if args.gpu_ids:
@@ -956,6 +1186,8 @@ def main():
                     print("エラー: モデルが見つかりません。--model_pathを指定するか、先に訓練を実行してください。")
                     return
         evaluate(args)
+    elif args.mode == 'transfer_evaluate':
+        transfer_evaluate(args)
     elif args.mode == 'predict':
         if args.query is None:
             print("エラー: --queryを指定してください。")

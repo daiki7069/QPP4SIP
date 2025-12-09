@@ -37,7 +37,8 @@ def train_and_evaluate_bertqpp(
     wandb_mode: str = 'online',
     k_fold: Optional[int] = None,
     random_state: int = 42,
-    multi_gpu: bool = False
+    multi_gpu: bool = False,
+    retrieval_method: str = 'dpr'
 ):
     """
     BERT-QPPの学習と検証を実行
@@ -55,13 +56,13 @@ def train_and_evaluate_bertqpp(
     """
     base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
     input_dir = base_dir / "dataset" / dataset
-    output_dir = base_dir / "QPP" / "neural_qpp" / "outputs" / dataset / f"{model_type}_{metric}"
+    output_dir = base_dir / "QPP" / "neural_qpp" / "outputs" / dataset / retrieval_method / f"{model_type}_{metric}"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # ファイルパス
-    train_dpr_json_path = input_dir / f"dpr_train.json"
+    train_retrieval_json_path = input_dir / f"{retrieval_method}_train.json"
     train_base_json_path = input_dir / f"train.json"
-    dev_dpr_json_path = input_dir / f"dpr_dev.json"
+    dev_retrieval_json_path = input_dir / f"{retrieval_method}_dev.json"
     dev_base_json_path = input_dir / f"dev.json"
     
     print(f"データセット: {dataset}")
@@ -77,7 +78,7 @@ def train_and_evaluate_bertqpp(
     # 学習データの読み込み
     print("\n=== 学習データの読み込み ===")
     train_loader = QPPDataLoader(
-        dpr_json_path=str(train_dpr_json_path),
+        dpr_json_path=str(train_retrieval_json_path),
         base_json_path=str(train_base_json_path)
     )
     train_data = train_loader.load_training_data(metric=metric, use_first_doc_only=True)
@@ -86,7 +87,7 @@ def train_and_evaluate_bertqpp(
     # 検証データの読み込み
     print("\n=== 検証データの読み込み ===")
     dev_loader = QPPDataLoader(
-        dpr_json_path=str(dev_dpr_json_path),
+        dpr_json_path=str(dev_retrieval_json_path),
         base_json_path=str(dev_base_json_path)
     )
     dev_data = dev_loader.load_training_data(metric=metric, use_first_doc_only=True)
@@ -113,7 +114,8 @@ def train_and_evaluate_bertqpp(
             random_state=random_state,
             output_dir=output_dir,
             multi_gpu=multi_gpu,
-            base_device=device
+            base_device=device,
+            retrieval_method=retrieval_method
         )
     
     # wandbの初期化（使用する場合）
@@ -208,7 +210,8 @@ def train_and_evaluate_kfold(
     random_state: int,
     output_dir: Path,
     multi_gpu: bool,
-    base_device: Optional[str]
+    base_device: Optional[str],
+    retrieval_method: str = 'dpr'
 ) -> Dict:
     """
     K-fold交差検証による学習と検証
@@ -593,6 +596,13 @@ def main():
         action="store_true",
         help="利用可能な複数GPUをfoldごとに使い分けてOOMを緩和する"
     )
+    parser.add_argument(
+        "--retrieval_method",
+        type=str,
+        default="dpr",
+        choices=["dpr", "bm25"],
+        help="検索手法 (dpr または bm25, デフォルト: dpr)"
+    )
     
     args = parser.parse_args()
     
@@ -612,7 +622,8 @@ def main():
         wandb_mode=args.wandb_mode,
         k_fold=args.k_fold,
         random_state=args.random_state,
-        multi_gpu=args.multi_gpu
+        multi_gpu=args.multi_gpu,
+        retrieval_method=args.retrieval_method
     )
 
 

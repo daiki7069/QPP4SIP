@@ -10,6 +10,7 @@ from .similarity import Similarity
 from .coherency import Coherency
 from .smv import SMV
 from .nsv import NSV
+from .n_sigma_50 import NSigma50
 
 __all__ = [
     'BaseQPPAnalyzer',
@@ -21,5 +22,6 @@ __all__ = [
     'Coherency',
     'SMV',
     'NSV',
+    'NSigma50',
 ]
 

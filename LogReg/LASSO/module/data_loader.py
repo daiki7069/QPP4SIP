@@ -5,6 +5,23 @@ import json
 import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
+import sys
+from pathlib import Path
+
+# config.pyをmain.pyと同じ階層からインポート
+config_path = Path(__file__).parent.parent / "config.py"
+if config_path.exists():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("config", config_path)
+    config = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(config)
+    POST_RETRIEVAL_CONFIGS = config.POST_RETRIEVAL_CONFIGS
+    PRE_RETRIEVAL_CONFIGS = config.PRE_RETRIEVAL_CONFIGS
+    BASE_EXPERIMENT_NAMES = config.BASE_EXPERIMENT_NAMES
+    NSP_METRICS = config.NSP_METRICS
+    get_nsp_metric_name = config.get_nsp_metric_name
+else:
+    raise FileNotFoundError(f"config.py not found at {config_path}")
 
 
 def load_json_data(json_path: Path) -> List[List[Dict[str, Any]]]:
@@ -18,9 +35,11 @@ def extract_labels(json_data: List[List[Dict[str, Any]]]) -> Dict[Tuple[str, int
     """
     response_typeからラベルを抽出
     [SEP]で区切られている場合は前方を採用
-    clarificationを正例（1）、それ以外を負例（0）とする
+    一時的に: directAnswer以外をclarification（正例1）として扱う
+    directAnswerを負例（0）とする
     """
     labels = {}
+    response_type_counts = {}  # デバッグ用
     for conversation in json_data:
         for turn in conversation:
             # conv_idとturn_idを文字列/整数に統一
@@ -33,9 +52,24 @@ def extract_labels(json_data: List[List[Dict[str, Any]]]) -> Dict[Tuple[str, int
             if ' [SEP] ' in response_type:
                 response_type = response_type.split(' [SEP] ')[0]
             
-            # clarificationを正例（1）、それ以外を負例（0）
-            label = 1 if response_type.strip() == 'clarification' else 0
+            # 一時的に: directAnswer/noAnswerButRelevantInfo以外をclarification（正例1）として扱う
+            label = 0 if (response_type.strip() == 'directAnswer' or response_type.strip() == 'noAnswerButRelevantInfo') else 1
             labels[key] = label
+            
+            # デバッグ用: response_typeの分布をカウント
+            response_type_key = response_type.strip()
+            if response_type_key not in response_type_counts:
+                response_type_counts[response_type_key] = {'total': 0, 'label_0': 0, 'label_1': 0}
+            response_type_counts[response_type_key]['total'] += 1
+            response_type_counts[response_type_key][f'label_{label}'] += 1
+    
+    # デバッグ出力
+    print("\n【ラベル抽出のデバッグ情報】")
+    print("response_type別の分布:")
+    for rt, counts in sorted(response_type_counts.items()):
+        print(f"  {rt}: 総数={counts['total']}, ラベル0={counts['label_0']}, ラベル1={counts['label_1']}")
+    print(f"総ラベル分布: 0={sum(1 for l in labels.values() if l == 0)}, 1={sum(1 for l in labels.values() if l == 1)}")
+    print()
     
     return labels
 
@@ -105,18 +139,13 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
     """
     base_scores = {}
     
-    # ベース実験名の定義（コメントアウトで選択）
-    # 使用したい実験名をコメントアウト解除して有効化
-    default_base_configs = [
-        # f"{dataset}_bert-base_lr2e-05_bs16_kfold5",
-        # f"{dataset}_roberta-base_lr2e-05_bs16_earlystop_kfold5",  # earlystopあり
-        # f"{dataset}_roberta-base_lr2e-05_bs16_kfold5",  # earlystopなし
-        # 他の実験名も追加可能
-    ]
-    
-    # base_experiment_namesが指定されていない場合は、デフォルト設定を使用
+    # base_experiment_namesが指定されていない場合は、configから読み込む
     if base_experiment_names is None:
-        base_experiment_names = default_base_configs
+        # configのBASE_EXPERIMENT_NAMESを使用（dataset変数を展開）
+        base_experiment_names = [
+            exp_name.format(dataset=dataset) if '{dataset}' in exp_name else exp_name
+            for exp_name in BASE_EXPERIMENT_NAMES
+        ]
     
     if len(base_experiment_names) == 0:
         return base_scores
@@ -173,9 +202,9 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
     return base_scores
 
 
-def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = None, nsp_top_k: int = None) -> Dict[str, Dict[Tuple[str, int], float]]:
+def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = None, nsp_top_k: int = None, pre_retrieval_output_dir: Path = None) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
-    QPPスコアを読み込む（post_retrievalとnspの両方）
+    QPPスコアを読み込む（post_retrieval、pre_retrieval、nspの全て）
     戻り値: {metric_name: {(conv_id, turn_id): score}}
     
     Args:
@@ -183,27 +212,12 @@ def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = Non
         qpp_output_dir: post_retrievalの出力ディレクトリ
         nsp_output_dir: next_sentence_predictionの出力ディレクトリ（オプション）
         nsp_top_k: 使用するNSPのtop_k値（Noneの場合は自動検出）
+        pre_retrieval_output_dir: pre_retrievalの出力ディレクトリ（オプション）
     """
     qpp_scores = {}
     
-    # Post-retrieval QPPスコアの定義
-    # 使用したいメトリクスをコメントアウト解除して有効化
-    post_qpp_configs = {
-        # 'nqc': ('nqsc.csv', 'nqc'),
-        'similarity': ('similarity.csv', 'mean_similarity'),
-        # 'clarity': ('clarity.csv', 'clarity'),
-        # 'wig': ('wig.csv', 'wig'),
-        'smv': ('smv.csv', 'smv'),
-        # 'nsv': ('nsv.csv', 'nsv'),
-        # 'entropy': ('entropy.csv', 'entropy'),
-        # 'lci': ('lci.csv', 'lci'),
-        # 'unique_titles': ('unique_titles.csv', 'num_unique_titles'),
-        # 'acc': ('coherency.csv', 'acc'),
-        # 'wacc': ('coherency.csv', 'wacc'),
-    }
-    
-    # Post-retrievalスコアを読み込む
-    for metric_name, (filename, column_name) in post_qpp_configs.items():
+    # Post-retrieval QPPスコアを読み込む（configから有効なメトリクスのみ）
+    for metric_name, (filename, column_name) in POST_RETRIEVAL_CONFIGS.items():
         csv_path = qpp_output_dir / f"{split}_{filename}"
         if not csv_path.exists():
             print(f"Warning: {csv_path} not found, skipping {metric_name}")
@@ -224,6 +238,39 @@ def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = Non
         
         qpp_scores[metric_name] = scores
         print(f"Loaded {len(scores)} {metric_name} scores for {split}")
+    
+    # Pre-retrieval QPPスコアを読み込む（configから有効なメトリクスのみ）
+    # pre_retrieval_output_dirがNoneでも、PRE_RETRIEVAL_CONFIGSが定義されていれば自動的にパスを設定
+    if len(PRE_RETRIEVAL_CONFIGS) > 0:
+        # pre_retrieval_output_dirが指定されていない場合は、デフォルトパスを使用
+        if pre_retrieval_output_dir is None:
+            # デフォルトパスを設定（qpp_output_dirから推測）
+            base_dir = qpp_output_dir.parent.parent.parent  # QPP/post_retrieval/outputs -> QPP
+            pre_retrieval_output_dir = base_dir / "pre_retrieval" / "outputs" / qpp_output_dir.parent.name
+        
+        for metric_name, (filename, column_name) in PRE_RETRIEVAL_CONFIGS.items():
+            csv_path = pre_retrieval_output_dir / f"{split}_{filename}"
+            if not csv_path.exists():
+                print(f"Warning: {csv_path} not found, skipping {metric_name}")
+                continue
+            
+            # conv_idを文字列として読み込む（科学記数法を避けるため）
+            df = pd.read_csv(csv_path, dtype={'conv_id': str})
+            scores = {}
+            for _, row in df.iterrows():
+                # conv_idは既に文字列として読み込まれている
+                conv_id = str(row['conv_id'])
+                turn_id = int(row['turn_id'])
+                key = (conv_id, turn_id)
+                
+                value = row[column_name]
+                if pd.notna(value):
+                    scores[key] = float(value)
+            
+            # pre_retrievalプレフィックスを付けて区別
+            prefixed_metric_name = f"pre_{metric_name}"
+            qpp_scores[prefixed_metric_name] = scores
+            print(f"Loaded {len(scores)} {prefixed_metric_name} scores for {split}")
     
     # NSPスコアを読み込む（オプション）
     if nsp_output_dir is not None:
@@ -254,14 +301,9 @@ def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = Non
         # conv_idを文字列として読み込む
         df = pd.read_csv(csv_path, dtype={'conv_id': str})
         
-        # NSPメトリクスを読み込む
-        nsp_metrics = {
-            # 'node_connectivity': f'nsp_node_connectivity_topk{top_k}',
-            # 'average_node_connectivity': f'nsp_avg_node_connectivity_topk{top_k}',
-            # 'density': f'nsp_density_topk{top_k}',
-        }
-        
-        for column_name, metric_name in nsp_metrics.items():
+        # NSPメトリクスを読み込む（configから有効なメトリクスのみ）
+        for column_name, _ in NSP_METRICS.items():
+            metric_name = get_nsp_metric_name(column_name, top_k)
             if column_name not in df.columns:
                 print(f"Warning: {column_name} not found in {csv_path}, skipping")
                 continue

@@ -13,6 +13,9 @@ from collections import Counter
 import pickle
 import gzip
 import sys
+import hashlib
+import tempfile
+import shutil
 from .base import BaseQPPAnalyzer
 from data_loader import TurnData, DPRResultLoader
 
@@ -25,6 +28,7 @@ class Clarity(BaseQPPAnalyzer):
         turn_data_list: List[TurnData], 
         collection_freq: Optional[Dict[str, int]] = None,
         collection_freq_cache_path: Optional[str] = None,
+        document_lm_cache_dir: Optional[str] = None,
         device: Optional[str] = None,
         cache_dir: Optional[str] = None
     ):
@@ -43,6 +47,26 @@ class Clarity(BaseQPPAnalyzer):
                 except Exception as e:
                     print(f"Warning: Failed to load collection frequency cache: {e}")
                     self.collection_freq = None
+        
+        # コレクション言語モデルを事前に計算してメモリにキャッシュ
+        self.collection_language_model: Optional[Dict[str, float]] = None
+        if self.collection_freq is not None and len(self.collection_freq) > 0:
+            self.collection_language_model = self._compute_collection_language_model()
+            if self.collection_language_model:
+                total_cf = sum(self.collection_freq.values())
+                print(f"Computed collection language model: {len(self.collection_language_model)} unique words, {total_cf:,} total tokens")
+        
+        # 文書言語モデルのキャッシュ設定
+        if document_lm_cache_dir:
+            self.document_lm_cache_dir = Path(document_lm_cache_dir)
+            self.document_lm_cache_dir.mkdir(parents=True, exist_ok=True)
+            # メモリキャッシュのサイズ制限（最大1000エントリ、メモリ節約のため）
+            self.document_lm_cache: Dict[str, Dict[str, float]] = {}
+            self.document_lm_cache_max_size = 1000  # メモリキャッシュの最大サイズ
+        else:
+            self.document_lm_cache_dir = None
+            self.document_lm_cache = {}
+            self.document_lm_cache_max_size = 0
     
     def _tokenize(self, text: str) -> List[str]:
         """
@@ -73,72 +97,302 @@ class Clarity(BaseQPPAnalyzer):
         tokens = self._tokenize(text)
         return Counter(tokens)
     
-    def _compute_query_language_model(
-        self, 
-        documents: List, 
-        use_scores: bool = True
+    def _get_document_lm_cache_key(self, doc_text: str, mu: float) -> str:
+        """
+        文書言語モデルのキャッシュキーを生成
+        
+        Args:
+            doc_text: 文書テキスト
+            mu: Dirichlet smoothingパラメータ
+        
+        Returns:
+            キャッシュキー（ハッシュ値）
+        """
+        # テキストとmuパラメータからハッシュを生成
+        text_hash = hashlib.md5(doc_text.encode('utf-8')).hexdigest()
+        key = f"{text_hash}_{mu:.1f}"
+        return key
+    
+    def _compute_document_language_model(
+        self,
+        doc_text: str,
+        mu: float = 2000.0,
+        use_cache: bool = True
     ) -> Dict[str, float]:
         """
-        クエリ言語モデル P(w|Q) を計算
+        文書言語モデル P(t|d) を計算（Dirichlet smoothing）
         
-        P(w|Q) = Σ_d P(w|d) * P(d|Q)
+        P(t|d) = (tf(t,d) + mu * P(t|C)) / (|d| + mu)
+        
+        Args:
+            doc_text: 文書テキスト
+            mu: Dirichlet smoothingパラメータ（デフォルト: 2000.0）
+            use_cache: キャッシュを使用するかどうか
+        
+        Returns:
+            P(t|d) の辞書
+        """
+        # キャッシュから取得を試みる
+        if use_cache and self.document_lm_cache_dir:
+            cache_key = self._get_document_lm_cache_key(doc_text, mu)
+            
+            # メモリキャッシュから取得
+            if cache_key in self.document_lm_cache:
+                return self.document_lm_cache[cache_key]
+            
+            # ファイルキャッシュから取得
+            cache_file = self.document_lm_cache_dir / f"{cache_key}.pkl"
+            if cache_file.exists():
+                try:
+                    with open(cache_file, 'rb') as f:
+                        P_t_d = pickle.load(f)
+                    # メモリキャッシュにも保存（サイズ制限あり）
+                    if len(self.document_lm_cache) >= self.document_lm_cache_max_size:
+                        # 最も古いエントリを削除（FIFO方式）
+                        oldest_key = next(iter(self.document_lm_cache))
+                        del self.document_lm_cache[oldest_key]
+                    self.document_lm_cache[cache_key] = P_t_d
+                    return P_t_d
+                except Exception as e:
+                    # キャッシュファイルが破損している場合は再計算
+                    pass
+        
+        # キャッシュにない場合は計算
+        # 文書内の語頻度を計算
+        doc_word_freq = self._compute_document_word_freq(doc_text)
+        doc_len = sum(doc_word_freq.values())
+        
+        if doc_len == 0:
+            P_t_d = {}
+        else:
+            # コレクション言語モデルを取得（必要に応じて計算）
+            P_t_C = self._compute_collection_language_model(use_cache=True)
+            if not P_t_C:
+                # コレクション言語モデルがない場合は単純なMLE
+                P_t_d = {word: freq / doc_len for word, freq in doc_word_freq.items()}
+            else:
+                # Dirichlet smoothingでP(t|d)を計算
+                P_t_d = {}
+                for word, freq in doc_word_freq.items():
+                    P_t_C_word = P_t_C.get(word, 0.0)
+                    P_t_d[word] = (freq + mu * P_t_C_word) / (doc_len + mu)
+        
+        # キャッシュに保存
+        if use_cache and self.document_lm_cache_dir:
+            cache_key = self._get_document_lm_cache_key(doc_text, mu)
+            cache_file = self.document_lm_cache_dir / f"{cache_key}.pkl"
+            
+            try:
+                with open(cache_file, 'wb') as f:
+                    pickle.dump(P_t_d, f)
+                # メモリキャッシュにも保存（サイズ制限あり）
+                if len(self.document_lm_cache) >= self.document_lm_cache_max_size:
+                    # 最も古いエントリを削除（FIFO方式）
+                    oldest_key = next(iter(self.document_lm_cache))
+                    del self.document_lm_cache[oldest_key]
+                self.document_lm_cache[cache_key] = P_t_d
+            except Exception as e:
+                # キャッシュ保存に失敗しても計算結果は返す
+                pass
+        
+        return P_t_d
+    
+    def _estimate_relevance_model_em(
+        self,
+        documents: List,
+        query_tokens: List[str],
+        doc_language_models: Optional[List[Dict[str, float]]] = None,
+        initial_scores: Optional[np.ndarray] = None,
+        max_iter: int = 50,
+        epsilon: float = 1e-6,
+        mu: float = 2000.0,
+        verbose: bool = False
+    ) -> tuple:
+        """
+        EMアルゴリズムでRelevance Model（RM1）を推定し、P(d|q)を返す
         
         Args:
             documents: 上位k文書のリスト
-            use_scores: DPRスコアを使用してP(d|Q)を計算するかどうか
+            query_tokens: クエリのトークンリスト
+            doc_language_models: 各文書の言語モデルP(t|d)のリスト（Noneの場合は計算）
+            initial_scores: 初期スコア（DPRスコアなど）。Noneの場合は均等重み
+            max_iter: 最大反復回数
+            epsilon: 収束判定の閾値
+            mu: Dirichlet smoothingパラメータ
+            verbose: 進捗を表示するかどうか
         
         Returns:
-            P(w|Q) の辞書
+            (P(d|q)の配列, doc_language_models) のタプル
+        """
+        k = len(documents)
+        if k == 0 or len(query_tokens) == 0:
+            return np.array([]), []
+        
+        # 各文書の言語モデルP(t|d)を計算（まだ計算されていない場合）
+        if doc_language_models is None:
+            doc_language_models = []
+            for doc in documents:
+                P_t_d = self._compute_document_language_model(doc.text, mu=mu)
+                doc_language_models.append(P_t_d)
+        
+        # 初期化: P^(0)(d) = softmax(score(d,q))
+        if initial_scores is not None and len(initial_scores) == k:
+            scores = np.array(initial_scores)
+            if np.all(scores == scores[0]):
+                P_d_q = np.ones(k) / k
+            else:
+                exp_scores = np.exp(scores - np.max(scores))
+                P_d_q = exp_scores / np.sum(exp_scores)
+        else:
+            # 均等重みで初期化
+            P_d_q = np.ones(k) / k
+        
+        # EMアルゴリズム
+        for iteration in range(max_iter):
+            P_d_q_old = P_d_q.copy()
+            
+            # E-step: P^(i)(d|t) を計算
+            # P(d|t) = P(t|d) * P(d) / Σ_d' P(t|d') * P(d')
+            P_d_t = np.zeros((len(query_tokens), k))
+            
+            for t_idx, term in enumerate(query_tokens):
+                denominator = 0.0
+                numerators = np.zeros(k)
+                
+                for d_idx in range(k):
+                    P_t_d_val = doc_language_models[d_idx].get(term, 0.0)
+                    numerators[d_idx] = P_t_d_val * P_d_q[d_idx]
+                    denominator += numerators[d_idx]
+                
+                if denominator > 0:
+                    P_d_t[t_idx, :] = numerators / denominator
+                else:
+                    # すべて0の場合は均等分布
+                    P_d_t[t_idx, :] = np.ones(k) / k
+            
+            # M-step: P^(i+1)(d) = (1/|q|) * Σ_t P^(i)(d|t)
+            P_d_q = np.mean(P_d_t, axis=0)
+            
+            # 正規化（念のため）
+            total = np.sum(P_d_q)
+            if total > 0:
+                P_d_q = P_d_q / total
+            else:
+                P_d_q = np.ones(k) / k
+            
+            # 収束判定
+            max_diff = np.max(np.abs(P_d_q - P_d_q_old))
+            if verbose and iteration % 10 == 0:
+                print(f"  EM iteration {iteration}: max_diff = {max_diff:.6f}", file=sys.stderr)
+            
+            if max_diff < epsilon:
+                if verbose:
+                    print(f"  EM converged at iteration {iteration}", file=sys.stderr)
+                break
+        
+        return P_d_q, doc_language_models
+    
+    def _compute_query_language_model(
+        self, 
+        documents: List,
+        query_tokens: List[str],
+        use_em: bool = True,
+        use_scores: bool = True,
+        max_em_iter: int = 50,
+        em_epsilon: float = 1e-6,
+        mu: float = 2000.0,
+        verbose: bool = False
+    ) -> Dict[str, float]:
+        """
+        クエリ言語モデル P(w|R_q) を計算（Relevance Model）
+        
+        P(w|R_q) = Σ_d P(w|d) * P(d|q)
+        
+        Args:
+            documents: 上位k文書のリスト
+            query_tokens: クエリのトークンリスト
+            use_em: EMアルゴリズムを使用するかどうか（True: 正式なClarity, False: 簡略版）
+            use_scores: DPRスコアを使用して初期化するかどうか（use_em=Trueの場合）
+            max_em_iter: EMアルゴリズムの最大反復回数
+            em_epsilon: EMアルゴリズムの収束判定閾値
+            mu: Dirichlet smoothingパラメータ
+            verbose: 進捗を表示するかどうか
+        
+        Returns:
+            P(w|R_q) の辞書
         """
         k = len(documents)
         if k == 0:
             return {}
         
-        # P(d|Q) を計算（DPRスコアをsoftmaxで正規化）
-        if use_scores:
-            scores = np.array([doc.score for doc in documents])
-            # スコアがすべて同じ場合の処理
-            if np.all(scores == scores[0]):
-                P_d_Q = np.ones(k) / k
+        # 各文書の言語モデルP(t|d)を事前に計算（一度だけ）
+        doc_language_models = []
+        for doc in documents:
+            P_t_d = self._compute_document_language_model(doc.text, mu=mu)
+            doc_language_models.append(P_t_d)
+        
+        # P(d|q) を計算
+        if use_em:
+            # EMアルゴリズムで推定（正式なClarity）
+            if use_scores:
+                initial_scores = np.array([doc.score for doc in documents])
             else:
-                # softmaxで正規化
-                exp_scores = np.exp(scores - np.max(scores))  # 数値安定性のため
-                P_d_Q = exp_scores / np.sum(exp_scores)
-        else:
-            # 均等重み
-            P_d_Q = np.ones(k) / k
-        
-        # P(w|Q) = Σ_d P(w|d) * P(d|Q) を計算
-        P_w_Q = Counter()
-        
-        for i, doc in enumerate(documents):
-            # P(w|d) を計算（文書内の語頻度）
-            doc_word_freq = self._compute_document_word_freq(doc.text)
-            doc_len = sum(doc_word_freq.values())
+                initial_scores = None
             
-            if doc_len > 0:
-                for word, freq in doc_word_freq.items():
-                    P_w_d = freq / doc_len
-                    P_w_Q[word] += P_w_d * P_d_Q[i]
+            P_d_q, doc_language_models = self._estimate_relevance_model_em(
+                documents=documents,
+                query_tokens=query_tokens,
+                doc_language_models=doc_language_models,  # 事前計算したものを渡す
+                initial_scores=initial_scores,
+                max_iter=max_em_iter,
+                epsilon=em_epsilon,
+                mu=mu,
+                verbose=verbose
+            )
+        else:
+            # 簡略版: DPRスコアをsoftmaxで正規化
+            if use_scores:
+                scores = np.array([doc.score for doc in documents])
+                if np.all(scores == scores[0]):
+                    P_d_q = np.ones(k) / k
+                else:
+                    exp_scores = np.exp(scores - np.max(scores))
+                    P_d_q = exp_scores / np.sum(exp_scores)
+            else:
+                P_d_q = np.ones(k) / k
+        
+        # P(w|R_q) = Σ_d P(w|d) * P(d|q) を計算（事前計算したdoc_language_modelsを使用）
+        P_w_Rq = Counter()
+        
+        for i, P_w_d in enumerate(doc_language_models):
+            for word, prob in P_w_d.items():
+                P_w_Rq[word] += prob * P_d_q[i]
         
         # 正規化（確率分布にする）
-        total = sum(P_w_Q.values())
+        total = sum(P_w_Rq.values())
         if total > 0:
-            P_w_Q = {word: prob / total for word, prob in P_w_Q.items()}
+            P_w_Rq = {word: prob / total for word, prob in P_w_Rq.items()}
         else:
-            P_w_Q = {}
+            P_w_Rq = {}
         
-        return P_w_Q
+        return P_w_Rq
     
-    def _compute_collection_language_model(self) -> Dict[str, float]:
+    def _compute_collection_language_model(self, use_cache: bool = True) -> Dict[str, float]:
         """
         コレクション言語モデル P(w|C) を計算
         
         P(w|C) = cf(w) / Σ_w' cf(w')
         
+        Args:
+            use_cache: メモリキャッシュを使用するかどうか（デフォルト: True）
+        
         Returns:
             P(w|C) の辞書
         """
+        # メモリキャッシュから取得（既に計算済みの場合）
+        if use_cache and self.collection_language_model is not None:
+            return self.collection_language_model
+        
         if self.collection_freq is None or len(self.collection_freq) == 0:
             return {}
         
@@ -146,7 +400,13 @@ class Clarity(BaseQPPAnalyzer):
         if total_cf == 0:
             return {}
         
+        # 計算（軽量なので毎回計算しても問題ない）
         P_w_C = {word: freq / total_cf for word, freq in self.collection_freq.items()}
+        
+        # メモリキャッシュに保存（__init__で既に計算されている場合は不要だが、念のため）
+        if use_cache:
+            self.collection_language_model = P_w_C
+        
         return P_w_C
     
     def _compute_kl_divergence(
@@ -181,14 +441,24 @@ class Clarity(BaseQPPAnalyzer):
     def compute(
         self,
         top_k: Optional[int] = None,
-        use_scores: bool = True
+        use_scores: bool = True,
+        use_em: bool = True,
+        max_em_iter: int = 50,
+        em_epsilon: float = 1e-6,
+        mu: float = 2000.0,
+        verbose: bool = False
     ) -> pd.DataFrame:
         """
         各ターンについて、Clarityスコアを計算
         
         Args:
             top_k: 上位k件の文書のみを処理（Noneの場合は全件、最大100件）
-            use_scores: DPRスコアを使用してP(d|Q)を計算するかどうか
+            use_scores: DPRスコアを使用して初期化するかどうか（use_em=Trueの場合）
+            use_em: EMアルゴリズムを使用するかどうか（True: 正式なClarity, False: 簡略版）
+            max_em_iter: EMアルゴリズムの最大反復回数
+            em_epsilon: EMアルゴリズムの収束判定閾値
+            mu: Dirichlet smoothingパラメータ
+            verbose: 進捗を表示するかどうか
         
         Returns:
             DataFrame with columns: conv_id, turn_id, clarity, num_documents
@@ -196,9 +466,8 @@ class Clarity(BaseQPPAnalyzer):
         if self.collection_freq is None:
             raise ValueError("Collection frequency is required. Please provide collection_freq or load from cache.")
         
-        # コレクション言語モデルを計算（一度だけ）
-        P_w_C = self._compute_collection_language_model()
-        
+        # コレクション言語モデルを取得（必要に応じて計算、同じインスタンス内ではキャッシュされる）
+        P_w_C = self._compute_collection_language_model(use_cache=True)
         if not P_w_C:
             raise ValueError("Collection language model is empty. Please check collection_freq.")
         
@@ -207,7 +476,7 @@ class Clarity(BaseQPPAnalyzer):
         # tqdmの設定: nohup環境でも進捗が見えるように設定
         for turn in tqdm(
             self.turn_data_list, 
-            desc="Computing Clarity", 
+            desc="Computing Clarity" + (" (EM)" if use_em else " (simplified)"), 
             unit="turn",
             file=sys.stderr,  # 標準エラー出力に進捗を表示（nohupでも見える）
             mininterval=1.0,  # 最低1秒間隔で更新（ログファイルの肥大化を防ぐ）
@@ -224,10 +493,32 @@ class Clarity(BaseQPPAnalyzer):
                 })
                 continue
             
-            # クエリ言語モデルを計算
-            P_w_Q = self._compute_query_language_model(documents, use_scores=use_scores)
+            # クエリをトークン化
+            question = turn.question
+            query_tokens = self._tokenize(question)
             
-            if not P_w_Q:
+            if len(query_tokens) == 0:
+                results.append({
+                    'conv_id': turn.conv_id,
+                    'turn_id': turn.turn_id,
+                    'clarity': np.nan,
+                    'num_documents': len(documents)
+                })
+                continue
+            
+            # クエリ言語モデルを計算（Relevance Model）
+            P_w_Rq = self._compute_query_language_model(
+                documents=documents,
+                query_tokens=query_tokens,
+                use_em=use_em,
+                use_scores=use_scores,
+                max_em_iter=max_em_iter,
+                em_epsilon=em_epsilon,
+                mu=mu,
+                verbose=verbose
+            )
+            
+            if not P_w_Rq:
                 results.append({
                     'conv_id': turn.conv_id,
                     'turn_id': turn.turn_id,
@@ -237,7 +528,7 @@ class Clarity(BaseQPPAnalyzer):
                 continue
             
             # KLダイバージェンスを計算
-            clarity = self._compute_kl_divergence(P_w_Q, P_w_C)
+            clarity = self._compute_kl_divergence(P_w_Rq, P_w_C)
             
             results.append({
                 'conv_id': turn.conv_id,
@@ -252,7 +543,8 @@ class Clarity(BaseQPPAnalyzer):
     def compute_collection_frequency(
         dataset: str,
         collection_freq_cache_path: Optional[str] = None,
-        max_docs: Optional[int] = None
+        max_docs: Optional[int] = None,
+        batch_size: int = 50000  # 大規模コーパス用にバッチ処理（AmbigNQ用）
     ) -> Dict[str, int]:
         """
         コレクション全体の語頻度を計算
@@ -359,24 +651,131 @@ class Clarity(BaseQPPAnalyzer):
             if not collection_path.exists():
                 raise FileNotFoundError(f"Collection file not found: {collection_path}")
             
+            # ファイルサイズを取得（進捗表示のため）
+            file_size = collection_path.stat().st_size
+            print(f"File size: {file_size / (1024**3):.2f} GB", file=sys.stderr)
+            
+            # AmbigNQのコレクションサイズは約2100万〜2500万文書
+            # より正確な進捗表示のため、推定総文書数を使用
+            estimated_total_docs = 21000000  # デフォルトは2100万
+            # ファイルサイズから推定（1文書あたり約200バイトと仮定、gzip圧縮比3倍を考慮）
+            size_based_estimate = int((file_size * 3) / 200)
+            if 20000000 <= size_based_estimate <= 30000000:
+                estimated_total_docs = size_based_estimate
+            print(f"Estimated total documents: {estimated_total_docs:,}", file=sys.stderr)
+            
+            # メモリ効率のため、バッチ処理を実装
+            # バッチごとにディスクにキャッシュし、最後にマージする方式
+            temp_dir = Path(tempfile.mkdtemp(prefix="clarity_collection_freq_batch_"))
+            batch_cache_files: List[Path] = []
+            print(f"Using temporary directory for batch caches: {temp_dir}", file=sys.stderr)
+            
+            batch_collection_freq = Counter()
             doc_count = 0
+            batch_doc_count = 0
+            
             with gzip.open(collection_path, 'rt', encoding='utf-8') as f:
                 # ヘッダーをスキップ
-                next(f)
-                for line in tqdm(
-                    f, 
+                header_line = next(f)
+                
+                # tqdmプログレスバー（推定総文書数を使用）
+                pbar = tqdm(
                     desc="Processing documents",
+                    total=estimated_total_docs,
+                    unit="docs",
                     file=sys.stderr,
-                    mininterval=1.0
-                ):
-                    if max_docs and doc_count >= max_docs:
-                        break
-                    parts = line.strip().split('\t')
-                    if len(parts) >= 2:
-                        text = parts[1]  # text列
-                        tokens = re.findall(r"\b[a-z0-9']+\b", text.lower())
-                        collection_freq.update(tokens)
-                        doc_count += 1
+                    mininterval=1.0,
+                    dynamic_ncols=True,
+                    unit_scale=True
+                )
+                
+                try:
+                    for line in f:
+                        if max_docs and doc_count >= max_docs:
+                            break
+                        parts = line.strip().split('\t')
+                        if len(parts) >= 2:
+                            text = parts[1]  # text列
+                            tokens = re.findall(r"\b[a-z0-9']+\b", text.lower())
+                            batch_collection_freq.update(tokens)
+                            doc_count += 1
+                            batch_doc_count += 1
+                            
+                            # 進捗バーを更新
+                            pbar.update(1)
+                            progress_pct = min(100.0, (doc_count / estimated_total_docs) * 100)
+                            pbar.set_postfix({
+                                'progress': f"{progress_pct:.1f}%",
+                                'batch_terms': f"{len(batch_collection_freq):,}",
+                                'batches': f"{len(batch_cache_files)}"
+                            })
+                            
+                            # バッチサイズに達したら、バッチの結果をディスクにキャッシュ
+                            if batch_doc_count >= batch_size:
+                                # バッチの結果をディスクに保存
+                                batch_cache_file = temp_dir / f"batch_{len(batch_cache_files):06d}.pkl"
+                                with open(batch_cache_file, 'wb') as f:
+                                    pickle.dump(dict(batch_collection_freq), f)
+                                batch_cache_files.append(batch_cache_file)
+                                
+                                # バッチをクリアしてメモリを解放
+                                batch_collection_freq.clear()
+                                batch_doc_count = 0
+                                
+                                # ガベージコレクションを促す
+                                import gc
+                                gc.collect()
+                                
+                                # メモリ使用量を監視（オプション）
+                                try:
+                                    import psutil
+                                    import os
+                                    process = psutil.Process(os.getpid())
+                                    mem_info = process.memory_info()
+                                    mem_gb = mem_info.rss / (1024**3)
+                                    pbar.set_postfix({
+                                        'progress': f"{progress_pct:.1f}%",
+                                        'batches': f"{len(batch_cache_files)}",
+                                        'mem': f"{mem_gb:.1f}GB"
+                                    })
+                                except ImportError:
+                                    pbar.set_postfix({
+                                        'progress': f"{progress_pct:.1f}%",
+                                        'batches': f"{len(batch_cache_files)}",
+                                        'cached': "yes"
+                                    })
+                                
+                                print(f"  Processed {doc_count:,} documents ({progress_pct:.1f}%), cached batch {len(batch_cache_files)}. Memory cleared.", file=sys.stderr)
+                
+                finally:
+                    pbar.close()
+                
+                # 最後のバッチをキャッシュ
+                if batch_doc_count > 0:
+                    batch_cache_file = temp_dir / f"batch_{len(batch_cache_files):06d}.pkl"
+                    with open(batch_cache_file, 'wb') as f:
+                        pickle.dump(dict(batch_collection_freq), f)
+                    batch_cache_files.append(batch_cache_file)
+                    
+                    batch_collection_freq.clear()
+                    import gc
+                    gc.collect()
+                    print(f"  Processed final batch. Total: {doc_count:,} documents, {len(batch_cache_files)} batches cached.", file=sys.stderr)
+            
+            # すべてのバッチキャッシュを読み込んでマージ
+            print(f"Merging {len(batch_cache_files)} batch caches...", file=sys.stderr)
+            collection_freq = Counter()
+            for batch_file in tqdm(batch_cache_files, desc="Merging batches", file=sys.stderr, mininterval=1.0):
+                with open(batch_file, 'rb') as f:
+                    batch_freq = pickle.load(f)
+                    collection_freq.update(batch_freq)
+            
+            # 一時ディレクトリを削除
+            try:
+                shutil.rmtree(temp_dir)
+                print(f"Cleaned up temporary directory: {temp_dir}", file=sys.stderr)
+            except Exception as e:
+                print(f"Warning: Failed to clean up temporary directory {temp_dir}: {e}", file=sys.stderr)
         else:
             raise ValueError(f"Unknown dataset: {dataset}")
         
@@ -401,7 +800,13 @@ class Clarity(BaseQPPAnalyzer):
         dataset: str = "INSCIT",
         top_k: Optional[int] = None,
         use_scores: bool = True,
+        use_em: bool = True,
+        max_em_iter: int = 50,
+        em_epsilon: float = 1e-6,
+        mu: float = 2000.0,
+        verbose: bool = False,
         collection_freq_cache_path: Optional[str] = None,
+        document_lm_cache_dir: Optional[str] = None,
         device: Optional[str] = None,
         cache_dir: Optional[str] = None
     ) -> None:
@@ -415,8 +820,14 @@ class Clarity(BaseQPPAnalyzer):
             output_csv_path: 出力先のCSVファイルパス（Noneの場合は自動生成）
             dataset: データセット名（"INSCIT" または "AmbigNQ"）
             top_k: 上位k件の文書のみを処理（Noneの場合は全件、最大100件）
-            use_scores: DPRスコアを使用してP(d|Q)を計算するかどうか
+            use_scores: DPRスコアを使用して初期化するかどうか（use_em=Trueの場合）
+            use_em: EMアルゴリズムを使用するかどうか（True: 正式なClarity, False: 簡略版）
+            max_em_iter: EMアルゴリズムの最大反復回数
+            em_epsilon: EMアルゴリズムの収束判定閾値
+            mu: Dirichlet smoothingパラメータ
+            verbose: 進捗を表示するかどうか
             collection_freq_cache_path: コレクション語頻度のキャッシュファイルパス
+            document_lm_cache_dir: 文書言語モデルのキャッシュディレクトリ（Noneの場合は自動生成）
             device: 使用するデバイス（Noneの場合は自動選択）
             cache_dir: キャッシュディレクトリのパス（Noneの場合はキャッシュを使用しない）
         """
@@ -434,17 +845,32 @@ class Clarity(BaseQPPAnalyzer):
             collection_freq_cache_path=collection_freq_cache_path
         )
         
+        # 文書言語モデルのキャッシュディレクトリを設定
+        if document_lm_cache_dir is None:
+            base_dir = Path("/home/daiki_shibata/pj/QPP4SIP")
+            document_lm_cache_dir = str(base_dir / "QPP" / "post_retrieval" / ".document_lm_cache" / dataset)
+        
         print("Computing Clarity scores...")
         analyzer = cls(
             turn_data_list, 
             collection_freq=collection_freq,
             collection_freq_cache_path=collection_freq_cache_path,
+            document_lm_cache_dir=document_lm_cache_dir,
             device=device,
             cache_dir=cache_dir
         )
         
         # Clarityを計算
-        clarity_stats = analyzer.compute(top_k=top_k, use_scores=use_scores)
+        print(f"Computing Clarity using {'EM algorithm' if use_em else 'simplified method'}...")
+        clarity_stats = analyzer.compute(
+            top_k=top_k,
+            use_scores=use_scores,
+            use_em=use_em,
+            max_em_iter=max_em_iter,
+            em_epsilon=em_epsilon,
+            mu=mu,
+            verbose=verbose
+        )
         
         # CSV出力（output_csv_pathが指定されていない場合は自動生成）
         if output_csv_path is None:

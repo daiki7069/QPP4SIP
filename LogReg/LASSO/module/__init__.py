@@ -21,7 +21,17 @@ from .visualization import (
     plot_single_metric_roc_curves,
     plot_single_metric_pr_curves,
     plot_threshold_f1_curves,
-    plot_feature_distributions
+    plot_feature_distributions,
+    plot_correlation_heatmaps
+)
+from .bootstrap import (
+    generate_bootstrap_samples,
+    save_bootstrap_samples,
+    load_bootstrap_samples,
+    evaluate_bootstrap,
+    save_bootstrap_results,
+    load_bootstrap_results,
+    compare_feature_combinations
 )
 
 __all__ = [
@@ -45,5 +55,6 @@ __all__ = [
     'plot_single_metric_pr_curves',
     'plot_threshold_f1_curves',
     'plot_feature_distributions',
+    'plot_correlation_heatmaps',
 ]
 

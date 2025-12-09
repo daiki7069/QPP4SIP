@@ -1,0 +1,552 @@
+[
+  [
+    {
+      "conv_id": "101",
+      "turn_id": 1,
+      "query": "Find me information about the Ritz Carlton Lake Las Vegas.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "106",
+      "turn_id": 1,
+      "query": "I'm looking for universal animal cuts reviews",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "107",
+      "turn_id": 1,
+      "query": "tell me about cass county missouri",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "114",
+      "turn_id": 1,
+      "query": "Tell about an adobe indian house?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "123",
+      "turn_id": 1,
+      "query": "What is von Willebrand Disease?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "128",
+      "turn_id": 1,
+      "query": "Tell me about atypical squamous cells",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "133",
+      "turn_id": 1,
+      "query": "all men are created equal",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "139",
+      "turn_id": 1,
+      "query": "Tell me more about Rocky Mountain News",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "142",
+      "turn_id": 1,
+      "query": "Find me information about the sales tax in Illinois.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "164",
+      "turn_id": 1,
+      "query": "I'm looking for information on hobby stores",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "165",
+      "turn_id": 1,
+      "query": "I’m looking for blue throated hummingbird",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "166",
+      "turn_id": 1,
+      "query": "Tell me information about computer programming.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "169",
+      "turn_id": 1,
+      "query": "What should I know about the civil war",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "174",
+      "turn_id": 1,
+      "query": "I want to learn about rock art.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "18",
+      "turn_id": 1,
+      "query": "I'm looking for a wedding budget calculator",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "190",
+      "turn_id": 1,
+      "query": "Find Brooks Brothers clearance.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "191",
+      "turn_id": 1,
+      "query": "When can I see Churchil Downs",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "193",
+      "turn_id": 1,
+      "query": "Where should I order dog clean-up bags",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "195",
+      "turn_id": 1,
+      "query": "Where can I buy pressure washers?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "200",
+      "turn_id": 1,
+      "query": "Find information on ontario california airport.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "24",
+      "turn_id": 1,
+      "query": "tell me about diversity",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "25",
+      "turn_id": 1,
+      "query": "Tell me more about Euclid",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "27",
+      "turn_id": 1,
+      "query": "Tell me about Starbucks.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "35",
+      "turn_id": 1,
+      "query": "Find information on Hoboken",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "37",
+      "turn_id": 1,
+      "query": "Tell me about pampered chef",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "45",
+      "turn_id": 1,
+      "query": "Give me information on solar panels.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "71",
+      "turn_id": 1,
+      "query": "Find information about living in India.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "74",
+      "turn_id": 1,
+      "query": "Tell me about kiwi",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "8",
+      "turn_id": 1,
+      "query": "I want to know about appraisals.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "85",
+      "turn_id": 1,
+      "query": "Find information from the milwaukee journal sentinel.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "214",
+      "turn_id": 1,
+      "query": "What does the US capital gains tax rate consist of and how is it broken down?",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "219",
+      "turn_id": 1,
+      "query": "What was the name of Elvis Presley's home?",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "229",
+      "turn_id": 1,
+      "query": "Fine me beef stroganoff recipe",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "250",
+      "turn_id": 1,
+      "query": "What are problems with ford edge?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "252",
+      "turn_id": 1,
+      "query": "Tell me about history of orcas island",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "262",
+      "turn_id": 1,
+      "query": "Find more information about baldness cure",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "283",
+      "turn_id": 1,
+      "query": "Find information on hayrides in pa",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "287",
+      "turn_id": 1,
+      "query": "What are treatments for carotid cavernous fistula?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "293",
+      "turn_id": 1,
+      "query": "Tell me about the educational advantages of social networking sites.",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "110",
+      "turn_id": 1,
+      "query": "where to go if I made a crime in Brazil",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "118",
+      "turn_id": 1,
+      "query": "What is Poem in Your Pocket Day?",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "126",
+      "turn_id": 1,
+      "query": "Find me a map of the US Capitol",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "152",
+      "turn_id": 1,
+      "query": "How to cure angular cheilitis",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "20",
+      "turn_id": 1,
+      "query": "Tell me about defender",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "44",
+      "turn_id": 1,
+      "query": "Find me map of USA",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "51",
+      "turn_id": 1,
+      "query": "Tell me more about horse hooves",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "79",
+      "turn_id": 1,
+      "query": "tell me about Voyager",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "83",
+      "turn_id": 1,
+      "query": "tell me about memory",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "256",
+      "turn_id": 1,
+      "query": "Who is the patron saint of mental illness?",
+      "answer": [],
+      "response_type": "directAnswer",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ],
+  [
+    {
+      "conv_id": "292",
+      "turn_id": 1,
+      "query": "i'm interested in history of the electronic medical record",
+      "answer": [],
+      "response_type": "clarification",
+      "dialogue_history": [],
+      "ctxs": []
+    }
+  ]
+]

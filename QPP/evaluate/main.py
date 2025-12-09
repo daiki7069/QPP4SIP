@@ -11,20 +11,20 @@ from evaluate_nsp_graph import visualize_all_metrics as visualize_nsp_graph_metr
 from auc import plot_roc_curves, plot_pr_curves
 
 
-def evaluate_post_retrieval(split: str = 'train', dataset: str = 'INSCIT'):
+def evaluate_post_retrieval(split: str = 'train', dataset: str = 'INSCIT', retrieval_method: str = 'dpr'):
     """Post-retrieval QPP指標の評価"""
     # ベースパスの設定
     base_dir = '/home/daiki_shibata/pj/QPP4SIP'
     
     # 入力ファイルの設定
     csv_path = os.path.join(base_dir, 'QPP', 'raw_data', 'outputs', dataset, f'{split}.csv')
-    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset)
+    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset, retrieval_method)
     
     # 出力ディレクトリの作成
     os.makedirs(output_dir, exist_ok=True)
     
     # メトリクス設定（メトリクス名、CSVパス、カラム名）
-    post_retrieval_outputs_dir = os.path.join(base_dir, 'QPP', 'post_retrieval', 'outputs', dataset)
+    post_retrieval_outputs_dir = os.path.join(base_dir, 'QPP', 'post_retrieval', 'outputs', dataset, retrieval_method)
     metric_configs = {
         # 'entropy': {
         #     'csv_path': os.path.join(post_retrieval_outputs_dir, f'{split}_entropy.csv'),
@@ -136,15 +136,15 @@ def evaluate_post_retrieval(split: str = 'train', dataset: str = 'INSCIT'):
     )
 
 
-def evaluate_retrieval_data(split: str = 'train', dataset: str = 'INSCIT'):
+def evaluate_retrieval_data(split: str = 'train', dataset: str = 'INSCIT', retrieval_method: str = 'dpr'):
     """Retrieval data QPP指標の評価"""
     # ベースパスの設定
     base_dir = '/home/daiki_shibata/pj/QPP4SIP'
     
     # 入力ファイルの設定
     csv_path = os.path.join(base_dir, 'QPP', 'raw_data', 'outputs', dataset, f'{split}.csv')
-    retrieval_csv_path = os.path.join(base_dir, 'QPP', 'retrieval_data', 'outputs', dataset, f'dpr_{split}_only_evidence.csv')
-    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset)
+    retrieval_csv_path = os.path.join(base_dir, 'QPP', 'retrieval_data', 'outputs', dataset, f'{retrieval_method}_{split}_only_evidence.csv')
+    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset, retrieval_method)
     
     # 出力ディレクトリの作成
     os.makedirs(output_dir, exist_ok=True)
@@ -288,14 +288,14 @@ def evaluate_retrieval_data(split: str = 'train', dataset: str = 'INSCIT'):
     )
 
 
-def evaluate_nsp_graph(split: str = 'train', dataset: str = 'INSCIT'):
+def evaluate_nsp_graph(split: str = 'train', dataset: str = 'INSCIT', retrieval_method: str = 'dpr'):
     """NSP Graph QPP指標の評価（top_k=10,20,50,100）"""
     # ベースパスの設定
     base_dir = '/home/daiki_shibata/pj/QPP4SIP'
     
     # 入力ファイルの設定
     csv_path = os.path.join(base_dir, 'QPP', 'raw_data', 'outputs', dataset, f'{split}.csv')
-    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset)
+    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset, retrieval_method)
     
     # 出力ディレクトリの作成
     os.makedirs(output_dir, exist_ok=True)
@@ -408,21 +408,21 @@ def evaluate_nsp_graph(split: str = 'train', dataset: str = 'INSCIT'):
     )
 
 
-def evaluate_neural_qpp(split: str = 'train', dataset: str = 'INSCIT'):
+def evaluate_neural_qpp(split: str = 'train', dataset: str = 'INSCIT', retrieval_method: str = 'dpr'):
     """Neural QPP指標の評価"""
     # ベースパスの設定
     base_dir = '/home/daiki_shibata/pj/QPP4SIP'
     
     # 入力ファイルの設定
     csv_path = os.path.join(base_dir, 'QPP', 'raw_data', 'outputs', dataset, f'{split}.csv')
-    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset)
+    output_dir = os.path.join(base_dir, 'QPP', 'evaluate', 'outputs', dataset, retrieval_method)
     
     # 出力ディレクトリの作成
     os.makedirs(output_dir, exist_ok=True)
     
     # メトリクス設定（Neural QPPの出力ファイル）
     # CSVファイルはモデルディレクトリ（{model_type}_{metric}）内に保存される
-    neural_qpp_outputs_dir = os.path.join(base_dir, 'QPP', 'neural_qpp', 'outputs', dataset)
+    neural_qpp_outputs_dir = os.path.join(base_dir, 'QPP', 'neural_qpp', 'outputs', dataset, retrieval_method)
     metric_configs = {}
     
     # bi-encoderとcross-encoderの両方をチェック
@@ -536,24 +536,32 @@ def main():
         default='train',
         help='データセットの種類 (train または dev, デフォルト: train)'
     )
+    parser.add_argument(
+        '--retrieval_method',
+        type=str,
+        default='dpr',
+        choices=['dpr', 'bm25'],
+        help='検索手法 (dpr または bm25, デフォルト: dpr)'
+    )
     
     args = parser.parse_args()
     
     print(f"データセット: {args.dataset}")
     print(f"スプリット: {args.split}")
     print(f"モード: {args.mode}")
+    print(f"検索手法: {args.retrieval_method}")
     
     if args.mode == 'post_retrieval' or args.mode == 'all':
-        evaluate_post_retrieval(split=args.split, dataset=args.dataset)
+        evaluate_post_retrieval(split=args.split, dataset=args.dataset, retrieval_method=args.retrieval_method)
     
     if args.mode == 'retrieval_data' or args.mode == 'all':
-        evaluate_retrieval_data(split=args.split, dataset=args.dataset)
+        evaluate_retrieval_data(split=args.split, dataset=args.dataset, retrieval_method=args.retrieval_method)
     
     if args.mode == 'neural_qpp' or args.mode == 'all':
-        evaluate_neural_qpp(split=args.split, dataset=args.dataset)
+        evaluate_neural_qpp(split=args.split, dataset=args.dataset, retrieval_method=args.retrieval_method)
     
     if args.mode == 'nsp_graph' or args.mode == 'all':
-        evaluate_nsp_graph(split=args.split, dataset=args.dataset)
+        evaluate_nsp_graph(split=args.split, dataset=args.dataset, retrieval_method=args.retrieval_method)
 
 
 if __name__ == '__main__':

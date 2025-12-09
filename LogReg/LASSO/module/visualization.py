@@ -4,6 +4,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from pathlib import Path
 from typing import List, Optional
 from sklearn.metrics import roc_curve, precision_recall_curve, roc_auc_score, average_precision_score, f1_score
@@ -11,22 +12,123 @@ from sklearn.metrics import roc_curve, precision_recall_curve, roc_auc_score, av
 
 def get_feature_dir_name(feature_names: Optional[List[str]]) -> str:
     """
-    特徴量名のリストからディレクトリ名を生成
+    特徴量名のリストからディレクトリ名を生成（階層構造）
+    1階層目: カテゴリの組み合わせ（pre, post, pre_post, pre_bert, post_bert, pre_post_bertなど）
+    2階層目以降: 各カテゴリの指標名
     
     Args:
         feature_names: 特徴量名のリスト（Noneの場合は'all'を返す）
     
     Returns:
-        ディレクトリ名（例: 'features_similarity', 'features_logit_clarification_similarity'）
+        ディレクトリ名（例: 'pre/idf_ictf', 'pre_post/idf_ictf/nqc_wig', 'pre_post_bert/idf_ictf/nqc_wig/rob'）
     """
     if feature_names is None or len(feature_names) == 0:
-        return 'features_all'
+        return 'all'
     
-    # 特徴量名をソートして一貫性を保つ
-    sorted_features = sorted(feature_names)
-    # ディレクトリ名に使えない文字を置換
-    safe_features = [f.replace(' ', '_').replace('/', '_') for f in sorted_features]
-    return 'features_' + '_'.join(safe_features)
+    # 特徴量をカテゴリ別に分類
+    pre_features = []
+    post_features = []
+    base_features = []
+    nsp_features = []
+    other_features = []
+    
+    for name in sorted(feature_names):
+        if name.startswith('pre_'):
+            pre_features.append(name.replace('pre_', ''))
+        elif name.startswith('nsp_'):
+            nsp_features.append(name.replace('nsp_', ''))
+        elif 'logit_clarification' in name:
+            # base特徴量（モデル名を抽出）
+            if 'roberta' in name:
+                base_features.append('roberta')
+            elif 'bert' in name:
+                base_features.append('bert')
+            else:
+                base_features.append('base')
+        elif name in ['nqc', 'wig', 'smv', 'nsv', 'clarity', 'similarity', 'entropy', 'lci', 'unique_titles', 'acc', 'wacc', 'n_sigma_50']:
+            post_features.append(name)
+        else:
+            other_features.append(name)
+    
+    # カテゴリの有無を記録
+    has_pre = len(pre_features) > 0
+    has_post = len(post_features) > 0
+    has_base = len(base_features) > 0
+    has_nsp = len(nsp_features) > 0
+    has_other = len(other_features) > 0
+    
+    # カテゴリがない場合は'all'
+    if not any([has_pre, has_post, has_base, has_nsp, has_other]):
+        return 'all'
+    
+    # 1階層目: カテゴリの組み合わせを決定
+    category_parts = []
+    if has_pre:
+        category_parts.append('pre')
+    if has_post:
+        category_parts.append('post')
+    if has_base:
+        category_parts.append('bert')
+    if has_nsp:
+        category_parts.append('nsp')
+    if has_other:
+        category_parts.append('other')
+    
+    first_level = '_'.join(category_parts)
+    
+    # 2階層目: 全ての指標名を1つにまとめる
+    all_metrics = []
+    
+    # pre特徴量
+    if has_pre:
+        # 指標名を短縮
+        for f in pre_features:
+            if f == 'simplified_clarity':
+                all_metrics.append('scs')
+            elif f == 'avgictf':
+                all_metrics.append('ictf')
+            elif f == 'avgidf':
+                all_metrics.append('idf')
+            elif f == 'maxscq':
+                all_metrics.append('scq')
+            else:
+                all_metrics.append(f)
+    
+    # post特徴量
+    if has_post:
+        # 指標名を短縮
+        for f in post_features:
+            if f == 'n_sigma_50':
+                all_metrics.append('ns50')
+            elif f == 'unique_titles':
+                all_metrics.append('ut')
+            else:
+                all_metrics.append(f)
+    
+    # base特徴量
+    if has_base:
+        unique_base = sorted(set(base_features))
+        for model_name in unique_base:
+            # モデル名を短縮（roberta -> rob, bert -> bert）
+            if model_name == 'roberta':
+                all_metrics.append('rob')
+            else:
+                all_metrics.append(model_name[:4])  # 最大4文字
+    
+    # nsp特徴量
+    if has_nsp:
+        all_metrics.extend(nsp_features)
+    
+    # other特徴量
+    if has_other:
+        all_metrics.extend(other_features)
+    
+    # ディレクトリ名を構築: 1階層目/2階層目（全指標を_で連結）
+    if all_metrics:
+        second_level = '_'.join(all_metrics)
+        return f"{first_level}/{second_level}"
+    else:
+        return first_level
 
 
 def plot_roc_curves(
@@ -41,7 +143,8 @@ def plot_roc_curves(
     X_train: pd.DataFrame = None,
     X_test: pd.DataFrame = None,
     show_single_metrics: bool = False,
-    feature_names: Optional[List[str]] = None
+    feature_names: Optional[List[str]] = None,
+    y_test_single: pd.Series = None
 ) -> None:
     """ROC曲線を描画して保存"""
     # 特徴量名からディレクトリ名を生成
@@ -49,8 +152,9 @@ def plot_roc_curves(
     feature_output_dir = output_dir / feature_dir_name
     feature_output_dir.mkdir(parents=True, exist_ok=True)
     
-    # 訓練データのROC曲線
-    fpr_train, tpr_train, _ = roc_curve(y_train, y_train_proba)
+    # 訓練データのROC曲線（存在する場合のみ）
+    if y_train is not None and y_train_proba is not None:
+        fpr_train, tpr_train, _ = roc_curve(y_train, y_train_proba)
     
     # テストデータのROC曲線
     fpr_test, tpr_test, _ = roc_curve(y_test, y_test_proba)
@@ -60,28 +164,25 @@ def plot_roc_curves(
     plt.figure(figsize=figsize)
     
     # モデルのROC曲線
-    if not hide_train:
+    if not hide_train and y_train is not None and y_train_proba is not None and train_auc is not None:
         plt.plot(fpr_train, tpr_train, label=f'Model Train (AUC = {train_auc:.4f})', linewidth=2.5, color='blue')
-    plt.plot(fpr_test, tpr_test, label=f'Model Test (AUC = {test_auc:.4f})', linewidth=2.5, color='red')
+    if test_auc is not None:
+        label_prefix = "CV" if y_test_single is not None else "Test"
+        plt.plot(fpr_test, tpr_test, label=f'Model {label_prefix} (AUC = {test_auc:.4f})', linewidth=2.5, color='red')
     
     # 各特徴量単体のROC曲線（オプション）
-    if show_single_metrics and X_train is not None and X_test is not None:
-        for feature_name in X_train.columns:
-            # 訓練データ
-            train_scores = X_train[feature_name].values
-            if not hide_train:
-                fpr_train_single, tpr_train_single, _ = roc_curve(y_train, train_scores)
-                train_auc_single = roc_auc_score(y_train, train_scores)
-                plt.plot(fpr_train_single, tpr_train_single, 
-                        label=f'{feature_name} (Train, AUC = {train_auc_single:.4f})', 
-                        linewidth=1.5, linestyle='--', alpha=0.6)
-            
-            # テストデータ
+    if show_single_metrics and X_test is not None:
+        # 単一指標のラベル（CV結果の場合はy_test_singleを使用）
+        y_single_labels = y_test_single if y_test_single is not None else y_test
+        
+        for feature_name in X_test.columns:
+            # テストデータ（またはCV結果）
             test_scores = X_test[feature_name].values
-            fpr_test_single, tpr_test_single, _ = roc_curve(y_test, test_scores)
-            test_auc_single = roc_auc_score(y_test, test_scores)
+            fpr_test_single, tpr_test_single, _ = roc_curve(y_single_labels, test_scores)
+            test_auc_single = roc_auc_score(y_single_labels, test_scores)
+            label_prefix = "CV" if y_test_single is not None else "Test"
             plt.plot(fpr_test_single, tpr_test_single, 
-                    label=f'{feature_name} (Test, AUC = {test_auc_single:.4f})', 
+                    label=f'{feature_name} ({label_prefix}, AUC = {test_auc_single:.4f})', 
                     linewidth=1.5, alpha=0.7)
     
     # ランダム分類器
@@ -116,7 +217,8 @@ def plot_pr_curves(
     X_train: pd.DataFrame = None,
     X_test: pd.DataFrame = None,
     show_single_metrics: bool = False,
-    feature_names: Optional[List[str]] = None
+    feature_names: Optional[List[str]] = None,
+    y_test_single: pd.Series = None
 ) -> None:
     """Precision-Recall曲線を描画して保存"""
     # 特徴量名からディレクトリ名を生成
@@ -124,8 +226,9 @@ def plot_pr_curves(
     feature_output_dir = output_dir / feature_dir_name
     feature_output_dir.mkdir(parents=True, exist_ok=True)
     
-    # 訓練データのPR曲線
-    precision_train, recall_train, _ = precision_recall_curve(y_train, y_train_proba)
+    # 訓練データのPR曲線（存在する場合のみ）
+    if y_train is not None and y_train_proba is not None:
+        precision_train, recall_train, _ = precision_recall_curve(y_train, y_train_proba)
     
     # テストデータのPR曲線
     precision_test, recall_test, _ = precision_recall_curve(y_test, y_test_proba)
@@ -138,28 +241,25 @@ def plot_pr_curves(
     plt.figure(figsize=figsize)
     
     # モデルのPR曲線
-    if not hide_train:
+    if not hide_train and y_train is not None and y_train_proba is not None and train_ap is not None:
         plt.plot(recall_train, precision_train, label=f'Model Train (AP = {train_ap:.4f})', linewidth=2.5, color='blue')
-    plt.plot(recall_test, precision_test, label=f'Model Test (AP = {test_ap:.4f})', linewidth=2.5, color='red')
+    if test_ap is not None:
+        label_prefix = "CV" if y_test_single is not None else "Test"
+        plt.plot(recall_test, precision_test, label=f'Model {label_prefix} (AP = {test_ap:.4f})', linewidth=2.5, color='red')
     
     # 各特徴量単体のPR曲線（オプション）
-    if show_single_metrics and X_train is not None and X_test is not None:
-        for feature_name in X_train.columns:
-            # 訓練データ
-            train_scores = X_train[feature_name].values
-            if not hide_train:
-                precision_train_single, recall_train_single, _ = precision_recall_curve(y_train, train_scores)
-                train_ap_single = average_precision_score(y_train, train_scores)
-                plt.plot(recall_train_single, precision_train_single, 
-                        label=f'{feature_name} (Train, AP = {train_ap_single:.4f})', 
-                        linewidth=1.5, linestyle='--', alpha=0.6)
-            
-            # テストデータ
+    if show_single_metrics and X_test is not None:
+        # 単一指標のラベル（CV結果の場合はy_test_singleを使用）
+        y_single_labels = y_test_single if y_test_single is not None else y_test
+        
+        for feature_name in X_test.columns:
+            # テストデータ（またはCV結果）
             test_scores = X_test[feature_name].values
-            precision_test_single, recall_test_single, _ = precision_recall_curve(y_test, test_scores)
-            test_ap_single = average_precision_score(y_test, test_scores)
+            precision_test_single, recall_test_single, _ = precision_recall_curve(y_single_labels, test_scores)
+            test_ap_single = average_precision_score(y_single_labels, test_scores)
+            label_prefix = "CV" if y_test_single is not None else "Test"
             plt.plot(recall_test_single, precision_test_single, 
-                    label=f'{feature_name} (Test, AP = {test_ap_single:.4f})', 
+                    label=f'{feature_name} ({label_prefix}, AP = {test_ap_single:.4f})', 
                     linewidth=1.5, alpha=0.7)
     
     # ランダム分類器
@@ -303,7 +403,8 @@ def plot_threshold_f1_curves(
     X_train: pd.DataFrame = None,
     X_test: pd.DataFrame = None,
     show_single_metrics: bool = False,
-    feature_names: Optional[List[str]] = None
+    feature_names: Optional[List[str]] = None,
+    y_test_single: pd.Series = None
 ) -> None:
     """閾値とF1スコアの関係を描画して保存"""
     # 特徴量名からディレクトリ名を生成
@@ -323,10 +424,11 @@ def plot_threshold_f1_curves(
     test_f1_scores = []
     
     for threshold in thresholds:
-        # 訓練データ
-        y_train_pred = (y_train_proba >= threshold).astype(int)
-        train_f1 = f1_score(y_train, y_train_pred)
-        train_f1_scores.append(train_f1)
+        # 訓練データ（存在する場合のみ）
+        if y_train is not None and y_train_proba is not None:
+            y_train_pred = (y_train_proba >= threshold).astype(int)
+            train_f1 = f1_score(y_train, y_train_pred)
+            train_f1_scores.append(train_f1)
         
         # テストデータ
         y_test_pred = (y_test_proba >= threshold).astype(int)
@@ -334,10 +436,12 @@ def plot_threshold_f1_curves(
         test_f1_scores.append(test_f1)
     
     # モデルのF1曲線
-    if not hide_train:
+    if not hide_train and y_train is not None and y_train_proba is not None and len(train_f1_scores) > 0:
         plt.plot(thresholds, train_f1_scores, label=f'Model Train (Max F1 = {max(train_f1_scores):.4f})', 
                 linewidth=2.5, color='blue')
-    plt.plot(thresholds, test_f1_scores, label=f'Model Test (Max F1 = {max(test_f1_scores):.4f})', 
+    if len(test_f1_scores) > 0:
+        label_prefix = "CV" if y_test_single is not None else "Test"
+        plt.plot(thresholds, test_f1_scores, label=f'Model {label_prefix} (Max F1 = {max(test_f1_scores):.4f})', 
             linewidth=2.5, color='red')
     
     # 最適な閾値をマーク
@@ -355,35 +459,23 @@ def plot_threshold_f1_curves(
                 label=f'Best Train Threshold = {best_train_threshold:.2f} (F1 = {best_train_f1:.4f})')
     
     # 各特徴量単体のF1曲線（オプション）
-    if show_single_metrics and X_train is not None and X_test is not None:
-        for feature_name in X_train.columns:
-            # 訓練データ
-            train_scores = X_train[feature_name].values
-            train_f1_single_scores = []
-            
-            if not hide_train:
-                for threshold in thresholds:
-                    # 特徴量の値を[0,1]に正規化（既に正規化されている前提）
-                    y_train_pred_single = (train_scores >= threshold).astype(int)
-                    train_f1_single = f1_score(y_train, y_train_pred_single)
-                    train_f1_single_scores.append(train_f1_single)
-                
-                max_train_f1_single = max(train_f1_single_scores)
-                plt.plot(thresholds, train_f1_single_scores, 
-                        label=f'{feature_name} (Train, Max F1 = {max_train_f1_single:.4f})', 
-                        linewidth=1.5, linestyle='--', alpha=0.6)
-            
-            # テストデータ
+    if show_single_metrics and X_test is not None:
+        # 単一指標のラベル（CV結果の場合はy_test_singleを使用）
+        y_single_labels = y_test_single if y_test_single is not None else y_test
+        
+        for feature_name in X_test.columns:
+            # テストデータ（またはCV結果）
             test_scores = X_test[feature_name].values
             test_f1_single_scores = []
             for threshold in thresholds:
                 y_test_pred_single = (test_scores >= threshold).astype(int)
-                test_f1_single = f1_score(y_test, y_test_pred_single)
+                test_f1_single = f1_score(y_single_labels, y_test_pred_single)
                 test_f1_single_scores.append(test_f1_single)
             
             max_test_f1_single = max(test_f1_single_scores)
+            label_prefix = "CV" if y_test_single is not None else "Test"
             plt.plot(thresholds, test_f1_single_scores, 
-                    label=f'{feature_name} (Test, Max F1 = {max_test_f1_single:.4f})', 
+                    label=f'{feature_name} ({label_prefix}, Max F1 = {max_test_f1_single:.4f})', 
                     linewidth=1.5, alpha=0.7)
     
     plt.xlim([0.0, 1.0])
@@ -575,4 +667,232 @@ def plot_feature_distributions(
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"  - 保存先: {output_path}")
         plt.close()
+
+
+def plot_correlation_heatmaps(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    output_dir: Path,
+    feature_names: Optional[List[str]] = None,
+    use_combined: bool = False
+) -> None:
+    """
+    選択された指標（特徴量）同士のピアソン相関係数をヒートマップで可視化する
+    
+    Args:
+        X_train: 訓練データの特徴量DataFrame
+        X_test: テストデータの特徴量DataFrame
+        y_train: 訓練データのラベル
+        y_test: テストデータのラベル
+        output_dir: 出力ディレクトリ
+        feature_names: 特徴量名のリスト（Noneの場合は全特徴量）
+        use_combined: trainとtestを統合して相関係数を計算するかどうか
+    """
+    # 特徴量名からディレクトリ名を生成
+    feature_dir_name = get_feature_dir_name(feature_names)
+    feature_output_dir = output_dir / feature_dir_name
+    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 使用する特徴量を決定
+    if feature_names is None:
+        metric_columns = list(X_train.columns)
+    else:
+        metric_columns = [col for col in feature_names if col in X_train.columns]
+    
+    if len(metric_columns) == 0:
+        print("警告: 可視化する特徴量がありません。")
+        return
+    
+    # データを統合（use_combinedの場合）
+    if use_combined:
+        X_combined = pd.concat([X_train[metric_columns], X_test[metric_columns]], axis=0, ignore_index=True)
+        y_combined = pd.concat([y_train, y_test], axis=0, ignore_index=True)
+        merged_df_clean = X_combined.copy()
+        # インデックスをリセットしてからラベルを追加
+        merged_df_clean = merged_df_clean.reset_index(drop=True)
+        y_combined = y_combined.reset_index(drop=True)
+        merged_df_clean['label'] = y_combined
+        print(f"trainとtestを統合: train={len(X_train)}サンプル, test={len(X_test)}サンプル, 合計={len(merged_df_clean)}サンプル")
+    else:
+        # テストデータのみを使用
+        merged_df_clean = X_test[metric_columns].copy()
+        merged_df_clean = merged_df_clean.reset_index(drop=True)
+        y_test_reset = y_test.reset_index(drop=True)
+        merged_df_clean['label'] = y_test_reset
+        print(f"testデータのみ使用: {len(merged_df_clean)}サンプル")
+    
+    # NaN値を含む行を削除
+    merged_df_clean = merged_df_clean.dropna()
+    if len(merged_df_clean) == 0:
+        print("警告: 有効なデータがありません。")
+        return
+    
+    # 相関係数を計算
+    # 1. 全体の相関係数（ピアソン）
+    correlation_all_pearson = merged_df_clean[metric_columns].corr(method='pearson')
+    
+    # 2. 全体の相関係数（スピアマン）
+    correlation_all_spearman = merged_df_clean[metric_columns].corr(method='spearman')
+    
+    # 3. ラベル別の相関係数
+    labels = sorted(merged_df_clean['label'].unique())
+    correlations_by_label_pearson = {}
+    correlations_by_label_spearman = {}
+    
+    for label in labels:
+        df_label = merged_df_clean[merged_df_clean['label'] == label]
+        if len(df_label) > 1:  # 相関係数を計算するには最低2行必要
+            correlations_by_label_pearson[label] = df_label[metric_columns].corr(method='pearson')
+            correlations_by_label_spearman[label] = df_label[metric_columns].corr(method='spearman')
+    
+    # ヒートマップを作成
+    num_metrics = len(metric_columns)
+    num_labels = len(labels)
+    
+    # 図のサイズを調整
+    fig_width = max(20, num_metrics * 1.2)
+    fig_height = max(16, num_metrics * 1.8)
+    
+    # サブプロットのレイアウト: 2行（ピアソン、スピアマン）、最大3列（全体、ラベル1、ラベル2）
+    n_cols = min(3, 1 + num_labels)
+    fig, axes = plt.subplots(2, n_cols, figsize=(fig_width, fig_height))
+    if n_cols == 1:
+        axes = axes.reshape(-1, 1)
+    
+    # カラーマップの範囲を統一
+    vmin, vmax = -1, 1
+    
+    # フォントサイズを調整
+    annot_fontsize = max(6, min(10, 100 // num_metrics))
+    label_fontsize = max(7, min(10, 120 // num_metrics))
+    title_fontsize = max(8, min(12, 140 // num_metrics))
+    
+    # ピアソン相関係数のヒートマップ（1行目）
+    # 1. 全体の相関係数ヒートマップ（ピアソン）
+    sns.heatmap(
+        correlation_all_pearson,
+        annot=True,
+        fmt='.2f',
+        cmap='coolwarm',
+        center=0,
+        vmin=vmin,
+        vmax=vmax,
+        square=True,
+        cbar_kws={'shrink': 0.8},
+        ax=axes[0, 0],
+        annot_kws={'size': annot_fontsize}
+    )
+    axes[0, 0].set_title('All Labels (Pearson)', fontsize=title_fontsize, fontweight='bold')
+    axes[0, 0].set_xlabel('Metrics', fontsize=label_fontsize)
+    axes[0, 0].set_ylabel('Metrics', fontsize=label_fontsize)
+    axes[0, 0].tick_params(axis='x', rotation=45, labelsize=label_fontsize)
+    axes[0, 0].tick_params(axis='y', rotation=0, labelsize=label_fontsize)
+    
+    # 2-3. ラベル別の相関係数ヒートマップ（ピアソン）
+    label_idx = 1
+    for label in labels[:2]:  # 最大2つのラベルを表示
+        if label in correlations_by_label_pearson:
+            sns.heatmap(
+                correlations_by_label_pearson[label],
+                annot=True,
+                fmt='.2f',
+                cmap='coolwarm',
+                center=0,
+                vmin=vmin,
+                vmax=vmax,
+                square=True,
+                cbar_kws={'shrink': 0.8},
+                ax=axes[0, label_idx],
+                annot_kws={'size': annot_fontsize}
+            )
+            label_name = 'Positive' if label == 1 else 'Negative'
+            axes[0, label_idx].set_title(f'Label: {label_name} (Pearson)', fontsize=title_fontsize, fontweight='bold')
+            axes[0, label_idx].set_xlabel('Metrics', fontsize=label_fontsize)
+            axes[0, label_idx].set_ylabel('Metrics', fontsize=label_fontsize)
+            axes[0, label_idx].tick_params(axis='x', rotation=45, labelsize=label_fontsize)
+            axes[0, label_idx].tick_params(axis='y', rotation=0, labelsize=label_fontsize)
+            label_idx += 1
+    
+    # 3つ目のラベルがない場合は非表示（ピアソン）
+    if label_idx < n_cols:
+        for idx in range(label_idx, n_cols):
+            axes[0, idx].set_visible(False)
+    
+    # スピアマン相関係数のヒートマップ（2行目）
+    # 1. 全体の相関係数ヒートマップ（スピアマン）
+    sns.heatmap(
+        correlation_all_spearman,
+        annot=True,
+        fmt='.2f',
+        cmap='coolwarm',
+        center=0,
+        vmin=vmin,
+        vmax=vmax,
+        square=True,
+        cbar_kws={'shrink': 0.8},
+        ax=axes[1, 0],
+        annot_kws={'size': annot_fontsize}
+    )
+    axes[1, 0].set_title('All Labels (Spearman)', fontsize=title_fontsize, fontweight='bold')
+    axes[1, 0].set_xlabel('Metrics', fontsize=label_fontsize)
+    axes[1, 0].set_ylabel('Metrics', fontsize=label_fontsize)
+    axes[1, 0].tick_params(axis='x', rotation=45, labelsize=label_fontsize)
+    axes[1, 0].tick_params(axis='y', rotation=0, labelsize=label_fontsize)
+    
+    # 2-3. ラベル別の相関係数ヒートマップ（スピアマン）
+    label_idx = 1
+    for label in labels[:2]:  # 最大2つのラベルを表示
+        if label in correlations_by_label_spearman:
+            sns.heatmap(
+                correlations_by_label_spearman[label],
+                annot=True,
+                fmt='.2f',
+                cmap='coolwarm',
+                center=0,
+                vmin=vmin,
+                vmax=vmax,
+                square=True,
+                cbar_kws={'shrink': 0.8},
+                ax=axes[1, label_idx],
+                annot_kws={'size': annot_fontsize}
+            )
+            label_name = 'Positive' if label == 1 else 'Negative'
+            axes[1, label_idx].set_title(f'Label: {label_name} (Spearman)', fontsize=title_fontsize, fontweight='bold')
+            axes[1, label_idx].set_xlabel('Metrics', fontsize=label_fontsize)
+            axes[1, label_idx].set_ylabel('Metrics', fontsize=label_fontsize)
+            axes[1, label_idx].tick_params(axis='x', rotation=45, labelsize=label_fontsize)
+            axes[1, label_idx].tick_params(axis='y', rotation=0, labelsize=label_fontsize)
+            label_idx += 1
+    
+    # 3つ目のラベルがない場合は非表示（スピアマン）
+    if label_idx < n_cols:
+        for idx in range(label_idx, n_cols):
+            axes[1, idx].set_visible(False)
+    
+    plt.tight_layout()
+    
+    # 保存
+    output_path = feature_output_dir / 'correlation_heatmaps.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - 相関係数ヒートマップを保存しました: {output_path}")
+    plt.close()
+    
+    # 統計情報を表示
+    print("\n=== 相関係数の統計情報 ===")
+    print(f"全体のデータ数: {len(merged_df_clean)}")
+    print("\n全体の相関係数（ピアソン）:")
+    print(correlation_all_pearson)
+    print("\n全体の相関係数（スピアマン）:")
+    print(correlation_all_spearman)
+    
+    for label in labels[:2]:
+        label_name = 'Positive' if label == 1 else 'Negative'
+        if label in correlations_by_label_pearson:
+            print(f"\n{label_name}ラベルの相関係数（ピアソン） (データ数: {len(merged_df_clean[merged_df_clean['label'] == label])}):")
+            print(correlations_by_label_pearson[label])
+        if label in correlations_by_label_spearman:
+            print(f"\n{label_name}ラベルの相関係数（スピアマン） (データ数: {len(merged_df_clean[merged_df_clean['label'] == label])}):")
+            print(correlations_by_label_spearman[label])
 
