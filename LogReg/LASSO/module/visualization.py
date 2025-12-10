@@ -574,11 +574,9 @@ def plot_feature_distributions(
         n_cols = 3 if n_plots > 6 else 2
         n_rows = (n_plots + n_cols - 1) // n_cols
         
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows))
-        if n_plots == 1:
-            axes = [axes]
-        else:
-            axes = axes.flatten()
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(6 * n_cols, 5 * n_rows), squeeze=False)
+        # axesを常に1次元配列に変換（squeeze=Falseにより常に2次元配列として返される）
+        axes = axes.flatten()
         
         # 各特徴量の分布をプロット（ラベルごと）
         for idx, feature_name in enumerate(X_train.columns):

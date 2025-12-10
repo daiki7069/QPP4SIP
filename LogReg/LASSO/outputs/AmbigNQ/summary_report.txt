@@ -1,0 +1,125 @@
+================================================================================
+AmbigNQ 実験結果サマリー
+================================================================================
+
+【最高性能実験】
+  Accuracy: Pre + BERT (0.6362)
+  F1 Score: Pre + BERT (0.6300)
+  AUC-ROC: Pre+Post + BERT (0.6887)
+  Average Precision: Pre+Post + BERT (0.6651)
+
+【BERT有無による比較】
+  Accuracy:
+    BERT有り平均: 0.6334
+    QPPのみ平均: 0.5575
+    改善度: +0.0759 (+13.61%)
+  F1 Score:
+    BERT有り平均: 0.6278
+    QPPのみ平均: 0.5450
+    改善度: +0.0827 (+15.18%)
+  AUC-ROC:
+    BERT有り平均: 0.6852
+    QPPのみ平均: 0.5774
+    改善度: +0.1078 (+18.67%)
+  Average Precision:
+    BERT有り平均: 0.6613
+    QPPのみ平均: 0.5443
+    改善度: +0.1170 (+21.50%)
+
+【詳細結果】
+--------------------------------------------------------------------------------
+
+実験: Pre+Post + BERT
+  Accuracy: 0.6352
+  F1 Score: 0.6292
+  AUC-ROC: 0.6887
+  Average Precision: 0.6651
+  特徴量数: 11
+  単体指標からの改善:
+    最高単体指標: bert_logit_clarification (AUC = 0.6840)
+    回帰モデル: AUC = 0.6887
+    AUC改善: +0.0047 (+0.69%)
+  DeLong検定: 有意差あり (p=0.00e+00)
+
+実験: Pre + BERT
+  Accuracy: 0.6362
+  F1 Score: 0.6300
+  AUC-ROC: 0.6869
+  Average Precision: 0.6640
+  特徴量数: 6
+  単体指標からの改善:
+    最高単体指標: bert_logit_clarification (AUC = 0.6840)
+    回帰モデル: AUC = 0.6869
+    AUC改善: +0.0029 (+0.42%)
+  DeLong検定: 有意差あり (p=0.0003)
+
+実験: Post + BERT
+  Accuracy: 0.6332
+  F1 Score: 0.6271
+  AUC-ROC: 0.6866
+  Average Precision: 0.6646
+  特徴量数: 6
+  単体指標からの改善:
+    最高単体指標: bert_logit_clarification (AUC = 0.6839)
+    回帰モデル: AUC = 0.6866
+    AUC改善: +0.0027 (+0.39%)
+  DeLong検定: 有意差あり (p=0.0015)
+
+実験: BERT only
+  Accuracy: 0.6317
+  F1 Score: 0.6242
+  AUC-ROC: 0.6839
+  Average Precision: 0.6622
+  特徴量数: 1
+  単体指標からの改善:
+    最高単体指標: bert_logit_clarification (AUC = 0.6840)
+    回帰モデル: AUC = 0.6839
+    AUC改善: -0.0001 (-0.01%)
+
+実験: Pre+Post + BERT (rob)
+  Accuracy: 0.6307
+  F1 Score: 0.6284
+  AUC-ROC: 0.6799
+  Average Precision: 0.6506
+  特徴量数: 11
+  単体指標からの改善:
+    最高単体指標: roberta_logit_clarification (AUC = 0.6770)
+    回帰モデル: AUC = 0.6799
+    AUC改善: +0.0029 (+0.43%)
+  DeLong検定: 有意差あり (p=0.0081)
+
+実験: Pre+Post (QPP only)
+  Accuracy: 0.5690
+  F1 Score: 0.5634
+  AUC-ROC: 0.5921
+  Average Precision: 0.5565
+  特徴量数: 10
+  単体指標からの改善:
+    最高単体指標: pre_avgidf (AUC = 0.5580)
+    回帰モデル: AUC = 0.5921
+    AUC改善: +0.0341 (+6.11%)
+  DeLong検定: 有意差あり (p=0.00e+00)
+
+実験: Pre (QPP only)
+  Accuracy: 0.5656
+  F1 Score: 0.5640
+  AUC-ROC: 0.5879
+  Average Precision: 0.5521
+  特徴量数: 5
+  単体指標からの改善:
+    最高単体指標: pre_avgidf (AUC = 0.5577)
+    回帰モデル: AUC = 0.5879
+    AUC改善: +0.0302 (+5.42%)
+  DeLong検定: 有意差あり (p=0.00e+00)
+
+実験: Post (QPP only)
+  Accuracy: 0.5380
+  F1 Score: 0.5077
+  AUC-ROC: 0.5522
+  Average Precision: 0.5242
+  特徴量数: 5
+  単体指標からの改善:
+    最高単体指標: clarity (AUC = 0.5474)
+    回帰モデル: AUC = 0.5522
+    AUC改善: +0.0048 (+0.88%)
+  DeLong検定: 有意差なし (p=0.1938)
