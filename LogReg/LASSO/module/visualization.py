@@ -896,3 +896,367 @@ def plot_correlation_heatmaps(
             print(f"\n{label_name}ラベルの相関係数（スピアマン） (データ数: {len(merged_df_clean[merged_df_clean['label'] == label])}):")
             print(correlations_by_label_spearman[label])
 
+
+def plot_confidence_analysis(
+    confidence_ranges: List[tuple],
+    range_results: List[dict],
+    overall_auc_improvement: float,
+    output_dir: Path,
+    feature_names: Optional[List[str]] = None
+) -> None:
+    """
+    Confidence Analysisの結果を可視化
+    
+    Args:
+        confidence_ranges: 確率範囲のリスト [(low, high), ...]
+        range_results: 各範囲の評価結果のリスト [{'auc_regression': ..., 'auc_single': ..., 'n_samples': ...}, ...]
+        overall_auc_improvement: 全体データでのAUC改善度
+        output_dir: 出力ディレクトリ
+        feature_names: 特徴量名のリスト（ディレクトリ名生成用）
+    """
+    # 日本語フォントの設定
+    use_english = False
+    try:
+        import matplotlib
+        import matplotlib.font_manager as fm
+        
+        # 利用可能な日本語フォントを検索
+        jp_font_candidates = [
+            'Noto Sans CJK JP', 'Noto Sans Japanese', 'Takao', 'TakaoGothic', 'TakaoPGothic',
+            'IPAexGothic', 'IPAPGothic', 'IPAPMincho', 'VL PGothic', 'VL Gothic',
+            'Yu Gothic', 'YuGothic', 'Meiryo', 'MS PGothic', 'MS Gothic',
+            'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Osaka'
+        ]
+        
+        # システムにインストールされているフォントを確認
+        available_fonts = [f.name for f in fm.fontManager.ttflist]
+        found_jp_font = None
+        
+        for font_name in jp_font_candidates:
+            if font_name in available_fonts:
+                found_jp_font = font_name
+                break
+        
+        if found_jp_font:
+            matplotlib.rcParams['font.family'] = 'sans-serif'
+            matplotlib.rcParams['font.sans-serif'] = [found_jp_font] + matplotlib.rcParams['font.sans-serif']
+            matplotlib.rcParams['axes.unicode_minus'] = False
+        else:
+            # 日本語フォントが見つからない場合、英語表記にフォールバック
+            matplotlib.rcParams['font.family'] = 'DejaVu Sans'
+            matplotlib.rcParams['axes.unicode_minus'] = False
+            # 日本語ラベルを英語に変更
+            use_english = True
+    except Exception as e:
+        # エラーが発生した場合も英語表記にフォールバック
+        use_english = True
+        try:
+            matplotlib.rcParams['font.family'] = 'DejaVu Sans'
+            matplotlib.rcParams['axes.unicode_minus'] = False
+        except:
+            pass
+    
+    # 特徴量名からディレクトリ名を生成
+    feature_dir_name = get_feature_dir_name(feature_names)
+    feature_output_dir = output_dir / feature_dir_name
+    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # データの準備
+    range_labels = [f"[{low:.1f}-{high:.1f}]" for low, high in confidence_ranges]
+    auc_improvements = [r['auc_regression'] - r['auc_single'] if r.get('auc_single') is not None else None for r in range_results]
+    n_samples_list = [r['n_samples'] for r in range_results]
+    auc_regression_list = [r['auc_regression'] for r in range_results]
+    auc_single_list = [r.get('auc_single') for r in range_results]
+    
+    # ラベルを準備（日本語フォントがない場合は英語）
+    if use_english:
+        xlabel1 = 'BERT Prediction Probability Range'
+        ylabel1 = 'AUC Improvement (Regression - Single Metric)'
+        title1 = 'Confidence Analysis: AUC Improvement by Probability Range'
+        legend_label1 = f'Overall Improvement ({overall_auc_improvement:+.4f})'
+        xlabel2 = 'BERT Prediction Probability Range'
+        ylabel2 = 'AUC-ROC'
+        title2 = 'AUC-ROC Comparison by Probability Range'
+        label_regression = 'Regression Model (QPP Integrated)'
+        label_single = 'Single Metric'
+    else:
+        xlabel1 = 'BERT予測確率範囲'
+        ylabel1 = 'AUC改善度 (回帰モデル - 単体指標)'
+        title1 = 'Confidence Analysis: 確率範囲ごとのQPP統合によるAUC改善度'
+        legend_label1 = f'全体データでの改善度 ({overall_auc_improvement:+.4f})'
+        xlabel2 = 'BERT予測確率範囲'
+        ylabel2 = 'AUC-ROC'
+        title2 = '確率範囲ごとのAUC-ROC比較'
+        label_regression = '回帰モデル (QPP統合)'
+        label_single = '単体指標'
+    
+    # プロット1: AUC改善度のバープロット
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
+    
+    # サブプロット1: AUC改善度
+    colors = ['green' if imp > overall_auc_improvement else 'orange' if imp > 0 else 'red' 
+              for imp in auc_improvements]
+    bars = ax1.bar(range(len(range_labels)), auc_improvements, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
+    
+    # 全体データでの改善度を参考線として表示
+    ax1.axhline(y=overall_auc_improvement, color='blue', linestyle='--', linewidth=2, 
+                label=legend_label1)
+    ax1.axhline(y=0, color='black', linestyle='-', linewidth=1)
+    
+    # バーの上に値を表示
+    for i, (bar, imp, n) in enumerate(zip(bars, auc_improvements, n_samples_list)):
+        if imp is not None:
+            height = bar.get_height()
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{imp:+.3f}\n(n={n})',
+                    ha='center', va='bottom' if height > 0 else 'top', fontsize=9, fontweight='bold')
+    
+    ax1.set_xlabel(xlabel1, fontsize=12, fontweight='bold')
+    ax1.set_ylabel(ylabel1, fontsize=12, fontweight='bold')
+    ax1.set_title(title1, fontsize=14, fontweight='bold')
+    ax1.set_xticks(range(len(range_labels)))
+    ax1.set_xticklabels(range_labels, rotation=45, ha='right')
+    ax1.legend(loc='best', fontsize=10)
+    ax1.grid(True, alpha=0.3, axis='y')
+    ax1.set_ylim([min(min([i for i in auc_improvements if i is not None]), overall_auc_improvement) - 0.05,
+                  max(max([i for i in auc_improvements if i is not None]), overall_auc_improvement) + 0.05])
+    
+    # サブプロット2: 各範囲でのAUC比較（回帰モデル vs 単体指標）
+    x_pos = np.arange(len(range_labels))
+    width = 0.35
+    
+    bars1 = ax2.bar(x_pos - width/2, auc_regression_list, width, label=label_regression, 
+                    color='steelblue', alpha=0.8, edgecolor='black', linewidth=1)
+    
+    if any(auc_single_list):
+        bars2 = ax2.bar(x_pos + width/2, [a if a is not None else 0 for a in auc_single_list], width,
+                        label=label_single, color='lightcoral', alpha=0.8, edgecolor='black', linewidth=1)
+        
+        # バーの上に値を表示
+        for i, (bar1, bar2, auc_r, auc_s, n) in enumerate(zip(bars1, bars2, auc_regression_list, auc_single_list, n_samples_list)):
+            ax2.text(bar1.get_x() + bar1.get_width()/2., bar1.get_height(),
+                    f'{auc_r:.3f}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+            if auc_s is not None:
+                ax2.text(bar2.get_x() + bar2.get_width()/2., bar2.get_height(),
+                        f'{auc_s:.3f}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+    else:
+        # 単体指標がない場合
+        for i, (bar1, auc_r, n) in enumerate(zip(bars1, auc_regression_list, n_samples_list)):
+            ax2.text(bar1.get_x() + bar1.get_width()/2., bar1.get_height(),
+                    f'{auc_r:.3f}', ha='center', va='bottom', fontsize=8, fontweight='bold')
+    
+    ax2.set_xlabel(xlabel2, fontsize=12, fontweight='bold')
+    ax2.set_ylabel(ylabel2, fontsize=12, fontweight='bold')
+    ax2.set_title(title2, fontsize=14, fontweight='bold')
+    ax2.set_xticks(x_pos)
+    ax2.set_xticklabels(range_labels, rotation=45, ha='right')
+    ax2.legend(loc='best', fontsize=10)
+    ax2.grid(True, alpha=0.3, axis='y')
+    ax2.set_ylim([0, 1.0])
+    
+    plt.tight_layout()
+    
+    # 保存
+    output_path = feature_output_dir / 'confidence_analysis.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - Confidence Analysis可視化を保存: {output_path}")
+    plt.close()
+
+
+def plot_overconfidence_analysis(
+    overconfidence_results: dict,
+    output_dir: Path,
+    feature_names: Optional[List[str]] = None
+) -> None:
+    """
+    Overconfidence Analysisの結果を可視化
+    
+    Args:
+        overconfidence_results: Overconfidence分析の結果辞書
+            {
+                'high_confidence_fp': {'mean_regression': ..., 'mean_single': ..., 'improvement': ..., 'n_samples': ...},
+                'high_confidence_fn': {'mean_regression': ..., 'mean_single': ..., 'improvement': ..., 'n_samples': ...},
+                'overall_auc_improvement': ...
+            }
+        output_dir: 出力ディレクトリ
+        feature_names: 特徴量名のリスト（ディレクトリ名生成用）
+    """
+    # 日本語フォントの設定
+    use_english = False
+    try:
+        import matplotlib
+        import matplotlib.font_manager as fm
+        
+        jp_font_candidates = [
+            'Noto Sans CJK JP', 'Noto Sans Japanese', 'Takao', 'TakaoGothic', 'TakaoPGothic',
+            'IPAexGothic', 'IPAPGothic', 'IPAPMincho', 'VL PGothic', 'VL Gothic',
+            'Yu Gothic', 'YuGothic', 'Meiryo', 'MS PGothic', 'MS Gothic',
+            'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Osaka'
+        ]
+        
+        available_fonts = [f.name for f in fm.fontManager.ttflist]
+        found_jp_font = None
+        
+        for font_name in jp_font_candidates:
+            if font_name in available_fonts:
+                found_jp_font = font_name
+                break
+        
+        if found_jp_font:
+            matplotlib.rcParams['font.family'] = 'sans-serif'
+            matplotlib.rcParams['font.sans-serif'] = [found_jp_font] + matplotlib.rcParams['font.sans-serif']
+            matplotlib.rcParams['axes.unicode_minus'] = False
+        else:
+            matplotlib.rcParams['font.family'] = 'DejaVu Sans'
+            matplotlib.rcParams['axes.unicode_minus'] = False
+            use_english = True
+    except Exception as e:
+        use_english = True
+        try:
+            matplotlib.rcParams['font.family'] = 'DejaVu Sans'
+            matplotlib.rcParams['axes.unicode_minus'] = False
+        except:
+            pass
+    
+    # 特徴量名からディレクトリ名を生成
+    feature_dir_name = get_feature_dir_name(feature_names)
+    feature_output_dir = output_dir / feature_dir_name
+    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # ラベルを準備
+    if use_english:
+        title = 'Overconfidence Analysis: QPP Effect on BERT Misclassifications'
+        xlabel = 'Error Type'
+        ylabel1 = 'Prediction Probability Improvement\n(Closer to Correct Label)'
+        ylabel2 = 'Average Prediction Probability'
+        label_fp = 'False Positive\n(High Confidence, Wrong)'
+        label_fn = 'False Negative\n(High Confidence, Wrong)'
+        label_regression = 'Regression Model (QPP Integrated)'
+        label_single = 'Single Metric'
+        ideal_fp = 'Ideal (0.0)'
+        ideal_fn = 'Ideal (1.0)'
+    else:
+        title = 'Overconfidence Analysis: BERTの過信による誤分類でのQPP効果'
+        xlabel = '誤分類タイプ'
+        ylabel1 = '予測確率の改善度\n(正解ラベルに近づく)'
+        ylabel2 = '平均予測確率'
+        label_fp = 'False Positive\n(高確信度だが誤分類)'
+        label_fn = 'False Negative\n(高確信度だが誤分類)'
+        label_regression = '回帰モデル (QPP統合)'
+        label_single = '単体指標'
+        ideal_fp = '理想値 (0.0)'
+        ideal_fn = '理想値 (1.0)'
+    
+    # データの準備
+    fp_result = overconfidence_results.get('high_confidence_fp', {})
+    fn_result = overconfidence_results.get('high_confidence_fn', {})
+    
+    categories = []
+    improvements = []
+    mean_regression_list = []
+    mean_single_list = []
+    n_samples_list = []
+    ideal_values = []
+    
+    if fp_result.get('n_samples', 0) > 0:
+        categories.append(label_fp)
+        fp_mean_r = fp_result.get('mean_regression')
+        fp_mean_s = fp_result.get('mean_single')
+        mean_regression_list.append(fp_mean_r)
+        mean_single_list.append(fp_mean_s)
+        improvements.append(fp_result.get('improvement'))
+        n_samples_list.append(fp_result.get('n_samples', 0))
+        ideal_values.append(0.0)  # FPの理想値は0
+    
+    if fn_result.get('n_samples', 0) > 0:
+        categories.append(label_fn)
+        fn_mean_r = fn_result.get('mean_regression')
+        fn_mean_s = fn_result.get('mean_single')
+        mean_regression_list.append(fn_mean_r)
+        mean_single_list.append(fn_mean_s)
+        improvements.append(fn_result.get('improvement'))
+        n_samples_list.append(fn_result.get('n_samples', 0))
+        ideal_values.append(1.0)  # FNの理想値は1
+    
+    if len(categories) == 0:
+        print("  ⚠️  Overconfidence事例が見つかりませんでした")
+        return
+    
+    # プロット
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 10))
+    
+    # サブプロット1: 改善度（正解ラベルに近づく度合い）
+    colors = ['green' if imp is not None and imp > 0 else 'red' if imp is not None and imp < 0 else 'gray'
+              for imp in improvements]
+    bars = ax1.bar(range(len(categories)), improvements, color=colors, alpha=0.7, edgecolor='black', linewidth=1.5)
+    
+    ax1.axhline(y=0, color='black', linestyle='-', linewidth=1)
+    
+    # バーの上に値を表示
+    for i, (bar, imp, n) in enumerate(zip(bars, improvements, n_samples_list)):
+        if imp is not None:
+            height = bar.get_height()
+            ax1.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{imp:+.3f}\n(n={n})',
+                    ha='center', va='bottom' if height > 0 else 'top', fontsize=10, fontweight='bold')
+    
+    ax1.set_xlabel(xlabel, fontsize=12, fontweight='bold')
+    ax1.set_ylabel(ylabel1, fontsize=12, fontweight='bold')
+    ax1.set_title(title, fontsize=14, fontweight='bold')
+    ax1.set_xticks(range(len(categories)))
+    ax1.set_xticklabels(categories, rotation=0, ha='center')
+    ax1.grid(True, alpha=0.3, axis='y')
+    
+    # サブプロット2: 平均予測確率の比較
+    x_pos = np.arange(len(categories))
+    width = 0.35
+    
+    bars1 = ax2.bar(x_pos - width/2, mean_regression_list, width, label=label_regression,
+                    color='steelblue', alpha=0.8, edgecolor='black', linewidth=1)
+    
+    if any(mean_single_list):
+        bars2 = ax2.bar(x_pos + width/2, [m if m is not None else 0 for m in mean_single_list], width,
+                        label=label_single, color='lightcoral', alpha=0.8, edgecolor='black', linewidth=1)
+        
+        # 理想値を点線で表示
+        for i, ideal in enumerate(ideal_values):
+            ax2.axhline(y=ideal, xmin=(x_pos[i] - width)/len(categories), xmax=(x_pos[i] + width)/len(categories),
+                       color='green', linestyle='--', linewidth=2, alpha=0.5)
+        
+        for i, (bar1, bar2, mean_r, mean_s) in enumerate(zip(bars1, bars2, mean_regression_list, mean_single_list)):
+            if mean_r is not None:
+                ax2.text(bar1.get_x() + bar1.get_width()/2., bar1.get_height(),
+                        f'{mean_r:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+            if mean_s is not None:
+                ax2.text(bar2.get_x() + bar2.get_width()/2., bar2.get_height(),
+                        f'{mean_s:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+    else:
+        for i, ideal in enumerate(ideal_values):
+            ax2.axhline(y=ideal, xmin=(x_pos[i] - width)/len(categories), xmax=(x_pos[i] + width)/len(categories),
+                       color='green', linestyle='--', linewidth=2, alpha=0.5, label=ideal_fp if ideal == 0.0 else ideal_fn)
+        
+        for i, (bar1, mean_r) in enumerate(zip(bars1, mean_regression_list)):
+            if mean_r is not None:
+                ax2.text(bar1.get_x() + bar1.get_width()/2., bar1.get_height(),
+                        f'{mean_r:.3f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+    
+    ax2.set_xlabel(xlabel, fontsize=12, fontweight='bold')
+    ax2.set_ylabel(ylabel2, fontsize=12, fontweight='bold')
+    if use_english:
+        ax2.set_title('Average Prediction Probability for Overconfidence Errors', fontsize=14, fontweight='bold')
+    else:
+        ax2.set_title('過信誤分類での平均予測確率', fontsize=14, fontweight='bold')
+    ax2.set_xticks(x_pos)
+    ax2.set_xticklabels(categories, rotation=0, ha='center')
+    ax2.legend(loc='best', fontsize=10)
+    ax2.grid(True, alpha=0.3, axis='y')
+    ax2.set_ylim([0, 1.0])
+    
+    plt.tight_layout()
+    
+    # 保存
+    output_path = feature_output_dir / 'overconfidence_analysis.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - Overconfidence Analysis可視化を保存: {output_path}")
+    plt.close()
+

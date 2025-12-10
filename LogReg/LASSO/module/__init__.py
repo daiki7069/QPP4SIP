@@ -7,6 +7,7 @@ from .data_loader import (
     extract_base_scores,
     load_qpp_scores,
     load_base_scores,
+    load_base_probabilities,
     find_common_nsp_top_k
 )
 from .feature_merger import merge_features
@@ -22,7 +23,9 @@ from .visualization import (
     plot_single_metric_pr_curves,
     plot_threshold_f1_curves,
     plot_feature_distributions,
-    plot_correlation_heatmaps
+    plot_correlation_heatmaps,
+    plot_confidence_analysis,
+    plot_overconfidence_analysis
 )
 from .bootstrap import (
     generate_bootstrap_samples,
@@ -41,6 +44,7 @@ __all__ = [
     'extract_base_scores',
     'load_qpp_scores',
     'load_base_scores',
+    'load_base_probabilities',
     'find_common_nsp_top_k',
     # feature_merger
     'merge_features',
@@ -56,5 +60,7 @@ __all__ = [
     'plot_threshold_f1_curves',
     'plot_feature_distributions',
     'plot_correlation_heatmaps',
+    'plot_confidence_analysis',
+    'plot_overconfidence_analysis',
 ]
 

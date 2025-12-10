@@ -45,11 +45,11 @@ PRE_RETRIEVAL_CONFIGS: Dict[str, Tuple[str, str]] = {
 # {dataset}は自動的にデータセット名に置換されます
 
 BASE_EXPERIMENT_NAMES: List[str] = [
-    # f"{dataset}_bert-base_lr2e-05_bs16_kfold5",
-    # f"{dataset}_roberta-base_lr2e-05_bs16_earlystop_kfold5",  # earlystopあり
-    # f"{dataset}_roberta-base_lr2e-05_bs16_kfold5",  # earlystopなし
-    # f"{dataset}_transfer_from_AmbigNQ",
-    # f"{dataset}_transfer_from_INSCIT",
+    # "{dataset}_bert-base_lr2e-05_bs16_kfold5",
+    "{dataset}_roberta-base_lr2e-05_bs16_earlystop_kfold5",  # earlystopあり
+    # "{dataset}_roberta-base_lr2e-05_bs16_kfold5",  # earlystopなし
+    # "{dataset}_transfer_from_AmbigNQ",
+    # "{dataset}_transfer_from_INSCIT",
     # 他の実験名も追加可能
 ]
 

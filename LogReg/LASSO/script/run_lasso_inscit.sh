@@ -6,5 +6,7 @@ cd "$(dirname "$0")/.." || exit
 
 python main.py \
     --dataset INSCIT \
-    --delong-test
+    --delong-test \
+    # --bootstrap-test \
+    # --bootstrap-samples-path outputs/INSCIT/bootstrap_samples.pkl
 

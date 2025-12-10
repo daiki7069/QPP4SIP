@@ -202,6 +202,85 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
     return base_scores
 
 
+def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None) -> Dict[str, Dict[Tuple[str, int], float]]:
+    """
+    BERTの予測確率（prob_clarification）を読み込む
+    戻り値: {feature_name: {(conv_id, turn_id): probability}}
+    
+    Args:
+        split: データセットのスプリット（'train' または 'dev'）
+        dataset: データセット名
+        base_dir: ベースディレクトリ（SIP/FT-PLM/outputの親ディレクトリ）
+        base_experiment_names: 使用するSIP実験名のリスト（Noneの場合は関数内のデフォルト設定を使用）
+    
+    Returns:
+        ベース確率の辞書 {prefix_prob_clarification: {key: probability}}
+    """
+    base_probs = {}
+    
+    # base_experiment_namesが指定されていない場合は、configから読み込む
+    if base_experiment_names is None:
+        # configのBASE_EXPERIMENT_NAMESを使用（dataset変数を展開）
+        base_experiment_names = [
+            exp_name.format(dataset=dataset) if '{dataset}' in exp_name else exp_name
+            for exp_name in BASE_EXPERIMENT_NAMES
+        ]
+    
+    if len(base_experiment_names) == 0:
+        return base_probs
+    
+    def extract_prefix(experiment_name: str) -> str:
+        """実験名からプレフィックスを抽出"""
+        parts = experiment_name.split('_')
+        if len(parts) > 1:
+            model_part = parts[1]
+            if model_part.startswith('bert-'):
+                return 'bert_'
+            elif model_part.startswith('roberta-'):
+                return 'roberta_'
+            else:
+                return f"{model_part.split('-')[0]}_"
+        return ""
+    
+    # 存在する実験名のみをフィルタリング
+    available_experiments = []
+    for exp_name in base_experiment_names:
+        exp_output_dir = base_dir / "SIP" / "FT-PLM" / "output" / dataset / exp_name
+        pred_json_path = exp_output_dir / f"{split}_with_predictions.json"
+        if pred_json_path.exists():
+            available_experiments.append(exp_name)
+        else:
+            print(f"Warning: {pred_json_path} not found, skipping {exp_name}")
+            print(f"  → 実験ディレクトリが存在しないか、ファイル名が異なります")
+    
+    if len(available_experiments) == 0:
+        print(f"Warning: No available base experiments found. Returning empty base_probs.")
+        return base_probs
+    
+    for exp_name in available_experiments:
+        prefix = extract_prefix(exp_name)
+        exp_output_dir = base_dir / "SIP" / "FT-PLM" / "output" / dataset / exp_name
+        pred_json_path = exp_output_dir / f"{split}_with_predictions.json"
+        
+        json_data = load_json_data(pred_json_path)
+        probs = {}
+        for conversation in json_data:
+            for turn in conversation:
+                conv_id = str(turn['conv_id'])
+                turn_id = int(turn['turn_id'])
+                key = (conv_id, turn_id)
+                
+                prob = turn.get('prob_clarification')
+                if prob is not None:
+                    probs[key] = float(prob)
+        
+        feature_name = f"{prefix}prob_clarification" if prefix else "prob_clarification"
+        base_probs[feature_name] = probs
+        print(f"Loaded {len(probs)} {feature_name} probabilities for {split} (experiment: {exp_name})")
+    
+    return base_probs
+
+
 def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = None, nsp_top_k: int = None, pre_retrieval_output_dir: Path = None) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
     QPPスコアを読み込む（post_retrieval、pre_retrieval、nspの全て）

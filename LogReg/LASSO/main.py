@@ -19,6 +19,7 @@ from module import (
     extract_labels,
     load_qpp_scores,
     load_base_scores,
+    load_base_probabilities,
     find_common_nsp_top_k,
     merge_features,
     balance_label_distribution,
@@ -30,10 +31,15 @@ from module import (
     plot_single_metric_pr_curves,
     plot_threshold_f1_curves,
     plot_feature_distributions,
-    plot_correlation_heatmaps
+    plot_correlation_heatmaps,
+    plot_confidence_analysis,
+    plot_overconfidence_analysis
 )
 from module.bootstrap import (
-    delong_test
+    delong_test,
+    load_bootstrap_samples,
+    evaluate_bootstrap,
+    save_bootstrap_results
 )
 
 
@@ -232,6 +238,19 @@ def main():
         "--delong-test",
         action="store_true",
         help="DeLongの検定を実行する（デフォルト: False、単体指標の最高ROCと回帰モデルのROCを比較）"
+    )
+    
+    parser.add_argument(
+        "--bootstrap-test",
+        action="store_true",
+        help="ブートストラップ評価を実行する（デフォルト: False、単体指標の最高ROCと回帰モデルのROCを比較、--bootstrap-samples-pathが必要）"
+    )
+    
+    parser.add_argument(
+        "--bootstrap-samples-path",
+        type=str,
+        default=None,
+        help="既存のブートストラップサンプル（インデックス）のパス（--bootstrap-test使用時は必須）"
     )
     
     args = parser.parse_args()
@@ -455,6 +474,11 @@ def main():
         all_cv_test_proba = []  # 各foldのテストデータの予測確率（単一指標用）
         all_cv_test_labels = []  # 各foldのテストデータのラベル（単一指標用）
         all_cv_test_features = []  # 各foldのテストデータの特徴量（単一指標用）
+        
+        # Confidence Analysis用の変数を初期化
+        single_metric_probas = {}
+        best_metric = None
+        best_metric_auc = None
         
         for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_combined, y_combined)):
             print_and_save(f"\n{'='*80}")
@@ -690,6 +714,61 @@ def main():
             else:
                 print_and_save("  ⚠️  警告: 単体指標のROCを計算できませんでした")
         
+            # ブートストラップ評価（オプション）
+            if args.bootstrap_test:
+                if not args.bootstrap_samples_path:
+                    print_and_save("  ⚠️  警告: --bootstrap-testを使用する場合は--bootstrap-samples-pathを指定してください")
+                else:
+                    bootstrap_samples_path = Path(args.bootstrap_samples_path)
+                    if not bootstrap_samples_path.exists():
+                        print_and_save(f"  ⚠️  警告: ブートストラップサンプルファイルが見つかりません: {bootstrap_samples_path}")
+                    else:
+                        print_and_save("\n5.7. ブートストラップ評価を実行中（単体指標vs回帰モデル）...")
+                        bootstrap_samples = load_bootstrap_samples(bootstrap_samples_path)
+                        print_and_save(f"  - ブートストラップサンプルを読み込み: {len(bootstrap_samples)} 反復")
+                        
+                        # 回帰モデルのブートストラップ評価
+                        regression_bootstrap_results = evaluate_bootstrap(
+                            y_true=np.array(all_test_labels),
+                            y_pred_proba=np.array(all_test_proba),
+                            bootstrap_samples=bootstrap_samples,
+                            feature_combination_name="regression"
+                        )
+                        
+                        # 単体指標のブートストラップ評価
+                        single_metric_bootstrap_results = evaluate_bootstrap(
+                            y_true=y_cv_test_labels,
+                            y_pred_proba=best_metric_proba,
+                            bootstrap_samples=bootstrap_samples,
+                            feature_combination_name=f"single_{best_metric}"
+                        )
+                        
+                        # 結果を結合
+                        all_bootstrap_results = pd.concat([
+                            regression_bootstrap_results,
+                            single_metric_bootstrap_results
+                        ], ignore_index=True)
+                        
+                        # 結果を保存
+                        bootstrap_results_path = feature_output_dir / "bootstrap_results_single_vs_regression.csv"
+                        save_bootstrap_results(all_bootstrap_results, bootstrap_results_path)
+                        print_and_save(f"  - ブートストラップ結果を保存: {bootstrap_results_path}")
+                        
+                        # サマリーを表示
+                        print_and_save(f"\n  ブートストラップ結果のサマリー:")
+                        for combination in ["regression", f"single_{best_metric}"]:
+                            print_and_save(f"\n  {combination}:")
+                            for metric in ['auc', 'ap', 'f1', 'accuracy']:
+                                metric_values = all_bootstrap_results[
+                                    (all_bootstrap_results['feature_combination'] == combination) &
+                                    (all_bootstrap_results['metric_name'] == metric)
+                                ]['value'].values
+                                mean_val = np.mean(metric_values)
+                                std_val = np.std(metric_values)
+                                ci_lower = np.percentile(metric_values, 2.5)
+                                ci_upper = np.percentile(metric_values, 97.5)
+                                print_and_save(f"    {metric.upper()}: {mean_val:.4f} ± {std_val:.4f} (95% CI: [{ci_lower:.4f}, {ci_upper:.4f}])")
+        
             # 予測結果を保存（回帰モデル同士の比較用）
             predictions_path = feature_output_dir / "predictions_for_delong.csv"
             pd.DataFrame({
@@ -902,6 +981,12 @@ def main():
                 print_and_save(f"  結合データ全体: 平均={combined_mean:.6f}, 標準偏差={combined_std:.6f}")
                 print_and_save(f"  → 結合正規化により、結合データ全体の平均≈0, 標準偏差≈1になるはず")
     
+    # Confidence Analysis用の変数を初期化（通常評価の場合）
+    if not args.use_cv:
+        single_metric_probas = {}
+        best_metric = None
+        best_metric_auc = None
+    
     # 4. モデル学習（クロスバリデーションの場合は既に完了）
     if not args.use_cv:
         print_and_save("\n4. モデル学習中...")
@@ -1082,6 +1167,61 @@ def main():
                 print_and_save(f"  - DeLongの検定結果を保存: {delong_result_path}")
             else:
                 print_and_save("  ⚠️  警告: 単体指標のROCを計算できませんでした")
+            
+            # ブートストラップ評価（オプション）
+            if args.bootstrap_test:
+                if not args.bootstrap_samples_path:
+                    print_and_save("  ⚠️  警告: --bootstrap-testを使用する場合は--bootstrap-samples-pathを指定してください")
+                else:
+                    bootstrap_samples_path = Path(args.bootstrap_samples_path)
+                    if not bootstrap_samples_path.exists():
+                        print_and_save(f"  ⚠️  警告: ブートストラップサンプルファイルが見つかりません: {bootstrap_samples_path}")
+                    else:
+                        print_and_save("\n5.7. ブートストラップ評価を実行中（単体指標vs回帰モデル）...")
+                        bootstrap_samples = load_bootstrap_samples(bootstrap_samples_path)
+                        print_and_save(f"  - ブートストラップサンプルを読み込み: {len(bootstrap_samples)} 反復")
+                        
+                        # 回帰モデルのブートストラップ評価
+                        regression_bootstrap_results = evaluate_bootstrap(
+                            y_true=y_test.values,
+                            y_pred_proba=y_test_proba,
+                            bootstrap_samples=bootstrap_samples,
+                            feature_combination_name="regression"
+                        )
+                        
+                        # 単体指標のブートストラップ評価
+                        single_metric_bootstrap_results = evaluate_bootstrap(
+                            y_true=y_test.values,
+                            y_pred_proba=best_metric_proba,
+                            bootstrap_samples=bootstrap_samples,
+                            feature_combination_name=f"single_{best_metric}"
+                        )
+                        
+                        # 結果を結合
+                        all_bootstrap_results = pd.concat([
+                            regression_bootstrap_results,
+                            single_metric_bootstrap_results
+                        ], ignore_index=True)
+                        
+                        # 結果を保存
+                        bootstrap_results_path = feature_output_dir / "bootstrap_results_single_vs_regression.csv"
+                        save_bootstrap_results(all_bootstrap_results, bootstrap_results_path)
+                        print_and_save(f"  - ブートストラップ結果を保存: {bootstrap_results_path}")
+                        
+                        # サマリーを表示
+                        print_and_save(f"\n  ブートストラップ結果のサマリー:")
+                        for combination in ["regression", f"single_{best_metric}"]:
+                            print_and_save(f"\n  {combination}:")
+                            for metric in ['auc', 'ap', 'f1', 'accuracy']:
+                                metric_values = all_bootstrap_results[
+                                    (all_bootstrap_results['feature_combination'] == combination) &
+                                    (all_bootstrap_results['metric_name'] == metric)
+                                ]['value'].values
+                                mean_val = np.mean(metric_values)
+                                std_val = np.std(metric_values)
+                                ci_lower = np.percentile(metric_values, 2.5)
+                                ci_upper = np.percentile(metric_values, 97.5)
+                                print_and_save(f"    {metric.upper()}: {mean_val:.4f} ± {std_val:.4f} (95% CI: [{ci_lower:.4f}, {ci_upper:.4f}])")
             
             # 予測結果を保存（回帰モデル同士の比較用）
             predictions_path = feature_output_dir / "predictions_for_delong.csv"
@@ -1276,6 +1416,532 @@ def main():
             use_combined=False
         )
     print_and_save("  - 相関係数ヒートマップを保存しました")
+    
+    # 11. Confidence Analysis（確信度分析）
+    print_and_save("\n11. Confidence Analysis（確信度分析）を実行中...")
+    
+    # BERTの予測確率を読み込む
+    dev_base_probs = load_base_probabilities('dev', args.dataset, BASE_DIR, base_experiment_names=None)
+    
+    if len(dev_base_probs) > 0:
+        # 最初のBERT確率を使用（複数ある場合は最初のもの）
+        bert_prob_key = list(dev_base_probs.keys())[0]
+        bert_probs = dev_base_probs[bert_prob_key]
+        
+        print_and_save(f"  - BERT予測確率を読み込み: {bert_prob_key} ({len(bert_probs)} サンプル)")
+        
+        # 複数の確率範囲で評価（可視化用）
+        confidence_ranges = [
+            (0.0, 0.3),
+            (0.3, 0.4),
+            (0.4, 0.5),
+            (0.5, 0.6),
+            (0.6, 0.7),
+            (0.7, 1.0)
+        ]
+        
+        # 0.5付近のクエリを抽出（詳細分析用、デフォルト: 0.4-0.6）
+        confidence_threshold_low = 0.4
+        confidence_threshold_high = 0.6
+        
+        # テストデータからconv_idとturn_idを取得
+        dev_data = load_json_data(dataset_dir / "dev.json")
+        test_keys = []
+        for conversation in dev_data:
+            for turn in conversation:
+                conv_id = str(turn['conv_id'])
+                turn_id = int(turn['turn_id'])
+                test_keys.append((conv_id, turn_id))
+        
+        # 全体の評価結果を取得（比較用）
+        if args.use_cv:
+            overall_auc = cv_test_auc
+            overall_ap = cv_test_ap
+            overall_f1 = cv_test_f1
+            total_samples = len(all_test_labels)
+        else:
+            overall_auc = test_auc
+            overall_ap = test_ap
+            overall_f1 = test_f1
+            total_samples = len(y_test)
+        
+        # 単体指標の情報を取得
+        has_single_metric_global = (args.delong_test and 
+                                   len(single_metric_probas) > 0 and 
+                                   best_metric is not None)
+        if has_single_metric_global:
+            overall_auc_single = best_metric_auc
+            overall_auc_improvement = overall_auc - overall_auc_single
+        else:
+            overall_auc_improvement = None
+        
+        # 複数の確率範囲で評価（可視化用）
+        range_results = []
+        
+        # CVの場合は統合データのキーを取得
+        if args.use_cv:
+            train_data = load_json_data(dataset_dir / "train.json")
+            combined_keys = []
+            for conversation in train_data:
+                for turn in conversation:
+                    conv_id = str(turn['conv_id'])
+                    turn_id = int(turn['turn_id'])
+                    combined_keys.append((conv_id, turn_id))
+            for conversation in dev_data:
+                for turn in conversation:
+                    conv_id = str(turn['conv_id'])
+                    turn_id = int(turn['turn_id'])
+                    combined_keys.append((conv_id, turn_id))
+        else:
+            combined_keys = test_keys
+        
+        for range_low, range_high in confidence_ranges:
+            range_indices = []
+            range_labels = []
+            range_proba_regression = []
+            range_proba_single = []
+            
+            # 各範囲でサンプルを抽出
+            for idx, key in enumerate(combined_keys):
+                if key in bert_probs:
+                    bert_prob = bert_probs[key]
+                    if range_low <= bert_prob < range_high or (range_high == 1.0 and bert_prob == 1.0):
+                        if args.use_cv:
+                            if idx < len(all_test_labels):
+                                range_indices.append(idx)
+                                range_labels.append(all_test_labels[idx])
+                                range_proba_regression.append(all_test_proba[idx])
+                                if has_single_metric_global:
+                                    best_metric_proba = single_metric_probas[best_metric]
+                                    if idx < len(best_metric_proba):
+                                        range_proba_single.append(best_metric_proba[idx])
+                                    else:
+                                        range_proba_single.append(None)
+                                else:
+                                    range_proba_single.append(None)
+                        else:
+                            if idx < len(y_test):
+                                range_indices.append(idx)
+                                range_labels.append(y_test.iloc[idx] if hasattr(y_test, 'iloc') else y_test[idx])
+                                range_proba_regression.append(y_test_proba[idx])
+                                if has_single_metric_global:
+                                    best_metric_proba = single_metric_probas[best_metric]
+                                    if idx < len(best_metric_proba):
+                                        range_proba_single.append(best_metric_proba[idx])
+                                    else:
+                                        range_proba_single.append(None)
+                                else:
+                                    range_proba_single.append(None)
+            
+            # 各範囲で評価
+            if len(range_indices) > 0:
+                range_labels = np.array(range_labels)
+                range_proba_regression = np.array(range_proba_regression)
+                range_auc_regression = roc_auc_score(range_labels, range_proba_regression)
+                
+                range_auc_single = None
+                if has_single_metric_global and all(p is not None for p in range_proba_single):
+                    range_proba_single = np.array(range_proba_single)
+                    range_auc_single = roc_auc_score(range_labels, range_proba_single)
+                
+                range_results.append({
+                    'auc_regression': range_auc_regression,
+                    'auc_single': range_auc_single,
+                    'n_samples': len(range_indices)
+                })
+            else:
+                range_results.append({
+                    'auc_regression': None,
+                    'auc_single': None,
+                    'n_samples': 0
+                })
+        
+        # 可視化（単体指標がある場合のみ）
+        if has_single_metric_global and overall_auc_improvement is not None:
+            # 有効な範囲のみをフィルタリング
+            valid_ranges = []
+            valid_results = []
+            for (r_low, r_high), result in zip(confidence_ranges, range_results):
+                if result['n_samples'] > 0 and result['auc_regression'] is not None and result['auc_single'] is not None:
+                    valid_ranges.append((r_low, r_high))
+                    valid_results.append(result)
+            
+            if len(valid_ranges) > 0:
+                # feature_namesを取得（可視化セクションより前の場合はX_train_normから取得）
+                if args.use_cv:
+                    vis_feature_names = list(X_combined.columns) if 'X_combined' in locals() else list(X_train_norm.columns) if 'X_train_norm' in locals() else None
+                else:
+                    vis_feature_names = list(X_train_norm.columns) if 'X_train_norm' in locals() else None
+                
+                plot_confidence_analysis(
+                    valid_ranges,
+                    valid_results,
+                    overall_auc_improvement,
+                    output_dir,
+                    feature_names=vis_feature_names
+                )
+                print_and_save("  - Confidence Analysis可視化を保存しました")
+        
+        # 0.4-0.6の範囲で詳細分析（既存のコード）
+        confidence_indices = []
+        confidence_labels = []
+        confidence_proba_regression = []
+        confidence_proba_single = []
+        
+        for idx, key in enumerate(combined_keys):
+            if key in bert_probs:
+                bert_prob = bert_probs[key]
+                if confidence_threshold_low <= bert_prob <= confidence_threshold_high:
+                    if args.use_cv:
+                        if idx < len(all_test_labels):
+                            confidence_indices.append(idx)
+                            confidence_labels.append(all_test_labels[idx])
+                            confidence_proba_regression.append(all_test_proba[idx])
+                            if has_single_metric_global:
+                                best_metric_proba = single_metric_probas[best_metric]
+                                if idx < len(best_metric_proba):
+                                    confidence_proba_single.append(best_metric_proba[idx])
+                                else:
+                                    confidence_proba_single.append(None)
+                            else:
+                                confidence_proba_single.append(None)
+                    else:
+                        if idx < len(y_test):
+                            confidence_indices.append(idx)
+                            confidence_labels.append(y_test.iloc[idx] if hasattr(y_test, 'iloc') else y_test[idx])
+                            confidence_proba_regression.append(y_test_proba[idx])
+                            if has_single_metric_global:
+                                best_metric_proba = single_metric_probas[best_metric]
+                                if idx < len(best_metric_proba):
+                                    confidence_proba_single.append(best_metric_proba[idx])
+                                else:
+                                    confidence_proba_single.append(None)
+                            else:
+                                confidence_proba_single.append(None)
+        
+        if len(confidence_indices) > 0:
+            confidence_labels = np.array(confidence_labels)
+            confidence_proba_regression = np.array(confidence_proba_regression)
+            
+            total_samples = len(all_test_labels) if args.use_cv else len(y_test)
+            print_and_save(f"\n  Confidence Analysis結果:")
+            print_and_save(f"  - BERT確率範囲: [{confidence_threshold_low}, {confidence_threshold_high}]")
+            print_and_save(f"  - 抽出サンプル数: {len(confidence_indices)} / {total_samples}")
+            print_and_save(f"  - 抽出率: {len(confidence_indices) / total_samples * 100:.2f}%")
+            
+            # 回帰モデルの評価
+            confidence_pred_regression = (confidence_proba_regression >= 0.5).astype(int)
+            confidence_acc_regression = accuracy_score(confidence_labels, confidence_pred_regression)
+            confidence_f1_regression = f1_score(confidence_labels, confidence_pred_regression)
+            confidence_auc_regression = roc_auc_score(confidence_labels, confidence_proba_regression)
+            confidence_ap_regression = average_precision_score(confidence_labels, confidence_proba_regression)
+            
+            print_and_save(f"\n  回帰モデル（QPP統合）の評価:")
+            print_and_save(f"    Accuracy: {confidence_acc_regression:.4f}")
+            print_and_save(f"    F1 Score: {confidence_f1_regression:.4f}")
+            print_and_save(f"    AUC-ROC: {confidence_auc_regression:.4f}")
+            print_and_save(f"    Average Precision: {confidence_ap_regression:.4f}")
+            
+            # 単体指標との比較（DeLong検定が実行されている場合のみ）
+            has_single_metric = (args.delong_test and 
+                               len(single_metric_probas) > 0 and 
+                               best_metric is not None and
+                               all(p is not None for p in confidence_proba_single))
+            
+            if has_single_metric:
+                # 単体指標との比較が可能な場合
+                confidence_proba_single = np.array(confidence_proba_single)
+                confidence_pred_single = (confidence_proba_single >= 0.5).astype(int)
+                confidence_acc_single = accuracy_score(confidence_labels, confidence_pred_single)
+                confidence_f1_single = f1_score(confidence_labels, confidence_pred_single)
+                confidence_auc_single = roc_auc_score(confidence_labels, confidence_proba_single)
+                confidence_ap_single = average_precision_score(confidence_labels, confidence_proba_single)
+                
+                print_and_save(f"\n  単体指標（{best_metric}）の評価:")
+                print_and_save(f"    Accuracy: {confidence_acc_single:.4f}")
+                print_and_save(f"    F1 Score: {confidence_f1_single:.4f}")
+                print_and_save(f"    AUC-ROC: {confidence_auc_single:.4f}")
+                print_and_save(f"    Average Precision: {confidence_ap_single:.4f}")
+                
+                # 改善度を計算
+                auc_improvement = confidence_auc_regression - confidence_auc_single
+                ap_improvement = confidence_ap_regression - confidence_ap_single
+                f1_improvement = confidence_f1_regression - confidence_f1_single
+                
+                print_and_save(f"\n  QPP統合による改善度:")
+                print_and_save(f"    AUC-ROC改善: {auc_improvement:+.4f}")
+                print_and_save(f"    Average Precision改善: {ap_improvement:+.4f}")
+                print_and_save(f"    F1 Score改善: {f1_improvement:+.4f}")
+                
+                # 全体の評価結果と比較
+                if args.use_cv:
+                    overall_auc = cv_test_auc
+                    overall_ap = cv_test_ap
+                    overall_f1 = cv_test_f1
+                else:
+                    overall_auc = test_auc
+                    overall_ap = test_ap
+                    overall_f1 = test_f1
+                
+                overall_auc_single = best_metric_auc
+                overall_auc_improvement = overall_auc - overall_auc_single
+                
+                print_and_save(f"\n  全体データでの改善度との比較:")
+                print_and_save(f"    全体データ - AUC改善: {overall_auc_improvement:+.4f}")
+                print_and_save(f"    Confidence範囲 - AUC改善: {auc_improvement:+.4f}")
+                print_and_save(f"    改善度の差: {auc_improvement - overall_auc_improvement:+.4f}")
+                
+                if auc_improvement > overall_auc_improvement:
+                    print_and_save(f"\n  ✓ QPP統合の効果は、BERTが迷った時（確率0.5付近）により大きくなっています！")
+                    print_and_save(f"  → 「BERTが迷った時の最後の一押し（Tie-breaker）」としてQPPが有効であると主張できます。")
+                else:
+                    print_and_save(f"\n  → Confidence範囲での改善度は全体データと同程度です。")
+                
+                # 結果をCSVファイルに保存
+                confidence_results_path = feature_output_dir / "confidence_analysis.csv"
+                confidence_results_df = pd.DataFrame({
+                    'metric': ['regression', 'single_metric'],
+                    'accuracy': [confidence_acc_regression, confidence_acc_single],
+                    'f1': [confidence_f1_regression, confidence_f1_single],
+                    'auc': [confidence_auc_regression, confidence_auc_single],
+                    'ap': [confidence_ap_regression, confidence_ap_single],
+                    'confidence_range_low': [confidence_threshold_low, confidence_threshold_low],
+                    'confidence_range_high': [confidence_threshold_high, confidence_threshold_high],
+                    'n_samples': [len(confidence_indices), len(confidence_indices)]
+                })
+                confidence_results_df.to_csv(confidence_results_path, index=False)
+                print_and_save(f"  - Confidence Analysis結果を保存: {confidence_results_path}")
+            else:
+                # 単体指標との比較ができない場合でも、回帰モデルの結果は保存
+                confidence_results_path = feature_output_dir / "confidence_analysis.csv"
+                confidence_results_df = pd.DataFrame({
+                    'metric': ['regression'],
+                    'accuracy': [confidence_acc_regression],
+                    'f1': [confidence_f1_regression],
+                    'auc': [confidence_auc_regression],
+                    'ap': [confidence_ap_regression],
+                    'confidence_range_low': [confidence_threshold_low],
+                    'confidence_range_high': [confidence_threshold_high],
+                    'n_samples': [len(confidence_indices)]
+                })
+                confidence_results_df.to_csv(confidence_results_path, index=False)
+                print_and_save(f"  - Confidence Analysis結果を保存: {confidence_results_path}")
+                
+                if not args.delong_test:
+                    print_and_save(f"\n  ※ 単体指標との比較を行うには、--delong-testオプションを指定してください")
+                else:
+                    print_and_save(f"\n  ⚠️  単体指標の予測確率が取得できませんでした")
+        else:
+            print_and_save(f"  ⚠️  警告: Confidence範囲内のサンプルが見つかりませんでした")
+        
+        # 12. Overconfidence Analysis（過信分析）
+        print_and_save("\n12. Overconfidence Analysis（過信分析）を実行中...")
+        
+        if len(dev_base_probs) > 0 and has_single_metric_global:
+            # 高確信度で間違えた事例を抽出
+            # False Positive: BERT確率 > 0.8 で予測=1だが、実際のラベル=0
+            # False Negative: BERT確率 < 0.2 で予測=0だが、実際のラベル=1
+            
+            fp_indices = []
+            fp_labels = []
+            fp_proba_regression = []
+            fp_proba_single = []
+            
+            fn_indices = []
+            fn_labels = []
+            fn_proba_regression = []
+            fn_proba_single = []
+            
+            for idx, key in enumerate(combined_keys):
+                if key in bert_probs:
+                    bert_prob = bert_probs[key]
+                    
+                    if args.use_cv:
+                        if idx < len(all_test_labels):
+                            true_label = all_test_labels[idx]
+                            bert_pred = 1 if bert_prob >= 0.5 else 0
+                            
+                            # False Positive: 高確信度で1と予測したが、実際は0
+                            if bert_prob >= 0.8 and bert_pred == 1 and true_label == 0:
+                                fp_indices.append(idx)
+                                fp_labels.append(true_label)
+                                fp_proba_regression.append(all_test_proba[idx])
+                                best_metric_proba = single_metric_probas[best_metric]
+                                if idx < len(best_metric_proba):
+                                    fp_proba_single.append(best_metric_proba[idx])
+                                else:
+                                    fp_proba_single.append(None)
+                            
+                            # False Negative: 高確信度で0と予測したが、実際は1
+                            elif bert_prob <= 0.2 and bert_pred == 0 and true_label == 1:
+                                fn_indices.append(idx)
+                                fn_labels.append(true_label)
+                                fn_proba_regression.append(all_test_proba[idx])
+                                best_metric_proba = single_metric_probas[best_metric]
+                                if idx < len(best_metric_proba):
+                                    fn_proba_single.append(best_metric_proba[idx])
+                                else:
+                                    fn_proba_single.append(None)
+                    else:
+                        if idx < len(y_test):
+                            true_label = y_test.iloc[idx] if hasattr(y_test, 'iloc') else y_test[idx]
+                            bert_pred = 1 if bert_prob >= 0.5 else 0
+                            
+                            # False Positive
+                            if bert_prob >= 0.8 and bert_pred == 1 and true_label == 0:
+                                fp_indices.append(idx)
+                                fp_labels.append(true_label)
+                                fp_proba_regression.append(y_test_proba[idx])
+                                best_metric_proba = single_metric_probas[best_metric]
+                                if idx < len(best_metric_proba):
+                                    fp_proba_single.append(best_metric_proba[idx])
+                                else:
+                                    fp_proba_single.append(None)
+                            
+                            # False Negative
+                            elif bert_prob <= 0.2 and bert_pred == 0 and true_label == 1:
+                                fn_indices.append(idx)
+                                fn_labels.append(true_label)
+                                fn_proba_regression.append(y_test_proba[idx])
+                                best_metric_proba = single_metric_probas[best_metric]
+                                if idx < len(best_metric_proba):
+                                    fn_proba_single.append(best_metric_proba[idx])
+                                else:
+                                    fn_proba_single.append(None)
+            
+            overconfidence_results = {}
+            
+            # False Positiveの評価
+            # FPは全てラベル=0なので、AUCは計算できない
+            # 代わりに、予測確率の平均値と標準偏差を比較
+            if len(fp_indices) > 0 and all(p is not None for p in fp_proba_single):
+                fp_proba_regression = np.array(fp_proba_regression)
+                fp_proba_single = np.array(fp_proba_single)
+                
+                # 理想的な予測確率は0に近い（ラベル=0なので）
+                # QPP統合により予測確率が0に近づけば改善
+                fp_mean_regression = np.mean(fp_proba_regression)
+                fp_mean_single = np.mean(fp_proba_single)
+                fp_std_regression = np.std(fp_proba_regression)
+                fp_std_single = np.std(fp_proba_single)
+                
+                # 0からの距離を計算（小さいほど良い）
+                fp_distance_regression = fp_mean_regression  # 0からの距離
+                fp_distance_single = fp_mean_single
+                improvement = fp_distance_single - fp_distance_regression  # 正の値なら改善
+                
+                overconfidence_results['high_confidence_fp'] = {
+                    'mean_regression': fp_mean_regression,
+                    'mean_single': fp_mean_single,
+                    'std_regression': fp_std_regression,
+                    'std_single': fp_std_single,
+                    'improvement': improvement,
+                    'n_samples': len(fp_indices)
+                }
+                
+                print_and_save(f"\n  False Positive (高確信度で誤分類):")
+                print_and_save(f"    - サンプル数: {len(fp_indices)}")
+                print_and_save(f"    - 回帰モデル 平均予測確率: {fp_mean_regression:.4f} (std: {fp_std_regression:.4f})")
+                print_and_save(f"    - 単体指標 平均予測確率: {fp_mean_single:.4f} (std: {fp_std_single:.4f})")
+                print_and_save(f"    - 改善度（0からの距離の減少）: {improvement:+.4f}")
+                if improvement > 0:
+                    print_and_save(f"    → QPP統合により、誤分類の予測確率が0に近づいています（改善）")
+                else:
+                    print_and_save(f"    → QPP統合による改善は見られませんでした")
+            
+            # False Negativeの評価
+            # FNは全てラベル=1なので、AUCは計算できない
+            # 代わりに、予測確率の平均値と標準偏差を比較
+            if len(fn_indices) > 0 and all(p is not None for p in fn_proba_single):
+                fn_proba_regression = np.array(fn_proba_regression)
+                fn_proba_single = np.array(fn_proba_single)
+                
+                # 理想的な予測確率は1に近い（ラベル=1なので）
+                # QPP統合により予測確率が1に近づけば改善
+                fn_mean_regression = np.mean(fn_proba_regression)
+                fn_mean_single = np.mean(fn_proba_single)
+                fn_std_regression = np.std(fn_proba_regression)
+                fn_std_single = np.std(fn_proba_single)
+                
+                # 1からの距離を計算（小さいほど良い）
+                fn_distance_regression = 1.0 - fn_mean_regression  # 1からの距離
+                fn_distance_single = 1.0 - fn_mean_single
+                improvement = fn_distance_single - fn_distance_regression  # 正の値なら改善
+                
+                overconfidence_results['high_confidence_fn'] = {
+                    'mean_regression': fn_mean_regression,
+                    'mean_single': fn_mean_single,
+                    'std_regression': fn_std_regression,
+                    'std_single': fn_std_single,
+                    'improvement': improvement,
+                    'n_samples': len(fn_indices)
+                }
+                
+                print_and_save(f"\n  False Negative (高確信度で誤分類):")
+                print_and_save(f"    - サンプル数: {len(fn_indices)}")
+                print_and_save(f"    - 回帰モデル 平均予測確率: {fn_mean_regression:.4f} (std: {fn_std_regression:.4f})")
+                print_and_save(f"    - 単体指標 平均予測確率: {fn_mean_single:.4f} (std: {fn_std_single:.4f})")
+                print_and_save(f"    - 改善度（1からの距離の減少）: {improvement:+.4f}")
+                if improvement > 0:
+                    print_and_save(f"    → QPP統合により、誤分類の予測確率が1に近づいています（改善）")
+                else:
+                    print_and_save(f"    → QPP統合による改善は見られませんでした")
+            
+            # 可視化
+            if len(overconfidence_results) > 0:
+                overconfidence_results['overall_auc_improvement'] = overall_auc_improvement
+                
+                if args.use_cv:
+                    vis_feature_names = list(X_combined.columns) if 'X_combined' in locals() else list(X_train_norm.columns) if 'X_train_norm' in locals() else None
+                else:
+                    vis_feature_names = list(X_train_norm.columns) if 'X_train_norm' in locals() else None
+                
+                plot_overconfidence_analysis(
+                    overconfidence_results,
+                    output_dir,
+                    feature_names=vis_feature_names
+                )
+                print_and_save("  - Overconfidence Analysis可視化を保存しました")
+                
+                # 結果をCSVに保存
+                overconfidence_csv_path = feature_output_dir / "overconfidence_analysis.csv"
+                overconfidence_data = []
+                if 'high_confidence_fp' in overconfidence_results:
+                    fp_data = overconfidence_results['high_confidence_fp']
+                    overconfidence_data.append({
+                        'error_type': 'False Positive',
+                        'mean_regression': fp_data.get('mean_regression'),
+                        'mean_single': fp_data.get('mean_single'),
+                        'std_regression': fp_data.get('std_regression'),
+                        'std_single': fp_data.get('std_single'),
+                        'improvement': fp_data.get('improvement'),
+                        'n_samples': fp_data.get('n_samples', 0)
+                    })
+                if 'high_confidence_fn' in overconfidence_results:
+                    fn_data = overconfidence_results['high_confidence_fn']
+                    overconfidence_data.append({
+                        'error_type': 'False Negative',
+                        'mean_regression': fn_data.get('mean_regression'),
+                        'mean_single': fn_data.get('mean_single'),
+                        'std_regression': fn_data.get('std_regression'),
+                        'std_single': fn_data.get('std_single'),
+                        'improvement': fn_data.get('improvement'),
+                        'n_samples': fn_data.get('n_samples', 0)
+                    })
+                
+                if len(overconfidence_data) > 0:
+                    overconfidence_df = pd.DataFrame(overconfidence_data)
+                    overconfidence_df.to_csv(overconfidence_csv_path, index=False)
+                    print_and_save(f"  - Overconfidence Analysis結果を保存: {overconfidence_csv_path}")
+            else:
+                print_and_save(f"  ⚠️  高確信度で誤分類した事例が見つかりませんでした")
+        else:
+            if not has_single_metric_global:
+                print_and_save(f"  ⚠️  単体指標との比較ができないため、Overconfidence Analysisをスキップします（--delong-testを指定してください）")
+            else:
+                print_and_save(f"  ⚠️  BERTの予測確率を読み込めませんでした")
+    else:
+        print_and_save(f"  ⚠️  警告: BERTの予測確率を読み込めませんでした（BASE_EXPERIMENT_NAMESが設定されていない可能性があります）")
     
     # 結果をファイルに保存
     with open(output_file, 'w', encoding='utf-8') as f:
