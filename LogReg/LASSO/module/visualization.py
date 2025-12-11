@@ -181,9 +181,24 @@ def plot_roc_curves(
             fpr_test_single, tpr_test_single, _ = roc_curve(y_single_labels, test_scores)
             test_auc_single = roc_auc_score(y_single_labels, test_scores)
             label_prefix = "CV" if y_test_single is not None else "Test"
-            plt.plot(fpr_test_single, tpr_test_single, 
-                    label=f'{feature_name} ({label_prefix}, AUC = {test_auc_single:.4f})', 
-                    linewidth=1.5, alpha=0.7)
+            
+            # AUCが0.5未満の場合は反転させたバージョンも描画
+            if test_auc_single < 0.5:
+                # 元のROC曲線（点線で表示）
+                plt.plot(fpr_test_single, tpr_test_single, 
+                        label=f'{feature_name} ({label_prefix}, AUC = {test_auc_single:.4f}) [Original]', 
+                        linewidth=1.5, alpha=0.5, linestyle=':', color='gray')
+                # 反転させたROC曲線
+                flipped_scores = 1.0 - test_scores
+                fpr_flipped, tpr_flipped, _ = roc_curve(y_single_labels, flipped_scores)
+                flipped_auc = roc_auc_score(y_single_labels, flipped_scores)
+                plt.plot(fpr_flipped, tpr_flipped, 
+                        label=f'{feature_name} ({label_prefix}, AUC = {flipped_auc:.4f}) [Flipped]', 
+                        linewidth=1.5, alpha=0.7, linestyle='-')
+            else:
+                plt.plot(fpr_test_single, tpr_test_single, 
+                        label=f'{feature_name} ({label_prefix}, AUC = {test_auc_single:.4f})', 
+                        linewidth=1.5, alpha=0.7)
     
     # ランダム分類器
     plt.plot([0, 1], [0, 1], 'k--', label='Random (AUC = 0.5000)', linewidth=1)
@@ -255,12 +270,31 @@ def plot_pr_curves(
         for feature_name in X_test.columns:
             # テストデータ（またはCV結果）
             test_scores = X_test[feature_name].values
-            precision_test_single, recall_test_single, _ = precision_recall_curve(y_single_labels, test_scores)
-            test_ap_single = average_precision_score(y_single_labels, test_scores)
+            # ROCのAUCを計算して、0.5未満かどうかを判定
+            test_auc_single = roc_auc_score(y_single_labels, test_scores)
             label_prefix = "CV" if y_test_single is not None else "Test"
-            plt.plot(recall_test_single, precision_test_single, 
-                    label=f'{feature_name} ({label_prefix}, AP = {test_ap_single:.4f})', 
-                    linewidth=1.5, alpha=0.7)
+            
+            # AUCが0.5未満の場合は反転させたバージョンも描画
+            if test_auc_single < 0.5:
+                # 元のPR曲線（点線で表示）
+                precision_test_single, recall_test_single, _ = precision_recall_curve(y_single_labels, test_scores)
+                test_ap_single = average_precision_score(y_single_labels, test_scores)
+                plt.plot(recall_test_single, precision_test_single, 
+                        label=f'{feature_name} ({label_prefix}, AP = {test_ap_single:.4f}) [Original]', 
+                        linewidth=1.5, alpha=0.5, linestyle=':', color='gray')
+                # 反転させたPR曲線
+                flipped_scores = 1.0 - test_scores
+                precision_flipped, recall_flipped, _ = precision_recall_curve(y_single_labels, flipped_scores)
+                flipped_ap = average_precision_score(y_single_labels, flipped_scores)
+                plt.plot(recall_flipped, precision_flipped, 
+                        label=f'{feature_name} ({label_prefix}, AP = {flipped_ap:.4f}) [Flipped]', 
+                        linewidth=1.5, alpha=0.7, linestyle='-')
+            else:
+                precision_test_single, recall_test_single, _ = precision_recall_curve(y_single_labels, test_scores)
+                test_ap_single = average_precision_score(y_single_labels, test_scores)
+                plt.plot(recall_test_single, precision_test_single, 
+                        label=f'{feature_name} ({label_prefix}, AP = {test_ap_single:.4f})', 
+                        linewidth=1.5, alpha=0.7)
     
     # ランダム分類器
     plt.axhline(y=baseline, color='k', linestyle='--', label=f'Random (AP = {baseline:.4f})', linewidth=1)
@@ -306,15 +340,37 @@ def plot_single_metric_roc_curves(
         if not hide_train:
             fpr_train, tpr_train, _ = roc_curve(y_train, train_scores)
             train_auc = roc_auc_score(y_train, train_scores)
-            plt.plot(fpr_train, tpr_train, label=f'{feature_name} (Train, AUC = {train_auc:.4f})', 
-                    linewidth=1.5, linestyle='--', alpha=0.7)
+            if train_auc < 0.5:
+                # 反転させたROC曲線
+                flipped_train_scores = 1.0 - train_scores
+                fpr_train_flipped, tpr_train_flipped, _ = roc_curve(y_train, flipped_train_scores)
+                train_auc_flipped = roc_auc_score(y_train, flipped_train_scores)
+                plt.plot(fpr_train, tpr_train, label=f'{feature_name} (Train, AUC = {train_auc:.4f}) [Original]', 
+                        linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
+                plt.plot(fpr_train_flipped, tpr_train_flipped, 
+                        label=f'{feature_name} (Train, AUC = {train_auc_flipped:.4f}) [Flipped]', 
+                        linewidth=1.5, linestyle='--', alpha=0.7)
+            else:
+                plt.plot(fpr_train, tpr_train, label=f'{feature_name} (Train, AUC = {train_auc:.4f})', 
+                        linewidth=1.5, linestyle='--', alpha=0.7)
         
         # テストデータ
         test_scores = X_test[feature_name].values
         fpr_test, tpr_test, _ = roc_curve(y_test, test_scores)
         test_auc = roc_auc_score(y_test, test_scores)
-        plt.plot(fpr_test, tpr_test, label=f'{feature_name} (Test, AUC = {test_auc:.4f})', 
-                linewidth=2, alpha=0.9)
+        if test_auc < 0.5:
+            # 反転させたROC曲線
+            flipped_test_scores = 1.0 - test_scores
+            fpr_test_flipped, tpr_test_flipped, _ = roc_curve(y_test, flipped_test_scores)
+            test_auc_flipped = roc_auc_score(y_test, flipped_test_scores)
+            plt.plot(fpr_test, tpr_test, label=f'{feature_name} (Test, AUC = {test_auc:.4f}) [Original]', 
+                    linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
+            plt.plot(fpr_test_flipped, tpr_test_flipped, 
+                    label=f'{feature_name} (Test, AUC = {test_auc_flipped:.4f}) [Flipped]', 
+                    linewidth=2, alpha=0.9, linestyle='-')
+        else:
+            plt.plot(fpr_test, tpr_test, label=f'{feature_name} (Test, AUC = {test_auc:.4f})', 
+                    linewidth=2, alpha=0.9)
     
     # ランダム分類器
     plt.plot([0, 1], [0, 1], 'k--', label='Random (AUC = 0.5000)', linewidth=1)
@@ -360,19 +416,47 @@ def plot_single_metric_pr_curves(
         # 訓練データ
         train_scores = X_train[feature_name].values
         if not hide_train:
+            # ROCのAUCを計算して、0.5未満かどうかを判定
+            train_auc = roc_auc_score(y_train, train_scores)
             precision_train, recall_train, _ = precision_recall_curve(y_train, train_scores)
             train_ap = average_precision_score(y_train, train_scores)
-            plt.plot(recall_train, precision_train, 
-                    label=f'{feature_name} (Train, AP = {train_ap:.4f})', 
-                    linewidth=1.5, linestyle='--', alpha=0.7)
+            if train_auc < 0.5:
+                # 反転させたPR曲線
+                flipped_train_scores = 1.0 - train_scores
+                precision_train_flipped, recall_train_flipped, _ = precision_recall_curve(y_train, flipped_train_scores)
+                train_ap_flipped = average_precision_score(y_train, flipped_train_scores)
+                plt.plot(recall_train, precision_train, 
+                        label=f'{feature_name} (Train, AP = {train_ap:.4f}) [Original]', 
+                        linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
+                plt.plot(recall_train_flipped, precision_train_flipped, 
+                        label=f'{feature_name} (Train, AP = {train_ap_flipped:.4f}) [Flipped]', 
+                        linewidth=1.5, linestyle='--', alpha=0.7)
+            else:
+                plt.plot(recall_train, precision_train, 
+                        label=f'{feature_name} (Train, AP = {train_ap:.4f})', 
+                        linewidth=1.5, linestyle='--', alpha=0.7)
         
         # テストデータ
         test_scores = X_test[feature_name].values
+        # ROCのAUCを計算して、0.5未満かどうかを判定
+        test_auc = roc_auc_score(y_test, test_scores)
         precision_test, recall_test, _ = precision_recall_curve(y_test, test_scores)
         test_ap = average_precision_score(y_test, test_scores)
-        plt.plot(recall_test, precision_test, 
-                label=f'{feature_name} (Test, AP = {test_ap:.4f})', 
-                linewidth=2, alpha=0.9)
+        if test_auc < 0.5:
+            # 反転させたPR曲線
+            flipped_test_scores = 1.0 - test_scores
+            precision_test_flipped, recall_test_flipped, _ = precision_recall_curve(y_test, flipped_test_scores)
+            test_ap_flipped = average_precision_score(y_test, flipped_test_scores)
+            plt.plot(recall_test, precision_test, 
+                    label=f'{feature_name} (Test, AP = {test_ap:.4f}) [Original]', 
+                    linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
+            plt.plot(recall_test_flipped, precision_test_flipped, 
+                    label=f'{feature_name} (Test, AP = {test_ap_flipped:.4f}) [Flipped]', 
+                    linewidth=2, alpha=0.9, linestyle='-')
+        else:
+            plt.plot(recall_test, precision_test, 
+                    label=f'{feature_name} (Test, AP = {test_ap:.4f})', 
+                    linewidth=2, alpha=0.9)
     
     # ランダム分類器
     plt.axhline(y=baseline, color='k', linestyle='--', label=f'Random (AP = {baseline:.4f})', linewidth=1)
