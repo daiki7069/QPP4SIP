@@ -1,0 +1,401 @@
+"""
+モデル作成と管理に関するモジュール
+"""
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression, LassoLarsCV
+from sklearn.ensemble import RandomForestClassifier
+from scipy.optimize import minimize
+from scipy.special import expit
+import warnings
+from collections import Counter
+from .feature_selection import bolasso_feature_selection, lars_traps_feature_selection
+
+
+class NonNegativeLogisticRegression:
+    """非負制約付きL1正則化ロジスティック回帰"""
+    
+    def __init__(self, C=1.0, max_iter=1000, random_state=42, class_weight='balanced', tol=1e-7):
+        self.C = C
+        self.max_iter = max_iter
+        self.random_state = random_state
+        self.class_weight = class_weight
+        self.tol = tol
+        self.coef_ = None
+        self.intercept_ = None
+        self.n_iter_ = None
+        
+    def _logistic_loss(self, params, X, y, sample_weights):
+        """ロジスティック損失関数（L1正則化付き）"""
+        n_features = X.shape[1]
+        w = params[:n_features]
+        b = params[n_features]
+        
+        # 予測
+        z = X @ w + b
+        y_pred = expit(z)
+        
+        # ロジスティック損失
+        loss = -np.sum(sample_weights * (y * np.log(y_pred + 1e-15) + (1 - y) * np.log(1 - y_pred + 1e-15)))
+        
+        # L1正則化
+        l1_penalty = (1.0 / self.C) * np.sum(np.abs(w))
+        
+        return loss + l1_penalty
+    
+    def fit(self, X, y):
+        """モデルの学習"""
+        np.random.seed(self.random_state)
+        
+        # クラス重みの計算
+        if self.class_weight == 'balanced':
+            from sklearn.utils.class_weight import compute_sample_weight
+            sample_weights = compute_sample_weight('balanced', y)
+        else:
+            sample_weights = np.ones(len(y))
+        
+        n_features = X.shape[1]
+        n_samples = X.shape[0]
+        
+        # 初期値（小さい正の値）
+        initial_w = np.random.uniform(0.01, 0.1, n_features)
+        initial_b = 0.0
+        initial_params = np.concatenate([initial_w, [initial_b]])
+        
+        # 非負制約（係数のみ、切片は制約なし）
+        bounds = [(0, None) for _ in range(n_features)] + [(None, None)]
+        
+        # 最適化
+        result = minimize(
+            self._logistic_loss,
+            initial_params,
+            args=(X.values if isinstance(X, pd.DataFrame) else X, 
+                  y.values if isinstance(y, pd.Series) else y, 
+                  sample_weights),
+            method='L-BFGS-B',
+            bounds=bounds,
+            options={'maxiter': self.max_iter, 'ftol': self.tol}
+        )
+        
+        self.optimization_result_ = result
+        self.coef_ = np.array([result.x[:n_features]])
+        self.intercept_ = np.array([result.x[n_features]])
+        self.n_iter_ = np.array([result.nit])
+        
+        return self
+    
+    def predict_proba(self, X):
+        """予測確率を返す"""
+        if isinstance(X, pd.DataFrame):
+            X_array = X.values
+        else:
+            X_array = X
+        z = X_array @ self.coef_[0] + self.intercept_
+        proba_positive = expit(z)
+        proba_negative = 1 - proba_positive
+        return np.column_stack([proba_negative, proba_positive])
+    
+    def predict(self, X):
+        """予測ラベルを返す"""
+        proba = self.predict_proba(X)
+        return (proba[:, 1] >= 0.5).astype(int)
+
+
+class BOLASSOModel:
+    """BOLASSOモデル（特徴量選択 + ロジスティック回帰）"""
+    def __init__(self, n_bootstrap=100, C=1.0, selection_threshold=0.5, random_state=42, 
+                 max_iter=1000, class_weight='balanced', tol=1e-8):
+        self.n_bootstrap = n_bootstrap
+        self.C = C
+        self.selection_threshold = selection_threshold
+        self.random_state = random_state
+        self.max_iter = max_iter
+        self.class_weight = class_weight
+        self.tol = tol
+        self.selected_features_ = None
+        self.model_ = None
+        
+    def fit(self, X, y, print_and_save_func=None):
+        # BOLASSOで特徴量選択
+        self.selected_features_ = bolasso_feature_selection(
+            X, y, self.n_bootstrap, self.C, self.selection_threshold,
+            self.random_state, print_and_save_func
+        )
+        
+        # 選択された特徴量でロジスティック回帰を学習
+        if isinstance(X, pd.DataFrame):
+            X_selected = X[self.selected_features_]
+        else:
+            X_selected = X[:, [list(X.columns).index(f) if isinstance(X, pd.DataFrame) else f for f in self.selected_features_]]
+        
+        self.model_ = LogisticRegression(
+            penalty='l1',
+            solver='liblinear',
+            C=self.C,
+            max_iter=self.max_iter,
+            random_state=self.random_state,
+            class_weight=self.class_weight,
+            tol=self.tol
+        )
+        self.model_.fit(X_selected, y)
+        return self
+    
+    def predict_proba(self, X):
+        return self.model_.predict_proba(self._get_selected_features(X))
+    
+    def predict(self, X):
+        return self.model_.predict(self._get_selected_features(X))
+    
+    def _get_selected_features(self, X):
+        if isinstance(X, pd.DataFrame):
+            return X[self.selected_features_]
+        else:
+            return X[:, [list(X.columns).index(f) if isinstance(X, pd.DataFrame) else f for f in self.selected_features_]]
+
+
+class LARSTrapsModel:
+    """LARS-Trapsモデル（特徴量選択 + ロジスティック回帰）"""
+    def __init__(self, n_random_traps=10, random_state=42, max_iter=1000, 
+                 class_weight='balanced', tol=1e-8):
+        self.n_random_traps = n_random_traps
+        self.random_state = random_state
+        self.max_iter = max_iter
+        self.class_weight = class_weight
+        self.tol = tol
+        self.selected_features_ = None
+        self.model_ = None
+        
+    def fit(self, X, y, print_and_save_func=None):
+        # LARS-Trapsで特徴量選択
+        self.selected_features_ = lars_traps_feature_selection(
+            X, y, self.n_random_traps, self.random_state, print_and_save_func
+        )
+        
+        # 選択された特徴量でロジスティック回帰を学習
+        if isinstance(X, pd.DataFrame):
+            X_selected = X[self.selected_features_]
+        else:
+            X_selected = X[:, [list(X.columns).index(f) if isinstance(X, pd.DataFrame) else f for f in self.selected_features_]]
+        
+        self.model_ = LogisticRegression(
+            penalty='l2',
+            solver='lbfgs',
+            max_iter=self.max_iter,
+            random_state=self.random_state,
+            class_weight=self.class_weight,
+            tol=self.tol
+        )
+        self.model_.fit(X_selected, y)
+        return self
+    
+    def predict_proba(self, X):
+        return self.model_.predict_proba(self._get_selected_features(X))
+    
+    def predict(self, X):
+        return self.model_.predict(self._get_selected_features(X))
+    
+    def _get_selected_features(self, X):
+        if isinstance(X, pd.DataFrame):
+            return X[self.selected_features_]
+        else:
+            return X[:, [list(X.columns).index(f) if isinstance(X, pd.DataFrame) else f for f in self.selected_features_]]
+
+
+class LARSCVModel:
+    """LARS-CVモデル（クロスバリデーションで正則化パラメータを選択）"""
+    def __init__(self, cv=5, random_state=42, max_iter=1000, class_weight='balanced', tol=1e-8):
+        self.cv = cv
+        self.random_state = random_state
+        self.max_iter = max_iter
+        self.class_weight = class_weight
+        self.tol = tol
+        self.lars_model_ = None
+        self.model_ = None
+        self.selected_features_ = None
+        
+    def fit(self, X, y, print_and_save_func=None):
+        X_array = X.values if isinstance(X, pd.DataFrame) else X
+        y_array = y.values if isinstance(y, pd.Series) else y
+        
+        # LARS-CVで特徴量選択
+        # LassoLarsCVはrandom_stateパラメータを持たないため、numpyのランダムシードを設定
+        np.random.seed(self.random_state)
+        self.lars_model_ = LassoLarsCV(cv=self.cv, max_iter=1000)
+        self.lars_model_.fit(X_array, y_array)
+        
+        # 選択された特徴量（係数が0でない特徴量）
+        coefs = self.lars_model_.coef_
+        feature_names = list(X.columns) if isinstance(X, pd.DataFrame) else list(range(X.shape[1]))
+        self.selected_features_ = [feature_names[i] for i in np.where(np.abs(coefs) > 1e-6)[0]]
+        
+        if print_and_save_func:
+            print_and_save_func(f"\n  - LARS-CVで選択された特徴量: {len(self.selected_features_)}/{len(feature_names)}")
+            print_and_save_func(f"  - 選択された特徴量: {self.selected_features_}")
+        
+        # 選択された特徴量でロジスティック回帰を学習
+        if len(self.selected_features_) > 0:
+            if isinstance(X, pd.DataFrame):
+                X_selected = X[self.selected_features_]
+            else:
+                X_selected = X[:, [i for i, name in enumerate(feature_names) if name in self.selected_features_]]
+            
+            self.model_ = LogisticRegression(
+                penalty='l2',
+                solver='lbfgs',
+                max_iter=self.max_iter,
+                random_state=self.random_state,
+                class_weight=self.class_weight,
+                tol=self.tol
+            )
+            self.model_.fit(X_selected, y)
+        else:
+            # 特徴量が選択されなかった場合は全ての特徴量を使用
+            self.selected_features_ = feature_names
+            self.model_ = LogisticRegression(
+                penalty='l2',
+                solver='lbfgs',
+                max_iter=self.max_iter,
+                random_state=self.random_state,
+                class_weight=self.class_weight,
+                tol=self.tol
+            )
+            self.model_.fit(X, y)
+        
+        return self
+    
+    def predict_proba(self, X):
+        return self.model_.predict_proba(self._get_selected_features(X))
+    
+    def predict(self, X):
+        return self.model_.predict(self._get_selected_features(X))
+    
+    def _get_selected_features(self, X):
+        if isinstance(X, pd.DataFrame):
+            return X[self.selected_features_]
+        else:
+            feature_names = list(X.columns) if isinstance(X, pd.DataFrame) else list(range(X.shape[1]))
+            return X[:, [i for i, name in enumerate(feature_names) if name in self.selected_features_]]
+
+
+def create_model(model_type, max_iter=1000, random_state=42, class_weight='balanced', tol=1e-8, 
+                 non_negative=False, n_bootstrap=100, selection_threshold=0.5, n_random_traps=10, cv=5):
+    """モデルを作成する関数"""
+    if model_type == 'l1':
+        if non_negative:
+            return NonNegativeLogisticRegression(
+                C=1.0,
+                max_iter=max_iter,
+                random_state=random_state,
+                class_weight=class_weight,
+                tol=tol
+            )
+        else:
+            return LogisticRegression(
+                penalty='l1',
+                solver='liblinear',
+                C=1.0,
+                max_iter=max_iter,
+                random_state=random_state,
+                class_weight=class_weight,
+                tol=tol
+            )
+    elif model_type == 'l2':
+        return LogisticRegression(
+            penalty='l2',
+            solver='lbfgs',
+            C=1.0,
+            max_iter=max_iter,
+            random_state=random_state,
+            class_weight=class_weight,
+            tol=tol
+        )
+    elif model_type == 'elasticnet':
+        return LogisticRegression(
+            penalty='elasticnet',
+            solver='saga',
+            C=1.0,
+            l1_ratio=0.5,
+            max_iter=max_iter,
+            random_state=random_state,
+            class_weight=class_weight,
+            tol=tol
+        )
+    elif model_type == 'randomforest':
+        return RandomForestClassifier(
+            n_estimators=100,
+            max_depth=None,
+            min_samples_split=2,
+            min_samples_leaf=1,
+            random_state=random_state,
+            class_weight='balanced',
+            n_jobs=-1
+        )
+    elif model_type == 'none':
+        # ペナルティなしロジスティック回帰
+        return LogisticRegression(
+            penalty=None,
+            solver='lbfgs',
+            max_iter=max_iter,
+            random_state=random_state,
+            class_weight=class_weight,
+            tol=tol
+        )
+    elif model_type == 'bolasso':
+        return BOLASSOModel(
+            n_bootstrap=n_bootstrap,
+            C=1.0,
+            selection_threshold=selection_threshold,
+            random_state=random_state,
+            max_iter=max_iter,
+            class_weight=class_weight,
+            tol=tol
+        )
+    elif model_type == 'lars_traps':
+        return LARSTrapsModel(
+            n_random_traps=n_random_traps,
+            random_state=random_state,
+            max_iter=max_iter,
+            class_weight=class_weight,
+            tol=tol
+        )
+    elif model_type == 'lars_cv':
+        return LARSCVModel(
+            cv=cv,
+            random_state=random_state,
+            max_iter=max_iter,
+            class_weight=class_weight,
+            tol=tol
+        )
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
+
+
+def get_coefficients(model, feature_names, model_type):
+    """モデルから係数を取得する関数"""
+    if model_type == 'randomforest':
+        # RandomForestの場合はfeature_importances_を使用
+        if hasattr(model, 'feature_importances_'):
+            return model.feature_importances_
+        else:
+            return np.zeros(len(feature_names))
+    elif model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+        # 特徴量選択モデルの場合は、内部モデルの係数を使用
+        if hasattr(model, 'model_') and model.model_ is not None:
+            coefs = model.model_.coef_[0] if len(model.model_.coef_.shape) > 1 else model.model_.coef_
+            # 選択された特徴量のみの係数なので、全特徴量にマッピング
+            full_coefs = np.zeros(len(feature_names))
+            if hasattr(model, 'selected_features_') and model.selected_features_ is not None:
+                for i, feature in enumerate(model.selected_features_):
+                    if feature in feature_names:
+                        idx = feature_names.index(feature)
+                        full_coefs[idx] = coefs[i] if i < len(coefs) else 0.0
+            return full_coefs
+        else:
+            return np.zeros(len(feature_names))
+    else:
+        # 線形モデルの場合はcoef_を使用
+        if hasattr(model, 'coef_') and model.coef_ is not None:
+            return model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_
+        else:
+            return np.zeros(len(feature_names))
+

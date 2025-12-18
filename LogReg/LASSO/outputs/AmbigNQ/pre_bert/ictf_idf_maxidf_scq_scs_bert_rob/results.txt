@@ -1,0 +1,606 @@
+NSP top_k値: 50 (trainとdevで共通)
+使用する特徴量タイプ: pre, bert
+=== allによるclarification分類 ===
+
+データセット: AmbigNQ
+検索手法: dpr
+使用する特徴量: QPPスコア（post + pre + nsp + base）
+  設定: config.pyで指定
+モデルタイプ: all
+ラベル分布の調整: 無効
+非負制約: 無効
+クロスバリデーション: 有効
+  Fold数: 5
+正規化方法: 訓練データの統計量で[0,1]正規化（Min-Max）（通常）
+
+1. データ読み込み中...
+  - 訓練データ: 10036 サンプル
+  - pre_avgidf: 10036 サンプル
+  - pre_avgictf: 10036 サンプル
+  - pre_maxidf: 10036 サンプル
+  - pre_maxscq: 10036 サンプル
+  - pre_simplified_clarity: 10036 サンプル
+  - bert_logit_clarification: 10036 サンプル
+  - roberta_logit_clarification: 10036 サンプル
+  - テストデータ: 2002 サンプル
+  - pre_avgidf: 2002 サンプル
+  - pre_avgictf: 2002 サンプル
+  - pre_maxidf: 2002 サンプル
+  - pre_maxscq: 2002 サンプル
+  - pre_simplified_clarity: 2002 サンプル
+  - bert_logit_clarification: 2002 サンプル
+  - roberta_logit_clarification: 2002 サンプル
+
+2. 特徴量マージ中...
+  - 訓練データ: 10036 サンプル, 7 特徴量
+  - テストデータ: 2002 サンプル, 7 特徴量
+  - 特徴量: ['pre_avgidf', 'pre_avgictf', 'pre_maxidf', 'pre_maxscq', 'pre_simplified_clarity', 'bert_logit_clarification', 'roberta_logit_clarification']
+  - 訓練データのラベル分布: {0: 5289, 1: 4747}
+  - テストデータのラベル分布: {1: 1070, 0: 932}
+
+2.1. trainとdevを統合中...
+  - 統合データ: 12038 サンプル, 7 特徴量
+  - 統合データのラベル分布: {0: 6221, 1: 5817} (正例率: 0.4832)
+
+2.5. ラベル分布の調整: スキップ（--balance-label-distribution が指定されていません）
+
+================================================================================
+クロスバリデーション評価を開始します
+================================================================================
+
+================================================================================
+Fold 1/5
+================================================================================
+  - Fold訓練データ: 9630 サンプル
+  - Foldテストデータ: 2408 サンプル
+  - Fold訓練データのラベル分布: {0: 4976, 1: 4654} (正例率: 0.4833)
+  - Foldテストデータのラベル分布: {0: 1245, 1: 1163} (正例率: 0.4830)
+
+  Fold 1 結果:
+    訓練 - Accuracy: 0.6399, F1: 0.6359, AUC: 0.6971, AP: 0.6705
+    テスト - Accuracy: 0.6362, F1: 0.6266, AUC: 0.6933, AP: 0.6798
+
+================================================================================
+Fold 2/5
+================================================================================
+  - Fold訓練データ: 9630 サンプル
+  - Foldテストデータ: 2408 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4653} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1164} (正例率: 0.4834)
+
+  Fold 2 結果:
+    訓練 - Accuracy: 0.6391, F1: 0.6341, AUC: 0.6955, AP: 0.6722
+    テスト - Accuracy: 0.6329, F1: 0.6307, AUC: 0.6963, AP: 0.6682
+
+================================================================================
+Fold 3/5
+================================================================================
+  - Fold訓練データ: 9630 サンプル
+  - Foldテストデータ: 2408 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4653} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1164} (正例率: 0.4834)
+
+  Fold 3 結果:
+    訓練 - Accuracy: 0.6404, F1: 0.6358, AUC: 0.6969, AP: 0.6723
+    テスト - Accuracy: 0.6358, F1: 0.6381, AUC: 0.6950, AP: 0.6716
+
+================================================================================
+Fold 4/5
+================================================================================
+  - Fold訓練データ: 9631 サンプル
+  - Foldテストデータ: 2407 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4654} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1163} (正例率: 0.4832)
+
+  Fold 4 結果:
+    訓練 - Accuracy: 0.6388, F1: 0.6347, AUC: 0.6962, AP: 0.6736
+    テスト - Accuracy: 0.6361, F1: 0.6341, AUC: 0.6964, AP: 0.6665
+
+================================================================================
+Fold 5/5
+================================================================================
+  - Fold訓練データ: 9631 サンプル
+  - Foldテストデータ: 2407 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4654} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1163} (正例率: 0.4832)
+
+  Fold 5 結果:
+    訓練 - Accuracy: 0.6365, F1: 0.6320, AUC: 0.6958, AP: 0.6724
+    テスト - Accuracy: 0.6510, F1: 0.6392, AUC: 0.6959, AP: 0.6710
+
+================================================================================
+クロスバリデーション結果の集約
+================================================================================
+
+各Foldの結果:
+ fold  train_acc  train_f1  train_auc  train_ap  test_acc  test_f1  test_auc  test_ap
+    1   0.639875  0.635944   0.697096  0.670521  0.636213 0.626598  0.693349 0.679824
+    2   0.639148  0.634095   0.695480  0.672239  0.632890 0.630744  0.696304 0.668230
+    3   0.640395  0.635819   0.696920  0.672324  0.635797 0.638052  0.694995 0.671606
+    4   0.638771  0.634674   0.696240  0.673632  0.636061 0.634085  0.696364 0.666491
+    5   0.636486  0.631977   0.695816  0.672418  0.651018 0.639175  0.695894 0.671034
+
+平均値（標準偏差）:
+  train_acc: 0.6389 (±0.0015)
+  train_f1: 0.6345 (±0.0016)
+  train_auc: 0.6963 (±0.0007)
+  train_ap: 0.6722 (±0.0011)
+  test_acc: 0.6384 (±0.0072)
+  test_f1: 0.6337 (±0.0052)
+  test_auc: 0.6954 (±0.0013)
+  test_ap: 0.6714 (±0.0051)
+
+全Fold統合テストデータ:
+  AUC-ROC: 0.6953
+  Average Precision: 0.6710
+
+=== クロスバリデーション完了 ===
+
+================================================================================
+クロスバリデーションで得られたモデルを使って、train/devデータに対して評価を実行します
+================================================================================
+
+=== クロスバリデーション結果による評価 ===
+（各foldのテストデータに対する予測結果を使用）
+CVテストデータ - Accuracy: 0.6384, F1: 0.6337, AUC: 0.6953, AP: 0.6710
+
+5.6. 単体指標の最高ROCと回帰モデルのDeLong検定を実行中...
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6953
+
+  DeLongの検定結果:
+    モデルA (回帰): AUC = 0.6953
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0114
+    Z統計量: 6.4017
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+ALL Logistic Regression	0.6953	0.6710	1.54e-10
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_single_metric.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table.csv
+
+5.7. ブートストラップ評価を実行中（単体指標vs回帰モデル）...
+  - ブートストラップサンプルを読み込み: 1000 反復
+  - ブートストラップ結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/csv/bootstrap_results_single_vs_regression.csv
+
+  ブートストラップ結果のサマリー:
+
+  regression:
+    AUC: 0.6705 ± 0.0247 (95% CI: [0.6226, 0.7209])
+    AP: 0.6132 ± 0.0347 (95% CI: [0.5461, 0.6796])
+    F1: 0.5842 ± 0.0277 (95% CI: [0.5306, 0.6366])
+    ACCURACY: 0.6152 ± 0.0225 (95% CI: [0.5737, 0.6574])
+
+  single_bert_logit_clarification:
+    AUC: 0.6624 ± 0.0249 (95% CI: [0.6177, 0.7126])
+    AP: 0.6085 ± 0.0351 (95% CI: [0.5407, 0.6789])
+    F1: 0.5710 ± 0.0276 (95% CI: [0.5182, 0.6255])
+    ACCURACY: 0.6032 ± 0.0224 (95% CI: [0.5598, 0.6494])
+  - 回帰モデル同士の比較用に予測結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/csv/predictions_for_delong.csv
+
+参考: train/devデータに対する予測（評価には使用しません）
+参考 - 訓練データ: Accuracy: 0.6356, F1: 0.6294, AUC: 0.6913, AP: 0.6597
+参考 - テストデータ: Accuracy: 0.6568, F1: 0.6663, AUC: 0.7246, AP: 0.7414
+
+特徴量の係数（各foldの平均）:
+                    feature  coefficient
+   bert_logit_clarification     2.203380
+roberta_logit_clarification     2.097283
+                 pre_avgidf    -1.716510
+     pre_simplified_clarity     1.583308
+                 pre_maxscq    -0.170169
+                 pre_maxidf    -0.068001
+                pre_avgictf     0.000000
+  - 係数をCSVファイルに保存しました: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/coefficients.csv
+  - DeLongの検定用に予測結果を保存（CV統合）: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/csv/predictions_for_delong.csv
+
+3. [0,1]正規化（Min-Max）中...
+  - 方法: 訓練データの統計量でテストデータも正規化（通常）
+  - 正規化完了
+
+=== 評価結果 ===
+（クロスバリデーション結果は既に上記で表示済み）
+
+6. ROC曲線を描画中...
+  - ROC曲線を保存しました
+
+7. Precision-Recall曲線を描画中...
+  - PR曲線を保存しました
+
+8. 閾値とF1スコアの関係を描画中...
+  - 閾値とF1スコアの関係を保存しました
+
+9. 特徴量のスコア分布を描画中...
+  - 特徴量のスコア分布を保存しました
+
+10. 相関係数ヒートマップを描画中...
+  - 相関係数ヒートマップを保存しました
+
+11. Confidence Analysis（確信度分析）を実行中...
+  - BERT予測確率を読み込み: bert_prob_clarification (2002 サンプル)
+  - Confidence Analysis可視化を保存しました
+
+  Confidence Analysis結果:
+  - BERT確率範囲: [0.4, 0.6]
+  - 抽出サンプル数: 417 / 12038
+  - 抽出率: 3.46%
+
+  回帰モデル（QPP統合）の評価:
+    Accuracy: 0.6187
+    F1 Score: 0.5891
+    AUC-ROC: 0.6703
+    Average Precision: 0.6474
+
+  単体指標（bert_logit_clarification）の評価:
+    Accuracy: 0.5923
+    F1 Score: 0.5707
+    AUC-ROC: 0.6289
+    Average Precision: 0.6069
+
+  QPP統合による改善度:
+    AUC-ROC改善: +0.0414
+    Average Precision改善: +0.0405
+    F1 Score改善: +0.0184
+
+  全体データでの改善度との比較:
+    全体データ - AUC改善: +0.0114
+    Confidence範囲 - AUC改善: +0.0414
+    改善度の差: +0.0300
+
+  ✓ QPP統合の効果は、BERTが迷った時（確率0.5付近）により大きくなっています！
+  → 「BERTが迷った時の最後の一押し（Tie-breaker）」としてQPPが有効であると主張できます。
+  - Confidence Analysis結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/csv/confidence_analysis.csv
+
+12. Overconfidence Analysis（過信分析）を実行中...
+
+  False Positive (高確信度で誤分類):
+    - サンプル数: 234
+    - 回帰モデル 平均予測確率: 0.4281 (std: 0.1654)
+    - 単体指標 平均予測確率: 0.4332 (std: 0.1550)
+    - 改善度（0からの距離の減少）: +0.0051
+    → QPP統合により、誤分類の予測確率が0に近づいています（改善）
+
+  False Negative (高確信度で誤分類):
+    - サンプル数: 137
+    - 回帰モデル 平均予測確率: 0.5529 (std: 0.1661)
+    - 単体指標 平均予測確率: 0.5504 (std: 0.1573)
+    - 改善度（1からの距離の減少）: +0.0025
+    → QPP統合により、誤分類の予測確率が1に近づいています（改善）
+  - Overconfidence Analysis可視化を保存しました
+  - Overconfidence Analysis結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/csv/overconfidence_analysis.csv
+
+結果をファイルに保存しました: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/results.txt
+
+================================================================================
+全てのモデルタイプを実行して比較します
+================================================================================
+
+L1:
+  Accuracy: 0.6379
+  F1 Score: 0.6331
+  AUC-ROC: 0.6952
+  Average Precision: 0.6710
+
+  --- L1 モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6952
+
+  DeLongの検定結果:
+    モデルA (L1): AUC = 0.6952
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0114
+    Z統計量: 6.3986
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+L1	0.6952	0.6710	1.57e-10
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_l1.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_l1.csv
+
+L2:
+  Accuracy: 0.6384
+  F1 Score: 0.6337
+  AUC-ROC: 0.6953
+  Average Precision: 0.6711
+
+  --- L2 モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6953
+
+  DeLongの検定結果:
+    モデルA (L2): AUC = 0.6953
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0115
+    Z統計量: 6.4918
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+L2	0.6953	0.6711	8.48e-11
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_l2.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_l2.csv
+
+ElasticNet:
+  Accuracy: 0.6381
+  F1 Score: 0.6335
+  AUC-ROC: 0.6953
+  Average Precision: 0.6711
+
+  --- ElasticNet モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6953
+
+  DeLongの検定結果:
+    モデルA (ElasticNet): AUC = 0.6953
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0115
+    Z統計量: 6.4843
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+ElasticNet	0.6953	0.6711	8.91e-11
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_elasticnet.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_elasticnet.csv
+
+No Penalty:
+  Accuracy: 0.6383
+  F1 Score: 0.6343
+  AUC-ROC: 0.6958
+  Average Precision: 0.6713
+
+  --- No Penalty モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6958
+
+  DeLongの検定結果:
+    モデルA (No Penalty): AUC = 0.6958
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0119
+    Z統計量: 6.3918
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+No Penalty	0.6958	0.6713	1.64e-10
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_none.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_none.csv
+
+BOLASSO:
+  Accuracy: 0.6379
+  F1 Score: 0.6331
+  AUC-ROC: 0.6952
+  Average Precision: 0.6710
+
+  --- BOLASSO モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6952
+
+  DeLongの検定結果:
+    モデルA (BOLASSO): AUC = 0.6952
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0114
+    Z統計量: 6.3986
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+BOLASSO	0.6952	0.6710	1.57e-10
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_bolasso.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_bolasso.csv
+
+LARS-Traps:
+  Accuracy: 0.6384
+  F1 Score: 0.6337
+  AUC-ROC: 0.6953
+  Average Precision: 0.6711
+
+  --- LARS-Traps モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6953
+
+  DeLongの検定結果:
+    モデルA (LARS-Traps): AUC = 0.6953
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0115
+    Z統計量: 6.4918
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+LARS-Traps	0.6953	0.6711	8.48e-11
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_lars_traps.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_lars_traps.csv
+
+LARS-CV:
+  Accuracy: 0.6384
+  F1 Score: 0.6337
+  AUC-ROC: 0.6953
+  Average Precision: 0.6711
+
+  --- LARS-CV モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6953
+
+  DeLongの検定結果:
+    モデルA (LARS-CV): AUC = 0.6953
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: 0.0115
+    Z統計量: 6.4925
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+LARS-CV	0.6953	0.6711	8.44e-11
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_lars_cv.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_lars_cv.csv
+
+RandomForest:
+  Accuracy: 0.6141
+  F1 Score: 0.5970
+  AUC-ROC: 0.6622
+  Average Precision: 0.6338
+
+  --- RandomForest モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: bert_logit_clarification (AUC = 0.6839)
+  回帰モデルのROC: AUC = 0.6622
+
+  DeLongの検定結果:
+    モデルA (RandomForest): AUC = 0.6622
+    モデルB (単体指標 bert_logit_clarification): AUC = 0.6839
+    AUC差: -0.0217
+    Z統計量: -6.1104
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+pre_avgidf	0.5576	0.5302	-
+pre_avgictf	0.5501	0.5210	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+bert_logit_clarification	0.6839	0.6620	-
+roberta_logit_clarification	0.6769	0.6473	-
+RandomForest	0.6622	0.6338	9.94e-10
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/delong_test_randomforest.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comparison_table_randomforest.csv
+
+================================================================================
+全モデル統合比較表を作成中...
+================================================================================
+
+=== 全モデル統合比較表 ===
+Metric	AUC-ROC	AUC-PR	p-value
+bert_logit_clarification	0.6839	0.6620	-
+pre_avgictf	0.5501	0.5210	-
+pre_avgidf	0.5576	0.5302	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+roberta_logit_clarification	0.6769	0.6473	-
+L1 Logistic Regression	0.6952	0.6710	1.57e-10
+L2 Logistic Regression	0.6953	0.6711	8.48e-11
+E-Net	0.6953	0.6711	8.91e-11
+No Penalty Logistic Regression	0.6958	0.6713	1.64e-10
+BOLASSO	0.6952	0.6710	1.57e-10
+LARS-Traps	0.6953	0.6711	8.48e-11
+LARS-CV	0.6953	0.6711	8.44e-11
+Random Forest	0.6622	0.6338	9.94e-10
+
+  - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comprehensive_comparison_table.csv
+
+================================================================================
+ブートストラップ検定による全モデル統合比較表を作成中...
+================================================================================
+  - ブートストラップサンプルを読み込み: 1000 反復
+
+=== 全モデル統合比較表（ブートストラップ検定） ===
+Metric	AUC-ROC	AUC-PR	p-value
+bert_logit_clarification	0.6839	0.6620	-
+pre_avgictf	0.5501	0.5210	-
+pre_avgidf	0.5576	0.5302	-
+pre_maxidf	0.5388	0.5207	-
+pre_maxscq	0.5349	0.5153	-
+pre_simplified_clarity	0.5470	0.5204	-
+roberta_logit_clarification	0.6769	0.6473	-
+L1 Logistic Regression	0.6952	0.6710	0.00e+00
+L2 Logistic Regression	0.6953	0.6711	0.00e+00
+E-Net	0.6953	0.6711	0.00e+00
+No Penalty Logistic Regression	0.6958	0.6713	0.00e+00
+BOLASSO	0.6952	0.6710	0.00e+00
+LARS-Traps	0.6953	0.6711	0.00e+00
+LARS-CV	0.6953	0.6711	0.00e+00
+Random Forest	0.6622	0.6338	0.00e+00
+
+  - 統合比較表（ブートストラップ検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_bert/ictf_idf_maxidf_scq_scs_bert_rob/delong/comprehensive_comparison_table_bootstrap.csv
+
+================================================================================
+モデル比較グラフを描画中...
+================================================================================
+  - モデル比較グラフを保存しました

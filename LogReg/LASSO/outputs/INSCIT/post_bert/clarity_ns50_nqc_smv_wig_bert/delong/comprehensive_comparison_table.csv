@@ -1,0 +1,15 @@
+Metric,AUC-ROC,AUC-PR,p-value
+bert_logit_clarification,0.6062,0.2397,-
+clarity,0.4614,0.1506,-
+n_sigma_50,0.4744,0.1583,-
+nqc,0.4516,0.1595,-
+smv,0.4580,0.1636,-
+wig,0.4658,0.1629,-
+L1 Logistic Regression,0.6074,0.2331,0.8915
+L2 Logistic Regression,0.6099,0.2353,0.6475
+E-Net,0.6097,0.2352,0.6595
+No Penalty Logistic Regression,0.6154,0.2338,0.4162
+BOLASSO,0.6071,0.2331,0.9162
+LARS-Traps,0.6099,0.2353,0.6475
+LARS-CV,0.6110,0.2361,0.5452
+Random Forest,0.5808,0.2061,0.1685

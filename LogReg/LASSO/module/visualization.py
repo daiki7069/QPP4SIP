@@ -8,6 +8,73 @@ import seaborn as sns
 from pathlib import Path
 from typing import List, Optional
 from sklearn.metrics import roc_curve, precision_recall_curve, roc_auc_score, average_precision_score, f1_score
+import matplotlib.cm as cm
+
+
+def format_feature_name(feature_name: str) -> str:
+    """
+    特徴量名を一般表記に変換
+    
+    Args:
+        feature_name: 特徴量名（例: 'pre_avgidf', 'nqc', 'smv'）
+    
+    Returns:
+        一般表記（例: 'AvgIDF', 'NQC', 'SMV'）
+    """
+    # Pre-retrieval特徴量
+    if feature_name.startswith('pre_'):
+        base_name = feature_name.replace('pre_', '')
+        mapping = {
+            'avgidf': 'AvgIDF',
+            'avgictf': 'AvgICTF',
+            'maxidf': 'MaxIDF',
+            'maxscq': 'MaxSCQ',
+            'simplified_clarity': 'Simplified Clarity'
+        }
+        return mapping.get(base_name, base_name.title())
+    
+    # Post-retrieval特徴量
+    post_mapping = {
+        'nqc': 'NQC',
+        'wig': 'WIG',
+        'smv': 'SMV',
+        'nsv': 'NSV',
+        'clarity': 'Clarity',
+        'similarity': 'Similarity',
+        'entropy': 'Entropy',
+        'lci': 'LCI',
+        'unique_titles': 'Unique Titles',
+        'acc': 'ACC',
+        'wacc': 'WACC',
+        'n_sigma_50': 'n(σ%)'
+    }
+    if feature_name in post_mapping:
+        return post_mapping[feature_name]
+    
+    # NSP特徴量
+    if feature_name.startswith('nsp_'):
+        base_name = feature_name.replace('nsp_', '')
+        return f"NSP-{base_name.replace('_', ' ').title()}"
+    
+    # Transfer learning特徴量
+    if 'transfer' in feature_name.lower() and 'logit_clarification' in feature_name:
+        # transfer_logit_clarification_xxx -> Transfer (xxx)
+        parts = feature_name.split('_')
+        if len(parts) > 3:
+            model_name = '_'.join(parts[3:])
+            return f"Transfer ({model_name})"
+        return "Transfer"
+    
+    # BERT/RoBERTa特徴量
+    if 'logit_clarification' in feature_name:
+        if 'roberta' in feature_name:
+            return 'RoBERTa'
+        elif 'bert' in feature_name:
+            return 'BERT'
+        return 'Base Model'
+    
+    # その他はそのまま返す（またはタイトルケースに変換）
+    return feature_name.replace('_', ' ').title()
 
 
 def get_feature_dir_name(feature_names: Optional[List[str]]) -> str:
@@ -147,10 +214,7 @@ def plot_roc_curves(
     y_test_single: pd.Series = None
 ) -> None:
     """ROC曲線を描画して保存"""
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # 訓練データのROC曲線（存在する場合のみ）
     if y_train is not None and y_train_proba is not None:
@@ -167,8 +231,7 @@ def plot_roc_curves(
     if not hide_train and y_train is not None and y_train_proba is not None and train_auc is not None:
         plt.plot(fpr_train, tpr_train, label=f'Model Train (AUC = {train_auc:.4f})', linewidth=2.5, color='blue')
     if test_auc is not None:
-        label_prefix = "CV" if y_test_single is not None else "Test"
-        plt.plot(fpr_test, tpr_test, label=f'Model {label_prefix} (AUC = {test_auc:.4f})', linewidth=2.5, color='red')
+        plt.plot(fpr_test, tpr_test, label=f'Model (AUC = {test_auc:.4f})', linewidth=2.5, color='red')
     
     # 各特徴量単体のROC曲線（オプション）
     if show_single_metrics and X_test is not None:
@@ -183,21 +246,18 @@ def plot_roc_curves(
             label_prefix = "CV" if y_test_single is not None else "Test"
             
             # AUCが0.5未満の場合は反転させたバージョンも描画
+            formatted_name = format_feature_name(feature_name)
             if test_auc_single < 0.5:
-                # 元のROC曲線（点線で表示）
-                plt.plot(fpr_test_single, tpr_test_single, 
-                        label=f'{feature_name} ({label_prefix}, AUC = {test_auc_single:.4f}) [Original]', 
-                        linewidth=1.5, alpha=0.5, linestyle=':', color='gray')
-                # 反転させたROC曲線
+                # 反転させたROC曲線（元の線は表示しない）
                 flipped_scores = 1.0 - test_scores
                 fpr_flipped, tpr_flipped, _ = roc_curve(y_single_labels, flipped_scores)
                 flipped_auc = roc_auc_score(y_single_labels, flipped_scores)
                 plt.plot(fpr_flipped, tpr_flipped, 
-                        label=f'{feature_name} ({label_prefix}, AUC = {flipped_auc:.4f}) [Flipped]', 
+                        label=f'{formatted_name} (AUC = {flipped_auc:.4f})', 
                         linewidth=1.5, alpha=0.7, linestyle='-')
             else:
                 plt.plot(fpr_test_single, tpr_test_single, 
-                        label=f'{feature_name} ({label_prefix}, AUC = {test_auc_single:.4f})', 
+                        label=f'{formatted_name} (AUC = {test_auc_single:.4f})', 
                         linewidth=1.5, alpha=0.7)
     
     # ランダム分類器
@@ -214,7 +274,7 @@ def plot_roc_curves(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'roc_curves.png'
+    output_path = output_dir / 'roc_curves.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 保存先: {output_path}")
     plt.close()
@@ -236,10 +296,7 @@ def plot_pr_curves(
     y_test_single: pd.Series = None
 ) -> None:
     """Precision-Recall曲線を描画して保存"""
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # 訓練データのPR曲線（存在する場合のみ）
     if y_train is not None and y_train_proba is not None:
@@ -259,8 +316,7 @@ def plot_pr_curves(
     if not hide_train and y_train is not None and y_train_proba is not None and train_ap is not None:
         plt.plot(recall_train, precision_train, label=f'Model Train (AP = {train_ap:.4f})', linewidth=2.5, color='blue')
     if test_ap is not None:
-        label_prefix = "CV" if y_test_single is not None else "Test"
-        plt.plot(recall_test, precision_test, label=f'Model {label_prefix} (AP = {test_ap:.4f})', linewidth=2.5, color='red')
+        plt.plot(recall_test, precision_test, label=f'Model (AP = {test_ap:.4f})', linewidth=2.5, color='red')
     
     # 各特徴量単体のPR曲線（オプション）
     if show_single_metrics and X_test is not None:
@@ -275,25 +331,20 @@ def plot_pr_curves(
             label_prefix = "CV" if y_test_single is not None else "Test"
             
             # AUCが0.5未満の場合は反転させたバージョンも描画
+            formatted_name = format_feature_name(feature_name)
             if test_auc_single < 0.5:
-                # 元のPR曲線（点線で表示）
-                precision_test_single, recall_test_single, _ = precision_recall_curve(y_single_labels, test_scores)
-                test_ap_single = average_precision_score(y_single_labels, test_scores)
-                plt.plot(recall_test_single, precision_test_single, 
-                        label=f'{feature_name} ({label_prefix}, AP = {test_ap_single:.4f}) [Original]', 
-                        linewidth=1.5, alpha=0.5, linestyle=':', color='gray')
-                # 反転させたPR曲線
+                # 反転させたPR曲線（元の線は表示しない）
                 flipped_scores = 1.0 - test_scores
                 precision_flipped, recall_flipped, _ = precision_recall_curve(y_single_labels, flipped_scores)
                 flipped_ap = average_precision_score(y_single_labels, flipped_scores)
                 plt.plot(recall_flipped, precision_flipped, 
-                        label=f'{feature_name} ({label_prefix}, AP = {flipped_ap:.4f}) [Flipped]', 
+                        label=f'{formatted_name} (AP = {flipped_ap:.4f})', 
                         linewidth=1.5, alpha=0.7, linestyle='-')
             else:
                 precision_test_single, recall_test_single, _ = precision_recall_curve(y_single_labels, test_scores)
                 test_ap_single = average_precision_score(y_single_labels, test_scores)
                 plt.plot(recall_test_single, precision_test_single, 
-                        label=f'{feature_name} ({label_prefix}, AP = {test_ap_single:.4f})', 
+                        label=f'{formatted_name} (AP = {test_ap_single:.4f})', 
                         linewidth=1.5, alpha=0.7)
     
     # ランダム分類器
@@ -310,7 +361,7 @@ def plot_pr_curves(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'pr_curves.png'
+    output_path = output_dir / 'pr_curves.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 保存先: {output_path}")
     plt.close()
@@ -326,32 +377,28 @@ def plot_single_metric_roc_curves(
     feature_names: Optional[List[str]] = None
 ) -> None:
     """各特徴量単体でのROC曲線を描画して保存"""
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     plt.figure(figsize=(12, 10))
     
     # 各特徴量についてROC曲線を計算
     for feature_name in X_train.columns:
+        formatted_name = format_feature_name(feature_name)
         # 訓練データ
         train_scores = X_train[feature_name].values
         if not hide_train:
             fpr_train, tpr_train, _ = roc_curve(y_train, train_scores)
             train_auc = roc_auc_score(y_train, train_scores)
             if train_auc < 0.5:
-                # 反転させたROC曲線
+                # 反転させたROC曲線（元の線は表示しない）
                 flipped_train_scores = 1.0 - train_scores
                 fpr_train_flipped, tpr_train_flipped, _ = roc_curve(y_train, flipped_train_scores)
                 train_auc_flipped = roc_auc_score(y_train, flipped_train_scores)
-                plt.plot(fpr_train, tpr_train, label=f'{feature_name} (Train, AUC = {train_auc:.4f}) [Original]', 
-                        linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
                 plt.plot(fpr_train_flipped, tpr_train_flipped, 
-                        label=f'{feature_name} (Train, AUC = {train_auc_flipped:.4f}) [Flipped]', 
+                        label=f'{formatted_name} (AUC = {train_auc_flipped:.4f})', 
                         linewidth=1.5, linestyle='--', alpha=0.7)
             else:
-                plt.plot(fpr_train, tpr_train, label=f'{feature_name} (Train, AUC = {train_auc:.4f})', 
+                plt.plot(fpr_train, tpr_train, label=f'{formatted_name} (AUC = {train_auc:.4f})', 
                         linewidth=1.5, linestyle='--', alpha=0.7)
         
         # テストデータ
@@ -359,17 +406,15 @@ def plot_single_metric_roc_curves(
         fpr_test, tpr_test, _ = roc_curve(y_test, test_scores)
         test_auc = roc_auc_score(y_test, test_scores)
         if test_auc < 0.5:
-            # 反転させたROC曲線
+            # 反転させたROC曲線（元の線は表示しない）
             flipped_test_scores = 1.0 - test_scores
             fpr_test_flipped, tpr_test_flipped, _ = roc_curve(y_test, flipped_test_scores)
             test_auc_flipped = roc_auc_score(y_test, flipped_test_scores)
-            plt.plot(fpr_test, tpr_test, label=f'{feature_name} (Test, AUC = {test_auc:.4f}) [Original]', 
-                    linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
             plt.plot(fpr_test_flipped, tpr_test_flipped, 
-                    label=f'{feature_name} (Test, AUC = {test_auc_flipped:.4f}) [Flipped]', 
+                    label=f'{formatted_name} (AUC = {test_auc_flipped:.4f})', 
                     linewidth=2, alpha=0.9, linestyle='-')
         else:
-            plt.plot(fpr_test, tpr_test, label=f'{feature_name} (Test, AUC = {test_auc:.4f})', 
+            plt.plot(fpr_test, tpr_test, label=f'{formatted_name} (AUC = {test_auc:.4f})', 
                     linewidth=2, alpha=0.9)
     
     # ランダム分類器
@@ -385,7 +430,7 @@ def plot_single_metric_roc_curves(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'roc_curves_single_metrics.png'
+    output_path = output_dir / 'roc_curves_single_metrics.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 保存先: {output_path}")
     plt.close()
@@ -401,10 +446,7 @@ def plot_single_metric_pr_curves(
     feature_names: Optional[List[str]] = None
 ) -> None:
     """各特徴量単体でのPrecision-Recall曲線を描画して保存"""
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     plt.figure(figsize=(12, 10))
     
@@ -413,6 +455,7 @@ def plot_single_metric_pr_curves(
     
     # 各特徴量についてPR曲線を計算
     for feature_name in X_train.columns:
+        formatted_name = format_feature_name(feature_name)
         # 訓練データ
         train_scores = X_train[feature_name].values
         if not hide_train:
@@ -421,19 +464,16 @@ def plot_single_metric_pr_curves(
             precision_train, recall_train, _ = precision_recall_curve(y_train, train_scores)
             train_ap = average_precision_score(y_train, train_scores)
             if train_auc < 0.5:
-                # 反転させたPR曲線
+                # 反転させたPR曲線（元の線は表示しない）
                 flipped_train_scores = 1.0 - train_scores
                 precision_train_flipped, recall_train_flipped, _ = precision_recall_curve(y_train, flipped_train_scores)
                 train_ap_flipped = average_precision_score(y_train, flipped_train_scores)
-                plt.plot(recall_train, precision_train, 
-                        label=f'{feature_name} (Train, AP = {train_ap:.4f}) [Original]', 
-                        linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
                 plt.plot(recall_train_flipped, precision_train_flipped, 
-                        label=f'{feature_name} (Train, AP = {train_ap_flipped:.4f}) [Flipped]', 
+                        label=f'{formatted_name} (AP = {train_ap_flipped:.4f})', 
                         linewidth=1.5, linestyle='--', alpha=0.7)
             else:
                 plt.plot(recall_train, precision_train, 
-                        label=f'{feature_name} (Train, AP = {train_ap:.4f})', 
+                        label=f'{formatted_name} (AP = {train_ap:.4f})', 
                         linewidth=1.5, linestyle='--', alpha=0.7)
         
         # テストデータ
@@ -443,19 +483,16 @@ def plot_single_metric_pr_curves(
         precision_test, recall_test, _ = precision_recall_curve(y_test, test_scores)
         test_ap = average_precision_score(y_test, test_scores)
         if test_auc < 0.5:
-            # 反転させたPR曲線
+            # 反転させたPR曲線（元の線は表示しない）
             flipped_test_scores = 1.0 - test_scores
             precision_test_flipped, recall_test_flipped, _ = precision_recall_curve(y_test, flipped_test_scores)
             test_ap_flipped = average_precision_score(y_test, flipped_test_scores)
-            plt.plot(recall_test, precision_test, 
-                    label=f'{feature_name} (Test, AP = {test_ap:.4f}) [Original]', 
-                    linewidth=1.5, linestyle=':', alpha=0.5, color='gray')
             plt.plot(recall_test_flipped, precision_test_flipped, 
-                    label=f'{feature_name} (Test, AP = {test_ap_flipped:.4f}) [Flipped]', 
+                    label=f'{formatted_name} (AP = {test_ap_flipped:.4f})', 
                     linewidth=2, alpha=0.9, linestyle='-')
         else:
             plt.plot(recall_test, precision_test, 
-                    label=f'{feature_name} (Test, AP = {test_ap:.4f})', 
+                    label=f'{formatted_name} (AP = {test_ap:.4f})', 
                     linewidth=2, alpha=0.9)
     
     # ランダム分類器
@@ -471,7 +508,7 @@ def plot_single_metric_pr_curves(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'pr_curves_single_metrics.png'
+    output_path = output_dir / 'pr_curves_single_metrics.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 保存先: {output_path}")
     plt.close()
@@ -491,10 +528,7 @@ def plot_threshold_f1_curves(
     y_test_single: pd.Series = None
 ) -> None:
     """閾値とF1スコアの関係を描画して保存"""
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # 閾値の範囲を設定（0から1まで0.01刻み）
     thresholds = np.arange(0.0, 1.01, 0.01)
@@ -548,6 +582,7 @@ def plot_threshold_f1_curves(
         y_single_labels = y_test_single if y_test_single is not None else y_test
         
         for feature_name in X_test.columns:
+            formatted_name = format_feature_name(feature_name)
             # テストデータ（またはCV結果）
             test_scores = X_test[feature_name].values
             test_f1_single_scores = []
@@ -559,7 +594,7 @@ def plot_threshold_f1_curves(
             max_test_f1_single = max(test_f1_single_scores)
             label_prefix = "CV" if y_test_single is not None else "Test"
             plt.plot(thresholds, test_f1_single_scores, 
-                    label=f'{feature_name} ({label_prefix}, Max F1 = {max_test_f1_single:.4f})', 
+                    label=f'{formatted_name} ({label_prefix}, Max F1 = {max_test_f1_single:.4f})', 
                     linewidth=1.5, alpha=0.7)
     
     plt.xlim([0.0, 1.0])
@@ -573,7 +608,7 @@ def plot_threshold_f1_curves(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'threshold_f1_curves.png'
+    output_path = output_dir / 'threshold_f1_curves.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 保存先: {output_path}")
     plt.close()
@@ -591,10 +626,7 @@ def plot_feature_distributions(
     y_test_proba: np.ndarray = None
 ) -> None:
     """各特徴量のスコア分布と統合モデルの予測確率分布を描画して保存（全体分布とラベルごとの分布を別々のグラフに）"""
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # カラーマップを生成（特徴量が多い場合に備えて）
     try:
@@ -608,17 +640,18 @@ def plot_feature_distributions(
     
     # 各特徴量の分布をプロット
     for idx, feature_name in enumerate(X_train.columns):
+        formatted_name = format_feature_name(feature_name)
         color = colormap(idx / max(len(X_train.columns) - 1, 1))
         
         # 訓練データ
         if not hide_train:
             train_values = X_train[feature_name].values
-            plt.hist(train_values, bins=50, alpha=0.4, label=f'{feature_name} (Train)', 
+            plt.hist(train_values, bins=50, alpha=0.4, label=f'{formatted_name} (Train)', 
                     color=color, linestyle='--', linewidth=1.5, histtype='step', density=True)
         
         # テストデータ
         test_values = X_test[feature_name].values
-        plt.hist(test_values, bins=50, alpha=0.6, label=f'{feature_name} (Test)', 
+        plt.hist(test_values, bins=50, alpha=0.6, label=f'{formatted_name} (Test)', 
                 color=color, linewidth=2, histtype='step', density=True)
     
     # 統合モデルの予測確率分布を追加
@@ -643,7 +676,7 @@ def plot_feature_distributions(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'feature_distributions.png'
+    output_path = output_dir / 'feature_distributions.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 保存先: {output_path}")
     plt.close()
@@ -745,7 +778,7 @@ def plot_feature_distributions(
         plt.tight_layout()
         
         # 保存
-        output_path = feature_output_dir / 'feature_distributions_by_label.png'
+        output_path = output_dir / 'feature_distributions_by_label.png'
         plt.savefig(output_path, dpi=300, bbox_inches='tight')
         print(f"  - 保存先: {output_path}")
         plt.close()
@@ -772,10 +805,7 @@ def plot_correlation_heatmaps(
         feature_names: 特徴量名のリスト（Noneの場合は全特徴量）
         use_combined: trainとtestを統合して相関係数を計算するかどうか
     """
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # 使用する特徴量を決定
     if feature_names is None:
@@ -956,7 +986,7 @@ def plot_correlation_heatmaps(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'correlation_heatmaps.png'
+    output_path = output_dir / 'correlation_heatmaps.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - 相関係数ヒートマップを保存しました: {output_path}")
     plt.close()
@@ -1038,10 +1068,7 @@ def plot_confidence_analysis(
         except:
             pass
     
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # データの準備
     range_labels = [f"[{low:.1f}-{high:.1f}]" for low, high in confidence_ranges]
@@ -1139,7 +1166,7 @@ def plot_confidence_analysis(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'confidence_analysis.png'
+    output_path = output_dir / 'confidence_analysis.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - Confidence Analysis可視化を保存: {output_path}")
     plt.close()
@@ -1200,10 +1227,7 @@ def plot_overconfidence_analysis(
         except:
             pass
     
-    # 特徴量名からディレクトリ名を生成
-    feature_dir_name = get_feature_dir_name(feature_names)
-    feature_output_dir = output_dir / feature_dir_name
-    feature_output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     
     # ラベルを準備
     if use_english:
@@ -1337,8 +1361,99 @@ def plot_overconfidence_analysis(
     plt.tight_layout()
     
     # 保存
-    output_path = feature_output_dir / 'overconfidence_analysis.png'
+    output_path = output_dir / 'overconfidence_analysis.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - Overconfidence Analysis可視化を保存: {output_path}")
     plt.close()
+
+
+def plot_multiple_models_comparison(
+    models_results: List[dict],
+    y_test: pd.Series,
+    output_dir: Path,
+    feature_names: Optional[List[str]] = None
+) -> None:
+    """
+    複数のモデルの結果を1つのグラフに描画して比較
+    
+    Args:
+        models_results: 各モデルの結果を格納したリスト
+            [{'model_name': str, 'y_test_proba': np.ndarray, 'test_auc': float, 'test_ap': float}, ...]
+        y_test: テストデータのラベル
+        output_dir: 出力ディレクトリ
+        feature_names: 特徴量名のリスト
+    """
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # カラーマップを生成
+    colors = cm.tab10(np.linspace(0, 1, len(models_results)))
+    
+    # ROC曲線の比較
+    plt.figure(figsize=(12, 10))
+    for i, result in enumerate(models_results):
+        fpr, tpr, _ = roc_curve(y_test, result['y_test_proba'])
+        plt.plot(fpr, tpr, 
+                label=f"{result['model_name']} (AUC = {result['test_auc']:.4f})", 
+                linewidth=2.5, color=colors[i], alpha=0.8)
+    
+    # ランダム分類器
+    plt.plot([0, 1], [0, 1], 'k--', label='Random (AUC = 0.5000)', linewidth=1)
+    
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate', fontsize=12)
+    plt.ylabel('True Positive Rate', fontsize=12)
+    plt.title('ROC Curves - Model Comparison', fontsize=14, fontweight='bold')
+    plt.legend(loc='lower right', fontsize=10, ncol=1)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    output_path = output_dir / 'roc_curves_comparison.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - 保存先: {output_path}")
+    plt.close()
+    
+    # PR曲線の比較
+    plt.figure(figsize=(12, 10))
+    baseline = len(y_test[y_test == 1]) / len(y_test)
+    
+    for i, result in enumerate(models_results):
+        precision, recall, _ = precision_recall_curve(y_test, result['y_test_proba'])
+        plt.plot(recall, precision, 
+                label=f"{result['model_name']} (AP = {result['test_ap']:.4f})", 
+                linewidth=2.5, color=colors[i], alpha=0.8)
+    
+    # ランダム分類器
+    plt.axhline(y=baseline, color='k', linestyle='--', label=f'Random (AP = {baseline:.4f})', linewidth=1)
+    
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall', fontsize=12)
+    plt.ylabel('Precision', fontsize=12)
+    plt.title('Precision-Recall Curves - Model Comparison', fontsize=14, fontweight='bold')
+    plt.legend(loc='lower left', fontsize=10, ncol=1)
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+    output_path = output_dir / 'pr_curves_comparison.png'
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"  - 保存先: {output_path}")
+    plt.close()
+    
+    # 比較表を作成
+    comparison_df = pd.DataFrame([
+        {
+            'Model': result['model_name'],
+            'AUC-ROC': result['test_auc'],
+            'Average Precision': result['test_ap'],
+            'Accuracy': result.get('test_acc', None),
+            'F1 Score': result.get('test_f1', None)
+        }
+        for result in models_results
+    ])
+    comparison_df = comparison_df.sort_values('AUC-ROC', ascending=False)
+    
+    comparison_csv_path = output_dir / 'models_comparison.csv'
+    comparison_df.to_csv(comparison_csv_path, index=False)
+    print(f"  - 比較表を保存: {comparison_csv_path}")
 

@@ -1,0 +1,9 @@
+Metric,AUC-ROC,AUC-PR,p-value
+pre_avgidf,0.5576,0.5302,-
+pre_avgictf,0.5501,0.5210,-
+pre_maxidf,0.5388,0.5207,-
+pre_maxscq,0.5349,0.5153,-
+pre_simplified_clarity,0.5470,0.5204,-
+bert_logit_clarification,0.6839,0.6620,-
+roberta_logit_clarification,0.6769,0.6473,-
+L1,0.6952,0.6710,1.57e-10

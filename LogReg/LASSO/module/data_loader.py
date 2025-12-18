@@ -123,7 +123,7 @@ def find_common_nsp_top_k(nsp_output_dir: Path, splits: List[str] = None) -> int
     return max(common_top_k) if common_top_k else None
 
 
-def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None) -> Dict[str, Dict[Tuple[str, int], float]]:
+def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
     ベーススコア（logit_clarification）を読み込む
     戻り値: {feature_name: {(conv_id, turn_id): score}}
@@ -133,6 +133,9 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
         dataset: データセット名
         base_dir: ベースディレクトリ（SIP/FT-PLM/outputの親ディレクトリ）
         base_experiment_names: 使用するSIP実験名のリスト（Noneの場合は関数内のデフォルト設定を使用）
+        use_bert: BERT実験を使用するか（デフォルト: True）
+        use_roberta: RoBERTa実験を使用するか（デフォルト: True）
+        use_transfer: Transfer learning実験を使用するか（デフォルト: False）
     
     Returns:
         ベーススコアの辞書 {prefix_logit_clarification: {key: score}}
@@ -142,16 +145,57 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
     # base_experiment_namesが指定されていない場合は、configから読み込む
     if base_experiment_names is None:
         # configのBASE_EXPERIMENT_NAMESを使用（dataset変数を展開）
-        base_experiment_names = [
+        all_experiment_names = [
             exp_name.format(dataset=dataset) if '{dataset}' in exp_name else exp_name
             for exp_name in BASE_EXPERIMENT_NAMES
         ]
+        # use_bertとuse_robertaでフィルタリング
+        base_experiment_names = []
+        for exp_name in all_experiment_names:
+            # robertaを先にチェック（robertaにはbertが含まれるため）
+            is_roberta = 'roberta' in exp_name.lower()
+            # bertはrobertaでない場合のみチェック
+            is_bert = not is_roberta and ('bert-base' in exp_name or 'bert' in exp_name.lower())
+            if (is_bert and use_bert) or (is_roberta and use_roberta):
+                base_experiment_names.append(exp_name)
+        
+        # Transfer learningの実験名を検出して追加
+        if use_transfer:
+            transfer_output_dir = base_dir / "SIP" / "FT-PLM" / "output" / dataset
+            if transfer_output_dir.exists():
+                for exp_dir in transfer_output_dir.iterdir():
+                    if exp_dir.is_dir() and 'transfer' in exp_dir.name.lower():
+                        base_experiment_names.append(exp_dir.name)
+    else:
+        # 指定された実験名をフィルタリング
+        filtered_names = []
+        for exp_name in base_experiment_names:
+            # robertaを先にチェック（robertaにはbertが含まれるため）
+            is_roberta = 'roberta' in exp_name.lower()
+            # bertはrobertaでない場合のみチェック
+            is_bert = not is_roberta and ('bert-base' in exp_name or 'bert' in exp_name.lower())
+            # transfer learningをチェック
+            is_transfer = 'transfer' in exp_name.lower()
+            if (is_bert and use_bert) or (is_roberta and use_roberta) or (is_transfer and use_transfer):
+                filtered_names.append(exp_name)
+        base_experiment_names = filtered_names
+        
+        # base_experiment_namesが空で、use_transferがTrueの場合はtransfer learningの実験名を検出
+        if len(base_experiment_names) == 0 and use_transfer:
+            transfer_output_dir = base_dir / "SIP" / "FT-PLM" / "output" / dataset
+            if transfer_output_dir.exists():
+                for exp_dir in transfer_output_dir.iterdir():
+                    if exp_dir.is_dir() and 'transfer' in exp_dir.name.lower():
+                        base_experiment_names.append(exp_dir.name)
     
     if len(base_experiment_names) == 0:
         return base_scores
     
     def extract_prefix(experiment_name: str) -> str:
         """実験名からプレフィックスを抽出"""
+        # transfer learningの場合は'transfer_'を返す
+        if 'transfer' in experiment_name.lower():
+            return 'transfer_'
         parts = experiment_name.split('_')
         if len(parts) > 1:
             model_part = parts[1]
@@ -202,7 +246,7 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
     return base_scores
 
 
-def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None) -> Dict[str, Dict[Tuple[str, int], float]]:
+def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
     BERTの予測確率（prob_clarification）を読み込む
     戻り値: {feature_name: {(conv_id, turn_id): probability}}
@@ -212,6 +256,9 @@ def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_exper
         dataset: データセット名
         base_dir: ベースディレクトリ（SIP/FT-PLM/outputの親ディレクトリ）
         base_experiment_names: 使用するSIP実験名のリスト（Noneの場合は関数内のデフォルト設定を使用）
+        use_bert: BERT実験を使用するか（デフォルト: True）
+        use_roberta: RoBERTa実験を使用するか（デフォルト: True）
+        use_transfer: Transfer learning実験を使用するか（デフォルト: False）
     
     Returns:
         ベース確率の辞書 {prefix_prob_clarification: {key: probability}}
@@ -221,16 +268,57 @@ def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_exper
     # base_experiment_namesが指定されていない場合は、configから読み込む
     if base_experiment_names is None:
         # configのBASE_EXPERIMENT_NAMESを使用（dataset変数を展開）
-        base_experiment_names = [
+        all_experiment_names = [
             exp_name.format(dataset=dataset) if '{dataset}' in exp_name else exp_name
             for exp_name in BASE_EXPERIMENT_NAMES
         ]
+        # use_bertとuse_robertaでフィルタリング
+        base_experiment_names = []
+        for exp_name in all_experiment_names:
+            # robertaを先にチェック（robertaにはbertが含まれるため）
+            is_roberta = 'roberta' in exp_name.lower()
+            # bertはrobertaでない場合のみチェック
+            is_bert = not is_roberta and ('bert-base' in exp_name or 'bert' in exp_name.lower())
+            if (is_bert and use_bert) or (is_roberta and use_roberta):
+                base_experiment_names.append(exp_name)
+        
+        # Transfer learningの実験名を検出して追加
+        if use_transfer:
+            transfer_output_dir = base_dir / "SIP" / "FT-PLM" / "output" / dataset
+            if transfer_output_dir.exists():
+                for exp_dir in transfer_output_dir.iterdir():
+                    if exp_dir.is_dir() and 'transfer' in exp_dir.name.lower():
+                        base_experiment_names.append(exp_dir.name)
+    else:
+        # 指定された実験名をフィルタリング
+        filtered_names = []
+        for exp_name in base_experiment_names:
+            # robertaを先にチェック（robertaにはbertが含まれるため）
+            is_roberta = 'roberta' in exp_name.lower()
+            # bertはrobertaでない場合のみチェック
+            is_bert = not is_roberta and ('bert-base' in exp_name or 'bert' in exp_name.lower())
+            # transfer learningをチェック
+            is_transfer = 'transfer' in exp_name.lower()
+            if (is_bert and use_bert) or (is_roberta and use_roberta) or (is_transfer and use_transfer):
+                filtered_names.append(exp_name)
+        base_experiment_names = filtered_names
+        
+        # base_experiment_namesが空で、use_transferがTrueの場合はtransfer learningの実験名を検出
+        if len(base_experiment_names) == 0 and use_transfer:
+            transfer_output_dir = base_dir / "SIP" / "FT-PLM" / "output" / dataset
+            if transfer_output_dir.exists():
+                for exp_dir in transfer_output_dir.iterdir():
+                    if exp_dir.is_dir() and 'transfer' in exp_dir.name.lower():
+                        base_experiment_names.append(exp_dir.name)
     
     if len(base_experiment_names) == 0:
         return base_probs
     
     def extract_prefix(experiment_name: str) -> str:
         """実験名からプレフィックスを抽出"""
+        # transfer learningの場合は'transfer_'を返す
+        if 'transfer' in experiment_name.lower():
+            return 'transfer_'
         parts = experiment_name.split('_')
         if len(parts) > 1:
             model_part = parts[1]
@@ -281,7 +369,7 @@ def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_exper
     return base_probs
 
 
-def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = None, nsp_top_k: int = None, pre_retrieval_output_dir: Path = None) -> Dict[str, Dict[Tuple[str, int], float]]:
+def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = None, nsp_top_k: int = None, pre_retrieval_output_dir: Path = None, use_post: bool = True, use_pre: bool = True, use_nsp: bool = True) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
     QPPスコアを読み込む（post_retrieval、pre_retrieval、nspの全て）
     戻り値: {metric_name: {(conv_id, turn_id): score}}
@@ -292,35 +380,39 @@ def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = Non
         nsp_output_dir: next_sentence_predictionの出力ディレクトリ（オプション）
         nsp_top_k: 使用するNSPのtop_k値（Noneの場合は自動検出）
         pre_retrieval_output_dir: pre_retrievalの出力ディレクトリ（オプション）
+        use_post: post-retrievalスコアを使用するか（デフォルト: True）
+        use_pre: pre-retrievalスコアを使用するか（デフォルト: True）
+        use_nsp: NSPスコアを使用するか（デフォルト: True）
     """
     qpp_scores = {}
     
     # Post-retrieval QPPスコアを読み込む（configから有効なメトリクスのみ）
-    for metric_name, (filename, column_name) in POST_RETRIEVAL_CONFIGS.items():
-        csv_path = qpp_output_dir / f"{split}_{filename}"
-        if not csv_path.exists():
-            print(f"Warning: {csv_path} not found, skipping {metric_name}")
-            continue
-        
-        # conv_idを文字列として読み込む（科学記数法を避けるため）
-        df = pd.read_csv(csv_path, dtype={'conv_id': str})
-        scores = {}
-        for _, row in df.iterrows():
-            # conv_idは既に文字列として読み込まれている
-            conv_id = str(row['conv_id'])
-            turn_id = int(row['turn_id'])
-            key = (conv_id, turn_id)
+    if use_post:
+        for metric_name, (filename, column_name) in POST_RETRIEVAL_CONFIGS.items():
+            csv_path = qpp_output_dir / f"{split}_{filename}"
+            if not csv_path.exists():
+                print(f"Warning: {csv_path} not found, skipping {metric_name}")
+                continue
             
-            value = row[column_name]
-            if pd.notna(value):
-                scores[key] = float(value)
-        
-        qpp_scores[metric_name] = scores
-        print(f"Loaded {len(scores)} {metric_name} scores for {split}")
+            # conv_idを文字列として読み込む（科学記数法を避けるため）
+            df = pd.read_csv(csv_path, dtype={'conv_id': str})
+            scores = {}
+            for _, row in df.iterrows():
+                # conv_idは既に文字列として読み込まれている
+                conv_id = str(row['conv_id'])
+                turn_id = int(row['turn_id'])
+                key = (conv_id, turn_id)
+                
+                value = row[column_name]
+                if pd.notna(value):
+                    scores[key] = float(value)
+            
+            qpp_scores[metric_name] = scores
+            print(f"Loaded {len(scores)} {metric_name} scores for {split}")
     
     # Pre-retrieval QPPスコアを読み込む（configから有効なメトリクスのみ）
     # pre_retrieval_output_dirがNoneでも、PRE_RETRIEVAL_CONFIGSが定義されていれば自動的にパスを設定
-    if len(PRE_RETRIEVAL_CONFIGS) > 0:
+    if use_pre and len(PRE_RETRIEVAL_CONFIGS) > 0:
         # pre_retrieval_output_dirが指定されていない場合は、デフォルトパスを使用
         if pre_retrieval_output_dir is None:
             # デフォルトパスを設定（qpp_output_dirから推測）
@@ -352,7 +444,7 @@ def load_qpp_scores(split: str, qpp_output_dir: Path, nsp_output_dir: Path = Non
             print(f"Loaded {len(scores)} {prefixed_metric_name} scores for {split}")
     
     # NSPスコアを読み込む（オプション）
-    if nsp_output_dir is not None:
+    if use_nsp and nsp_output_dir is not None:
         # top_k値の決定
         if nsp_top_k is None:
             # 自動検出：このスプリットで存在する最大のtop_k値を使用

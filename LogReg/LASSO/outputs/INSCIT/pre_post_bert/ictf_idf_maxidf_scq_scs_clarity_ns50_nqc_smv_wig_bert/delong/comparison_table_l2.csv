@@ -1,0 +1,13 @@
+Metric,AUC-ROC,AUC-PR,p-value
+nqc,0.5455,0.1968,-
+clarity,0.5342,0.1775,-
+wig,0.5305,0.1933,-
+smv,0.5339,0.1923,-
+n_sigma_50,0.5206,0.1859,-
+pre_avgidf,0.4843,0.1670,-
+pre_avgictf,0.4842,0.1661,-
+pre_maxidf,0.5039,0.1783,-
+pre_maxscq,0.5037,0.1719,-
+pre_simplified_clarity,0.4791,0.1645,-
+bert_logit_clarification,0.6057,0.2379,-
+L2,0.6014,0.2312,0.6206

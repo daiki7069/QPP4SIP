@@ -1,0 +1,8 @@
+feature,coefficient
+bert_logit_clarification,2.2033795563420924
+roberta_logit_clarification,2.097283253131609
+pre_avgidf,-1.7165095498998841
+pre_simplified_clarity,1.583307967439995
+pre_maxscq,-0.17016909212095385
+pre_maxidf,-0.06800096700543092
+pre_avgictf,0.0

@@ -1,0 +1,7 @@
+Metric,AUC-ROC,AUC-PR,p-value
+nqc,0.4516,0.1595,-
+clarity,0.4614,0.1506,-
+wig,0.4658,0.1629,-
+smv,0.4580,0.1636,-
+n_sigma_50,0.4744,0.1583,-
+ALL Logistic Regression,0.5366,0.1824,0.0535

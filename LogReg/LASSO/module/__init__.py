@@ -25,7 +25,8 @@ from .visualization import (
     plot_feature_distributions,
     plot_correlation_heatmaps,
     plot_confidence_analysis,
-    plot_overconfidence_analysis
+    plot_overconfidence_analysis,
+    plot_multiple_models_comparison
 )
 from .bootstrap import (
     generate_bootstrap_samples,
@@ -35,6 +36,19 @@ from .bootstrap import (
     save_bootstrap_results,
     load_bootstrap_results,
     compare_feature_combinations
+)
+from .models import (
+    NonNegativeLogisticRegression,
+    BOLASSOModel,
+    LARSTrapsModel,
+    LARSCVModel,
+    create_model,
+    get_coefficients
+)
+from .feature_selection import (
+    bootstrap_sample,
+    bolasso_feature_selection,
+    lars_traps_feature_selection
 )
 
 __all__ = [
@@ -62,5 +76,17 @@ __all__ = [
     'plot_correlation_heatmaps',
     'plot_confidence_analysis',
     'plot_overconfidence_analysis',
+    'plot_multiple_models_comparison',
+    # models
+    'NonNegativeLogisticRegression',
+    'BOLASSOModel',
+    'LARSTrapsModel',
+    'LARSCVModel',
+    'create_model',
+    'get_coefficients',
+    # feature_selection
+    'bootstrap_sample',
+    'bolasso_feature_selection',
+    'lars_traps_feature_selection',
 ]
 

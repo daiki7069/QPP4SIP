@@ -1,0 +1,7 @@
+Metric,AUC-ROC,AUC-PR,p-value
+pre_avgidf,0.4960,0.1680,-
+pre_avgictf,0.4950,0.1663,-
+pre_maxidf,0.5097,0.1797,-
+pre_maxscq,0.4842,0.1625,-
+pre_simplified_clarity,0.4907,0.1652,-
+ALL Logistic Regression,0.4957,0.1675,0.0986

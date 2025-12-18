@@ -1,0 +1,13 @@
+Metric,AUC-ROC,AUC-PR,p-value
+NQC,0.5111,0.4939,-
+Clarity,0.5475,0.5185,-
+WIG,0.5101,0.4957,-
+SMV,0.5100,0.4931,-
+n(σ%),0.5201,0.5001,-
+AvgIDF,0.5577,0.5310,-
+AvgICTF,0.5501,0.5214,-
+MaxIDF,0.5393,0.5211,-
+MaxSCQ,0.5361,0.5165,-
+Simplified Clarity,0.5471,0.5210,-
+RoBERTa,0.6768,0.6466,-
+ALL Logistic Regression,0.6798,0.6499,0.0073

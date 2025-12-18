@@ -1,0 +1,9 @@
+Metric,AUC-ROC,AUC-PR,p-value
+nqc,0.5111,0.4939,-
+clarity,0.5475,0.5185,-
+wig,0.5101,0.4957,-
+smv,0.5100,0.4931,-
+n_sigma_50,0.5201,0.5001,-
+bert_logit_clarification,0.6838,0.6619,-
+roberta_logit_clarification,0.6768,0.6470,-
+ALL Logistic Regression,0.6969,0.6732,1.60e-12

@@ -1,0 +1,733 @@
+NSP top_k値: 50 (trainとdevで共通)
+使用する特徴量タイプ: pre, post
+=== allによるclarification分類 ===
+
+データセット: AmbigNQ
+検索手法: dpr
+使用する特徴量: QPPスコア（post + pre）
+  設定: --feature-typesで指定
+モデルタイプ: all
+ラベル分布の調整: 無効
+非負制約: 無効
+クロスバリデーション: 有効
+  Fold数: 5
+正規化方法: 訓練データの統計量で[0,1]正規化（Min-Max）（通常）
+
+1. データ読み込み中...
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=4747, ラベル0=0, ラベル1=4747
+  directAnswer: 総数=5289, ラベル0=5289, ラベル1=0
+総ラベル分布: 0=5289, 1=4747
+
+  - 訓練データ: 10036 サンプル
+Loaded 10036 nqc scores for train
+Loaded 10036 clarity scores for train
+Loaded 10036 wig scores for train
+Loaded 10036 smv scores for train
+Loaded 10036 n_sigma_50 scores for train
+Loaded 10036 pre_avgidf scores for train
+Loaded 10036 pre_avgictf scores for train
+Loaded 10036 pre_maxidf scores for train
+Loaded 10036 pre_maxscq scores for train
+Loaded 10036 pre_simplified_clarity scores for train
+  - nqc: 10036 サンプル
+  - clarity: 10036 サンプル
+  - wig: 10036 サンプル
+  - smv: 10036 サンプル
+  - n_sigma_50: 10036 サンプル
+  - pre_avgidf: 10036 サンプル
+  - pre_avgictf: 10036 サンプル
+  - pre_maxidf: 10036 サンプル
+  - pre_maxscq: 10036 サンプル
+  - pre_simplified_clarity: 10036 サンプル
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=1070, ラベル0=0, ラベル1=1070
+  directAnswer: 総数=932, ラベル0=932, ラベル1=0
+総ラベル分布: 0=932, 1=1070
+
+  - テストデータ: 2002 サンプル
+Loaded 2002 nqc scores for dev
+Loaded 2002 clarity scores for dev
+Loaded 2002 wig scores for dev
+Loaded 2002 smv scores for dev
+Loaded 2002 n_sigma_50 scores for dev
+Loaded 2002 pre_avgidf scores for dev
+Loaded 2002 pre_avgictf scores for dev
+Loaded 2002 pre_maxidf scores for dev
+Loaded 2002 pre_maxscq scores for dev
+Loaded 2002 pre_simplified_clarity scores for dev
+  - nqc: 2002 サンプル
+  - clarity: 2002 サンプル
+  - wig: 2002 サンプル
+  - smv: 2002 サンプル
+  - n_sigma_50: 2002 サンプル
+  - pre_avgidf: 2002 サンプル
+  - pre_avgictf: 2002 サンプル
+  - pre_maxidf: 2002 サンプル
+  - pre_maxscq: 2002 サンプル
+  - pre_simplified_clarity: 2002 サンプル
+
+2. 特徴量マージ中...
+  - 訓練データ: 10036 サンプル, 10 特徴量
+  - テストデータ: 2002 サンプル, 10 特徴量
+  - 特徴量: ['nqc', 'clarity', 'wig', 'smv', 'n_sigma_50', 'pre_avgidf', 'pre_avgictf', 'pre_maxidf', 'pre_maxscq', 'pre_simplified_clarity']
+  - 訓練データのラベル分布: {0: 5289, 1: 4747}
+  - テストデータのラベル分布: {1: 1070, 0: 932}
+
+2.1. trainとdevを統合中...
+  - 統合データ: 12038 サンプル, 10 特徴量
+  - 統合データのラベル分布: {0: 6221, 1: 5817} (正例率: 0.4832)
+
+2.5. ラベル分布の調整: スキップ（--balance-label-distribution が指定されていません）
+
+================================================================================
+クロスバリデーション評価を開始します
+================================================================================
+
+================================================================================
+Fold 1/5
+================================================================================
+  - Fold訓練データ: 9630 サンプル
+  - Foldテストデータ: 2408 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4653} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1164} (正例率: 0.4834)
+
+  Fold 1 結果:
+    訓練 - Accuracy: 0.5731, F1: 0.5637, AUC: 0.5942, AP: 0.5584
+    テスト - Accuracy: 0.5652, F1: 0.5550, AUC: 0.5902, AP: 0.5565
+
+================================================================================
+Fold 2/5
+================================================================================
+  - Fold訓練データ: 9630 サンプル
+  - Foldテストデータ: 2408 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4653} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1164} (正例率: 0.4834)
+
+  Fold 2 結果:
+    訓練 - Accuracy: 0.5731, F1: 0.5699, AUC: 0.5934, AP: 0.5594
+    テスト - Accuracy: 0.5644, F1: 0.5638, AUC: 0.5930, AP: 0.5566
+
+================================================================================
+Fold 3/5
+================================================================================
+  - Fold訓練データ: 9630 サンプル
+  - Foldテストデータ: 2408 サンプル
+  - Fold訓練データのラベル分布: {0: 4976, 1: 4654} (正例率: 0.4833)
+  - Foldテストデータのラベル分布: {0: 1245, 1: 1163} (正例率: 0.4830)
+
+  Fold 3 結果:
+    訓練 - Accuracy: 0.5746, F1: 0.5720, AUC: 0.5976, AP: 0.5625
+    テスト - Accuracy: 0.5602, F1: 0.5622, AUC: 0.5783, AP: 0.5446
+
+================================================================================
+Fold 4/5
+================================================================================
+  - Fold訓練データ: 9631 サンプル
+  - Foldテストデータ: 2407 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4654} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1163} (正例率: 0.4832)
+
+  Fold 4 結果:
+    訓練 - Accuracy: 0.5694, F1: 0.5684, AUC: 0.5956, AP: 0.5611
+    テスト - Accuracy: 0.5733, F1: 0.5701, AUC: 0.5871, AP: 0.5563
+
+================================================================================
+Fold 5/5
+================================================================================
+  - Fold訓練データ: 9631 サンプル
+  - Foldテストデータ: 2407 サンプル
+  - Fold訓練データのラベル分布: {0: 4977, 1: 4654} (正例率: 0.4832)
+  - Foldテストデータのラベル分布: {0: 1244, 1: 1163} (正例率: 0.4832)
+
+  Fold 5 結果:
+    訓練 - Accuracy: 0.5691, F1: 0.5638, AUC: 0.5906, AP: 0.5571
+    テスト - Accuracy: 0.5758, F1: 0.5631, AUC: 0.6072, AP: 0.5734
+
+================================================================================
+クロスバリデーション結果の集約
+================================================================================
+
+各Foldの結果:
+ fold  train_acc  train_f1  train_auc  train_ap  test_acc  test_f1  test_auc  test_ap
+    1   0.573105  0.563727   0.594178  0.558386  0.565199 0.555036  0.590233 0.556541
+    2   0.573105  0.569934   0.593355  0.559421  0.564369 0.563825  0.592968 0.556606
+    3   0.574559  0.572025   0.597608  0.562523  0.560216 0.562216  0.578277 0.544593
+    4   0.569411  0.568425   0.595592  0.561083  0.573328 0.570113  0.587123 0.556313
+    5   0.569100  0.563801   0.590591  0.557125  0.575821 0.563115  0.607180 0.573387
+
+平均値（標準偏差）:
+  train_acc: 0.5719 (±0.0024)
+  train_f1: 0.5676 (±0.0037)
+  train_auc: 0.5943 (±0.0026)
+  train_ap: 0.5597 (±0.0021)
+  test_acc: 0.5678 (±0.0065)
+  test_f1: 0.5629 (±0.0054)
+  test_auc: 0.5912 (±0.0105)
+  test_ap: 0.5575 (±0.0103)
+
+全Fold統合テストデータ:
+  AUC-ROC: 0.5911
+  Average Precision: 0.5561
+
+=== クロスバリデーション完了 ===
+
+================================================================================
+クロスバリデーションで得られたモデルを使って、train/devデータに対して評価を実行します
+================================================================================
+
+=== クロスバリデーション結果による評価 ===
+（各foldのテストデータに対する予測結果を使用）
+CVテストデータ - Accuracy: 0.5678, F1: 0.5629, AUC: 0.5911, AP: 0.5561
+
+5.6. 単体指標の最高ROCと回帰モデルのDeLong検定を実行中...
+  単体指標の最高ROC: AvgIDF (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5911
+
+  DeLongの検定結果:
+    モデルA (回帰): AUC = 0.5911
+    モデルB (単体指標 AvgIDF): AUC = 0.5568/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:718: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_pos = X_test[y_test == 1][feature_name].values
+/home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/module/visualization.py:719: UserWarning: Boolean Series key will be reindexed to match DataFrame index.
+  test_values_neg = X_test[y_test == 0][feature_name].values
+
+    AUC差: 0.0343
+    Z統計量: 7.6308
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5111	0.4939	-
+Clarity	0.5475	0.5185	-
+WIG	0.5101	0.4957	-
+SMV	0.5100	0.4931	-
+n(σ%)	0.5201	0.5001	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+ALL Logistic Regression	0.5911	0.5561	2.33e-14
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_single_metric.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table.csv
+  - 回帰モデル同士の比較用に予測結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/csv/predictions_for_delong.csv
+
+参考: train/devデータに対する予測（評価には使用しません）
+参考 - 訓練データ: Accuracy: 0.5660, F1: 0.5679, AUC: 0.5900, AP: 0.5449
+参考 - テストデータ: Accuracy: 0.5699, F1: 0.6725, AUC: 0.5915, AP: 0.6042
+
+特徴量の係数（各foldの平均）:
+               feature  coefficient
+            pre_avgidf    -9.284305
+pre_simplified_clarity     8.598914
+            n_sigma_50     1.269221
+               clarity     0.704336
+                   smv    -0.595291
+            pre_maxscq    -0.398030
+                   nqc    -0.320851
+            pre_maxidf     0.192519
+                   wig    -0.035065
+           pre_avgictf     0.000000
+  - 係数をCSVファイルに保存しました: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/coefficients.csv
+  - DeLongの検定用に予測結果を保存（CV統合）: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/csv/predictions_for_delong.csv
+
+3. [0,1]正規化（Min-Max）中...
+  - 方法: 訓練データの統計量でテストデータも正規化（通常）
+  - 正規化完了
+
+=== 評価結果 ===
+（クロスバリデーション結果は既に上記で表示済み）
+
+6. ROC曲線を描画中...
+  - 保存先: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/roc_curves.png
+  - ROC曲線を保存しました
+
+7. Precision-Recall曲線を描画中...
+  - 保存先: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/pr_curves.png
+  - PR曲線を保存しました
+
+8. 閾値とF1スコアの関係を描画中...
+  - 保存先: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/threshold_f1_curves.png
+  - 閾値とF1スコアの関係を保存しました
+
+9. 特徴量のスコア分布を描画中...
+  - 保存先: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/feature_distributions.png
+  - 保存先: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/feature_distributions_by_label.png
+  - 特徴量のスコア分布を保存しました
+
+10. 相関係数ヒートマップを描画中...
+trainとtestを統合: train=10036サンプル, test=2002サンプル, 合計=12038サンプル
+  - 相関係数ヒートマップを保存しました: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/correlation_heatmaps.png
+
+=== 相関係数の統計情報 ===
+全体のデータ数: 12038
+
+全体の相関係数（ピアソン）:
+                             nqc   clarity  ...  pre_maxscq  pre_simplified_clarity
+nqc                     1.000000  0.001331  ...   -0.008365               -0.009730
+clarity                 0.001331  1.000000  ...   -0.109574               -0.088624
+wig                     0.905049  0.009999  ...   -0.018676               -0.013827
+smv                     0.968019  0.005229  ...   -0.009298               -0.008102
+n_sigma_50              0.960829  0.015376  ...   -0.014343                0.001869
+pre_avgidf             -0.010206 -0.105838  ...    0.276256                0.988840
+pre_avgictf            -0.009081 -0.094595  ...    0.276517                0.990687
+pre_maxidf             -0.011692 -0.069864  ...    0.107366                0.717147
+pre_maxscq             -0.008365 -0.109574  ...    1.000000                0.255475
+pre_simplified_clarity -0.009730 -0.088624  ...    0.255475                1.000000
+
+[10 rows x 10 columns]
+
+全体の相関係数（スピアマン）:
+                             nqc   clarity  ...  pre_maxscq  pre_simplified_clarity
+nqc                     1.000000 -0.008799  ...   -0.004201               -0.017177
+clarity                -0.008799  1.000000  ...   -0.127046               -0.146312
+wig                     0.910473  0.007823  ...   -0.012192               -0.019037
+smv                     0.988699  0.000222  ...   -0.005668               -0.017317
+n_sigma_50              0.959306  0.012500  ...   -0.007247               -0.004367
+pre_avgidf             -0.017423 -0.166041  ...    0.292212                0.987387
+pre_avgictf            -0.016332 -0.149436  ...    0.285713                0.990136
+pre_maxidf             -0.007874 -0.088470  ...    0.075114                0.728577
+pre_maxscq             -0.004201 -0.127046  ...    1.000000                0.268601
+pre_simplified_clarity -0.017177 -0.146312  ...    0.268601                1.000000
+
+[10 rows x 10 columns]
+
+Negativeラベルの相関係数（ピアソン） (データ数: 6335):
+                             nqc   clarity  ...  pre_maxscq  pre_simplified_clarity
+nqc                     1.000000  0.010478  ...   -0.007547               -0.021548
+clarity                 0.010478  1.000000  ...   -0.129110               -0.109783
+wig                     0.902334  0.015180  ...   -0.013176               -0.028300
+smv                     0.966442  0.011523  ...   -0.007345               -0.020436
+n_sigma_50              0.957248  0.028541  ...   -0.011376               -0.010195
+pre_avgidf             -0.021645 -0.131921  ...    0.283984                0.988753
+pre_avgictf            -0.021411 -0.117161  ...    0.284821                0.990586
+pre_maxidf             -0.016988 -0.091158  ...    0.117257                0.707439
+pre_maxscq             -0.007547 -0.129110  ...    1.000000                0.264640
+pre_simplified_clarity -0.021548 -0.109783  ...    0.264640                1.000000
+
+[10 rows x 10 columns]
+
+Negativeラベルの相関係数（スピアマン） (データ数: 6335):
+                             nqc   clarity  ...  pre_maxscq  pre_simplified_clarity
+nqc                     1.000000 -0.000882  ...   -0.006100               -0.025224
+clarity                -0.000882  1.000000  ...   -0.140438               -0.163219
+wig                     0.909233  0.016220  ...   -0.010749               -0.029131
+smv                     0.988339  0.008885  ...   -0.007151               -0.026110
+n_sigma_50              0.955617  0.024518  ...   -0.005893               -0.012070
+pre_avgidf             -0.024670 -0.186127  ...    0.291789                0.987497
+pre_avgictf            -0.023684 -0.166101  ...    0.286007                0.990197
+pre_maxidf             -0.011786 -0.108220  ...    0.062842                0.709333
+pre_maxscq             -0.006100 -0.140438  ...    1.000000                0.271241
+pre_simplified_clarity -0.025224 -0.163219  ...    0.271241                1.000000
+
+[10 rows x 10 columns]
+
+Positiveラベルの相関係数（ピアソン） (データ数: 5703):
+                             nqc   clarity  ...  pre_maxscq  pre_simplified_clarity
+nqc                     1.000000 -0.009339  ...   -0.008475                0.004066
+clarity                -0.009339  1.000000  ...   -0.085445               -0.059982
+wig                     0.907896  0.003893  ...   -0.023712                0.002529
+smv                     0.969679 -0.002250  ...   -0.010505                0.006219
+n_sigma_50              0.964748 -0.000656  ...   -0.015472                0.017629
+pre_avgidf              0.003405 -0.070726  ...    0.262561                0.989016
+pre_avgictf             0.005396 -0.064004  ...    0.262866                0.990733
+pre_maxidf             -0.005366 -0.042625  ...    0.091824                0.725681
+pre_maxscq             -0.008475 -0.085445  ...    1.000000                0.240993
+pre_simplified_clarity  0.004066 -0.059982  ...    0.240993                1.000000
+
+[10 rows x 10 columns]
+
+Positiveラベルの相関係数（スピアマン） (データ数: 5703):
+                             nqc   clarity  ...  pre_maxscq  pre_simplified_clarity
+nqc                     1.000000 -0.018363  ...   -0.002317               -0.008746
+clarity                -0.018363  1.000000  ...   -0.107169               -0.119713
+wig                     0.911799 -0.001186  ...   -0.014654               -0.008956
+smv                     0.989041 -0.009939  ...   -0.004259               -0.008215
+n_sigma_50              0.963492 -0.003207  ...   -0.007098                0.006343
+pre_avgidf             -0.009772 -0.134658  ...    0.285364                0.987283
+pre_avgictf            -0.008361 -0.122890  ...    0.278401                0.989903
+pre_maxidf             -0.003574 -0.060295  ...    0.084390                0.747030
+pre_maxscq             -0.002317 -0.107169  ...    1.000000                0.259042
+pre_simplified_clarity -0.008746 -0.119713  ...    0.259042                1.000000
+
+[10 rows x 10 columns]
+  - 相関係数ヒートマップを保存しました
+
+11. Confidence Analysis（確信度分析）を実行中...
+  ⚠️  警告: BERTの予測確率を読み込めませんでした（BASE_EXPERIMENT_NAMESが設定されていない可能性があります）
+
+結果をファイルに保存しました: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/results.txt
+
+================================================================================
+全てのモデルタイプを実行して比較します
+================================================================================
+
+L1:
+  Accuracy: 0.5678
+  F1 Score: 0.5627
+  AUC-ROC: 0.5910
+  Average Precision: 0.5560
+
+  --- L1 モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5910
+
+  DeLongの検定結果:
+    モデルA (L1): AUC = 0.5910
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: 0.0342
+    Z統計量: 7.6205
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+L1	0.5910	0.5560	2.53e-14
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_l1.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_l1.csv
+
+L2:
+  Accuracy: 0.5619
+  F1 Score: 0.5481
+  AUC-ROC: 0.5840
+  Average Precision: 0.5488
+
+  --- L2 モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5840
+
+  DeLongの検定結果:
+    モデルA (L2): AUC = 0.5840
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: 0.0273
+    Z統計量: 6.8861
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+L2	0.5840	0.5488	5.73e-12
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_l2.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_l2.csv
+
+ElasticNet:
+  Accuracy: 0.5645
+  F1 Score: 0.5540
+  AUC-ROC: 0.5866
+  Average Precision: 0.5512
+
+  --- ElasticNet モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5866
+
+  DeLongの検定結果:
+    モデルA (ElasticNet): AUC = 0.5866
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: 0.0298
+    Z統計量: 7.3368
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+ElasticNet	0.5866	0.5512	2.19e-13
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_elasticnet.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_elasticnet.csv
+
+No Penalty:
+  Accuracy: 0.5672
+  F1 Score: 0.5654
+  AUC-ROC: 0.5914
+  Average Precision: 0.5572
+
+  --- No Penalty モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5914
+
+  DeLongの検定結果:
+    モデルA (No Penalty): AUC = 0.5914
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: 0.0347
+    Z統計量: 7.1224
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+No Penalty	0.5914	0.5572	1.06e-12
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_none.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_none.csv
+
+BOLASSO:
+  Accuracy: 0.5678
+  F1 Score: 0.5627
+  AUC-ROC: 0.5910
+  Average Precision: 0.5560
+
+  --- BOLASSO モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5910
+
+  DeLongの検定結果:
+    モデルA (BOLASSO): AUC = 0.5910
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: 0.0342
+    Z統計量: 7.6205
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+BOLASSO	0.5910	0.5560	2.53e-14
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_bolasso.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_bolasso.csv
+
+LARS-Traps:
+  Accuracy: 0.5619
+  F1 Score: 0.5481
+  AUC-ROC: 0.5840
+  Average Precision: 0.5488
+
+  --- LARS-Traps モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5840
+
+  DeLongの検定結果:
+    モデルA (LARS-Traps): AUC = 0.5840
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: 0.0273
+    Z統計量: 6.8861
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+LARS-Traps	0.5840	0.5488	5.73e-12
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_lars_traps.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_lars_traps.csv
+
+LARS-CV:
+  Accuracy: 0.5619
+  F1 Score: 0.5481
+  AUC-ROC: 0.5836
+  Average Precision: 0.5486
+
+  --- LARS-CV モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5836
+
+  DeLongの検定結果:
+    モデルA (LARS-CV): AUC = 0.5836
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: 0.0268
+    Z統計量: 6.8153
+    p値: 0.0000
+    有意差: あり (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+LARS-CV	0.5836	0.5486	9.41e-12
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_lars_cv.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_lars_cv.csv
+
+RandomForest:
+  Accuracy: 0.5395
+  F1 Score: 0.5118
+  AUC-ROC: 0.5523
+  Average Precision: 0.5270
+
+  --- RandomForest モデルのDeLong検定を実行中 ---
+  単体指標の最高ROC: pre_avgidf (AUC = 0.5568)
+  回帰モデルのROC: AUC = 0.5523
+
+  DeLongの検定結果:
+    モデルA (RandomForest): AUC = 0.5523
+    モデルB (単体指標 pre_avgidf): AUC = 0.5568
+    AUC差: -0.0045
+    Z統計量: -0.7629
+    p値: 0.4455
+    有意差: なし (α=0.05)
+
+  === 各指標とモデルの比較表 ===
+
+Metric	AUC-ROC	AUC-PR	p-value
+NQC	0.5098	0.4904	-
+Clarity	0.5472	0.5182	-
+WIG	0.5081	0.4913	-
+SMV	0.5082	0.4897	-
+n(σ%)	0.5194	0.4983	-
+AvgIDF	0.5568	0.5295	-
+AvgICTF	0.5492	0.5205	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+RandomForest	0.5523	0.5270	0.4455
+
+  - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/delong_test_randomforest.csv
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comparison_table_randomforest.csv
+
+================================================================================
+全モデル統合比較表を作成中...
+================================================================================
+
+=== 全モデル統合比較表 ===
+Metric	AUC-ROC	AUC-PR	p-value
+Clarity	0.5475	0.5185	-
+n(σ%)	0.5201	0.5001	-
+NQC	0.5111	0.4939	-
+AvgICTF	0.5492	0.5205	-
+AvgIDF	0.5568	0.5295	-
+MaxIDF	0.5380	0.5190	-
+MaxSCQ	0.5353	0.5165	-
+Simplified Clarity	0.5461	0.5198	-
+SMV	0.5100	0.4931	-
+WIG	0.5101	0.4957	-
+L1 Logistic Regression	0.5910	0.5560	2.53e-14
+L2 Logistic Regression	0.5840	0.5488	5.73e-12
+E-Net	0.5866	0.5512	2.19e-13
+No Penalty Logistic Regression	0.5914	0.5572	1.06e-12
+BOLASSO	0.5910	0.5560	2.53e-14
+LARS-Traps	0.5840	0.5488	5.73e-12
+LARS-CV	0.5836	0.5486	9.41e-12
+Random Forest	0.5523	0.5270	0.4455
+
+  - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/delong/comprehensive_comparison_table.csv
+
+================================================================================
+モデル比較グラフを描画中...
+================================================================================
+  - 保存先: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/roc_curves_comparison.png
+  - 保存先: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/pr_curves_comparison.png
+  - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/graphs/models_comparison.csv
+  - モデル比較グラフを保存しました
+
+結果をファイルに保存しました（全モデル実行結果を含む）: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig/results.txt
+
+=== 完了 ===

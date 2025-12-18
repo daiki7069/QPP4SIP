@@ -11,18 +11,11 @@ from typing import Dict, Tuple, List
 # 使用したいメトリクスをコメントアウト解除して有効化
 
 POST_RETRIEVAL_CONFIGS: Dict[str, Tuple[str, str]] = {
-    # 'nqc': ('nqc.csv', 'nqc'),
-    # 'clarity': ('clarity.csv', 'clarity'),
-    # 'wig': ('wig.csv', 'wig'),
-    # 'smv': ('smv.csv', 'smv'),
-    # 'n_sigma_50': ('n_sigma_50.csv', 'n_sigma_50'),
-    # 'entropy': ('entropy.csv', 'entropy'),
-    # 'lci': ('lci.csv', 'lci'),
-    # 'unique_titles': ('unique_titles.csv', 'num_unique_titles'),
-    # 'acc': ('coherency.csv', 'acc'),
-    # 'wacc': ('coherency.csv', 'wacc'),
-    # 'similarity': ('similarity.csv', 'mean_similarity'),
-    # 'nsv': ('nsv.csv', 'nsv'),
+    'nqc': ('nqc.csv', 'nqc'),
+    'clarity': ('clarity.csv', 'clarity'),
+    'wig': ('wig.csv', 'wig'),
+    'smv': ('smv.csv', 'smv'),
+    'n_sigma_50': ('n_sigma_50.csv', 'n_sigma_50'),
 }
 
 # ============================================================================
@@ -45,12 +38,8 @@ PRE_RETRIEVAL_CONFIGS: Dict[str, Tuple[str, str]] = {
 # {dataset}は自動的にデータセット名に置換されます
 
 BASE_EXPERIMENT_NAMES: List[str] = [
-    # "{dataset}_bert-base_lr2e-05_bs16_kfold5",
-    # "{dataset}_roberta-base_lr2e-05_bs16_earlystop_kfold5",  # earlystopあり
-    # "{dataset}_roberta-base_lr2e-05_bs16_kfold5",  # earlystopなし
-    # "{dataset}_transfer_from_AmbigNQ",
-    # "{dataset}_transfer_from_INSCIT",
-    # 他の実験名も追加可能
+    "{dataset}_bert-base_lr2e-05_bs16_kfold5",
+    "{dataset}_roberta-base_lr2e-05_bs16_earlystop_kfold5",
 ]
 
 # ============================================================================

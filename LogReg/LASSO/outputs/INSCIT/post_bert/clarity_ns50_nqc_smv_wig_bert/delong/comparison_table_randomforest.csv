@@ -1,0 +1,8 @@
+Metric,AUC-ROC,AUC-PR,p-value
+nqc,0.5489,0.1989,-
+clarity,0.5332,0.1735,-
+wig,0.5337,0.1925,-
+smv,0.5370,0.1966,-
+n_sigma_50,0.5228,0.1918,-
+bert_logit_clarification,0.6062,0.2397,-
+RandomForest,0.5808,0.2061,0.1685

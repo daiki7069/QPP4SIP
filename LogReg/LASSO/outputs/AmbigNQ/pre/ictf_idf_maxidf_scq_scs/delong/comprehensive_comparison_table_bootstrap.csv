@@ -1,0 +1,14 @@
+Metric,AUC-ROC,AUC-PR,p-value
+pre_avgictf,0.5500,0.5211,-
+pre_avgidf,0.5575,0.5302,-
+pre_maxidf,0.5378,0.5199,-
+pre_maxscq,0.5368,0.5164,-
+pre_simplified_clarity,0.5470,0.5206,-
+L1 Logistic Regression,0.5881,0.5521,0.00e+00
+L2 Logistic Regression,0.5779,0.5430,0.00e+00
+E-Net,0.5818,0.5464,0.00e+00
+No Penalty Logistic Regression,0.5882,0.5528,0.00e+00
+BOLASSO,0.5881,0.5521,0.00e+00
+LARS-Traps,0.5779,0.5430,0.00e+00
+LARS-CV,0.5778,0.5429,0.00e+00
+Random Forest,0.5674,0.5448,8.76e-05

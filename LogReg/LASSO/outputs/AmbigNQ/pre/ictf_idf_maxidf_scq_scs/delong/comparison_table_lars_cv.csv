@@ -1,0 +1,7 @@
+Metric,AUC-ROC,AUC-PR,p-value
+AvgIDF,0.5577,0.5305,-
+AvgICTF,0.5501,0.5215,-
+MaxIDF,0.5386,0.5205,-
+MaxSCQ,0.5356,0.5157,-
+Simplified Clarity,0.5471,0.5210,-
+LARS-CV,0.5786,0.5440,1.04e-13

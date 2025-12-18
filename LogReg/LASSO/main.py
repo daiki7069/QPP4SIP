@@ -1,5 +1,6 @@
 """
-L1正則化付きロジスティック回帰によるclarification分類
+ロジスティック回帰・RandomForestによるclarification分類
+L1/L2/ElasticNet正則化ロジスティック回帰とRandomForest分類器をサポート
 """
 import argparse
 import warnings
@@ -11,8 +12,7 @@ from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, average_precision_score
 from sklearn.model_selection import StratifiedKFold
-from scipy.optimize import minimize
-from scipy.special import expit
+import warnings
 
 from module import (
     load_json_data,
@@ -33,13 +33,22 @@ from module import (
     plot_feature_distributions,
     plot_correlation_heatmaps,
     plot_confidence_analysis,
-    plot_overconfidence_analysis
+    plot_overconfidence_analysis,
+    plot_multiple_models_comparison,
+    NonNegativeLogisticRegression,
+    BOLASSOModel,
+    LARSTrapsModel,
+    LARSCVModel,
+    create_model,
+    get_coefficients
 )
+from module.visualization import format_feature_name
 from module.bootstrap import (
     delong_test,
     load_bootstrap_samples,
     evaluate_bootstrap,
-    save_bootstrap_results
+    save_bootstrap_results,
+    compare_feature_combinations
 )
 
 
@@ -47,101 +56,26 @@ from module.bootstrap import (
 BASE_DIR = Path("/home/daiki_shibata/pj/QPP4SIP")
 
 
-class NonNegativeLogisticRegression:
-    """非負制約付きL1正則化ロジスティック回帰"""
-    
-    def __init__(self, C=1.0, max_iter=1000, random_state=42, class_weight='balanced', tol=1e-7):
-        self.C = C
-        self.max_iter = max_iter
-        self.random_state = random_state
-        self.class_weight = class_weight
-        self.tol = tol
-        self.coef_ = None
-        self.intercept_ = None
-        self.n_iter_ = None
-        
-    def _logistic_loss(self, params, X, y, sample_weights):
-        """ロジスティック損失関数（L1正則化付き）"""
-        n_features = X.shape[1]
-        w = params[:n_features]
-        b = params[n_features]
-        
-        # 予測
-        z = X @ w + b
-        y_pred = expit(z)
-        
-        # ロジスティック損失
-        loss = -np.sum(sample_weights * (y * np.log(y_pred + 1e-15) + (1 - y) * np.log(1 - y_pred + 1e-15)))
-        
-        # L1正則化
-        l1_penalty = (1.0 / self.C) * np.sum(np.abs(w))
-        
-        return loss + l1_penalty
-    
-    def fit(self, X, y):
-        """モデルの学習"""
-        np.random.seed(self.random_state)
-        
-        # クラス重みの計算
-        if self.class_weight == 'balanced':
-            from sklearn.utils.class_weight import compute_sample_weight
-            sample_weights = compute_sample_weight('balanced', y)
-        else:
-            sample_weights = np.ones(len(y))
-        
-        n_features = X.shape[1]
-        n_samples = X.shape[0]
-        
-        # 初期値（小さい正の値）
-        initial_w = np.random.uniform(0.01, 0.1, n_features)
-        initial_b = 0.0
-        initial_params = np.concatenate([initial_w, [initial_b]])
-        
-        # 非負制約（係数のみ、切片は制約なし）
-        bounds = [(0, None)] * n_features + [(None, None)]
-        
-        # 最適化
-        result = minimize(
-            self._logistic_loss,
-            initial_params,
-            args=(X.values, y.values, sample_weights),
-            method='L-BFGS-B',
-            bounds=bounds,
-            options={
-                'maxiter': self.max_iter,
-                'ftol': self.tol,
-                'gtol': self.tol,
-                'disp': False
-            }
-        )
-        
-        # 収束状況を保存
-        self.optimization_result_ = result
-        self.coef_ = result.x[:n_features].reshape(1, -1)
-        self.intercept_ = result.x[n_features]
-        self.n_iter_ = [result.nit]
-        
-        return self
-    
-    def predict_proba(self, X):
-        """予測確率を返す"""
-        if isinstance(X, pd.DataFrame):
-            X_array = X.values
-        else:
-            X_array = X
-        z = X_array @ self.coef_[0] + self.intercept_
-        proba_positive = expit(z)
-        proba_negative = 1 - proba_positive
-        return np.column_stack([proba_negative, proba_positive])
-    
-    def predict(self, X):
-        """予測ラベルを返す"""
-        proba = self.predict_proba(X)
-        return (proba[:, 1] >= 0.5).astype(int)
+# 以下のクラスと関数は module/models.py と module/feature_selection.py に移動しました
+# - NonNegativeLogisticRegression
+# - BOLASSOModel
+# - LARSTrapsModel
+# - LARSCVModel
+# - create_model
+# - get_coefficients
+# - bootstrap_sample
+# - bolasso_feature_selection
+# - lars_traps_feature_selection
 
 
 def main():
-    parser = argparse.ArgumentParser(description="L1正則化付きロジスティック回帰によるclarification分類")
+    # ランダムシードを固定して実験の再現性を確保
+    import random
+    RANDOM_SEED = 42
+    np.random.seed(RANDOM_SEED)
+    random.seed(RANDOM_SEED)
+    
+    parser = argparse.ArgumentParser(description="ロジスティック回帰・RandomForestによるclarification分類")
     
     # データセット名（必須）
     parser.add_argument(
@@ -150,6 +84,46 @@ def main():
         required=True,
         choices=["INSCIT", "AmbigNQ"],
         help="データセット名（INSCIT または AmbigNQ）"
+    )
+    
+    # モデルタイプ
+    parser.add_argument(
+        "--model-type",
+        type=str,
+        default="all",
+        choices=["l1", "l2", "elasticnet", "randomforest", "none", "bolasso", "lars_traps", "lars_cv", "all"],
+        help="モデルタイプ（l1: L1正則化, l2: L2正則化, elasticnet: ElasticNet, randomforest: RandomForest, none: ペナルティなし, bolasso: BOLASSO, lars_traps: LARS-Traps, lars_cv: LARS-CV, all: 全てのモデルを実行して比較, デフォルト: all）"
+    )
+    
+    # BOLASSO用のパラメータ
+    parser.add_argument(
+        "--n-bootstrap",
+        type=int,
+        default=100,
+        help="BOLASSOのブートストラップサンプル数（デフォルト: 100、--model-type bolassoの場合のみ有効）"
+    )
+    
+    parser.add_argument(
+        "--selection-threshold",
+        type=float,
+        default=0.5,
+        help="BOLASSOの特徴量選択閾値（0.0-1.0、デフォルト: 0.5、--model-type bolassoの場合のみ有効）"
+    )
+    
+    # LARS-Traps用のパラメータ
+    parser.add_argument(
+        "--n-random-traps",
+        type=int,
+        default=10,
+        help="LARS-Trapsのランダムトラップ数（デフォルト: 10、--model-type lars_trapsの場合のみ有効）"
+    )
+    
+    # LARS-CV用のパラメータ
+    parser.add_argument(
+        "--lars-cv-folds",
+        type=int,
+        default=5,
+        help="LARS-CVのクロスバリデーションフォールド数（デフォルト: 5、--model-type lars_cvの場合のみ有効）"
     )
     
     
@@ -253,7 +227,27 @@ def main():
         help="既存のブートストラップサンプル（インデックス）のパス（--bootstrap-test使用時は必須）"
     )
     
+    parser.add_argument(
+        "--feature-types",
+        type=str,
+        nargs='+',
+        choices=['post', 'pre', 'bert', 'roberta', 'nsp', 'transfer'],
+        default=['post', 'pre', 'nsp'],
+        help="使用する特徴量タイプを指定（複数指定可能: post, pre, bert, roberta, nsp, transfer）。デフォルト: post, pre, nsp"
+    )
+    
     args = parser.parse_args()
+    
+    # 全てのモデルタイプを定義
+    ALL_MODEL_TYPES = ['l1', 'l2', 'elasticnet', 'none', 'bolasso', 'lars_traps', 'lars_cv', 'randomforest']
+    
+    # model_typeが"all"の場合、全てのモデルタイプを実行
+    if args.model_type == 'all':
+        model_types_to_run = ALL_MODEL_TYPES
+        run_all_models = True
+    else:
+        model_types_to_run = [args.model_type]
+        run_all_models = False
     
     # パスの動的設定
     dataset_dir = BASE_DIR / "dataset" / args.dataset
@@ -281,35 +275,51 @@ def main():
         else:
             print_and_save("Warning: trainとdevで共通するNSP top_k値が見つかりませんでした")
     
-    # config.pyから使用する指標を確認
-    import sys
-    from pathlib import Path
-    import importlib.util
-    config_path = Path(__file__).parent / "config.py"
-    if config_path.exists():
-        spec = importlib.util.spec_from_file_location("config", config_path)
-        config = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(config)
-        use_pre_retrieval = len(config.PRE_RETRIEVAL_CONFIGS) > 0
-        use_base = len(config.BASE_EXPERIMENT_NAMES) > 0
-    else:
-        use_pre_retrieval = False
-        use_base = False
+    # 特徴量タイプの設定（argparseのデフォルト機能を使用）
+    use_post = 'post' in args.feature_types
+    use_pre = 'pre' in args.feature_types
+    use_bert = 'bert' in args.feature_types
+    use_roberta = 'roberta' in args.feature_types
+    use_nsp = 'nsp' in args.feature_types
+    use_transfer = 'transfer' in args.feature_types
+    print_and_save(f"使用する特徴量タイプ: {', '.join(args.feature_types)}")
     
-    print_and_save("=== L1正則化付きロジスティック回帰によるclarification分類 ===\n")
+    # 後方互換性のため
+    use_pre_retrieval = use_pre
+    use_base = use_bert or use_roberta or use_transfer
+    
+    model_type_name = {
+        'l1': 'L1正則化付きロジスティック回帰',
+        'l2': 'L2正則化付きロジスティック回帰',
+        'elasticnet': 'ElasticNet正則化付きロジスティック回帰',
+        'randomforest': 'RandomForest分類器',
+        'none': 'ペナルティなしロジスティック回帰',
+        'bolasso': 'BOLASSO（Bootstrap-enhanced LASSO）',
+        'lars_traps': 'LARS-Traps',
+        'lars_cv': 'LARS-CV'
+    }.get(args.model_type, args.model_type)
+    print_and_save(f"=== {model_type_name}によるclarification分類 ===\n")
     print_and_save(f"データセット: {args.dataset}")
     print_and_save(f"検索手法: {args.retrieval_method}")
-    feature_desc = "QPPスコア（post"
+    # 使用する特徴量タイプに基づいて説明文を生成
+    feature_parts = []
+    if use_post:
+        feature_parts.append("post")
     if use_pre_retrieval:
-        feature_desc += " + pre"
-    feature_desc += " + nsp"
+        feature_parts.append("pre")
+    if use_nsp:
+        feature_parts.append("nsp")
     if use_base:
-        feature_desc += " + base"
-    feature_desc += "）"
+        if use_transfer:
+            feature_parts.append("transfer")
+        if use_bert or use_roberta:
+            feature_parts.append("base")
+    feature_desc = "QPPスコア（" + " + ".join(feature_parts) + "）"
     print_and_save(f"使用する特徴量: {feature_desc}")
-    print_and_save(f"  設定: config.pyで指定")
+    print_and_save(f"  設定: --feature-typesで指定")
+    print_and_save(f"モデルタイプ: {model_type_name}")
     print_and_save(f"ラベル分布の調整: {'有効' if args.balance_label_distribution else '無効'}")
-    print_and_save(f"非負制約: {'有効' if args.non_negative_coefficients else '無効'}")
+    print_and_save(f"非負制約: {'有効' if args.non_negative_coefficients and args.model_type == 'l1' else '無効'}")
     print_and_save(f"クロスバリデーション: {'有効' if args.use_cv else '無効'}")
     if args.use_cv:
         print_and_save(f"  Fold数: {args.cv_folds}")
@@ -372,14 +382,17 @@ def main():
         qpp_output_dir, 
         nsp_output_dir=nsp_output_dir, 
         nsp_top_k=nsp_top_k,
-        pre_retrieval_output_dir=pre_retrieval_output_dir
+        pre_retrieval_output_dir=pre_retrieval_output_dir,
+        use_post=use_post,
+        use_pre=use_pre,
+        use_nsp=use_nsp
     )
     train_all_scores.update(train_qpp_scores)
     for metric_name, scores in train_qpp_scores.items():
         print_and_save(f"  - {metric_name}: {len(scores)} サンプル")
     
     # ベーススコアを読み込む（data_loader内のコメントアウトで選択）
-    train_base_scores = load_base_scores('train', args.dataset, BASE_DIR, base_experiment_names=None)
+    train_base_scores = load_base_scores('train', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer)
     if train_base_scores:
         train_all_scores.update(train_base_scores)
         for feature_name, scores in train_base_scores.items():
@@ -402,14 +415,17 @@ def main():
         qpp_output_dir, 
         nsp_output_dir=nsp_output_dir, 
         nsp_top_k=nsp_top_k,
-        pre_retrieval_output_dir=pre_retrieval_output_dir
+        pre_retrieval_output_dir=pre_retrieval_output_dir,
+        use_post=use_post,
+        use_pre=use_pre,
+        use_nsp=use_nsp
     )
     dev_all_scores.update(dev_qpp_scores)
     for metric_name, scores in dev_qpp_scores.items():
         print_and_save(f"  - {metric_name}: {len(scores)} サンプル")
     
     # ベーススコアを読み込む（data_loader内のコメントアウトで選択）
-    dev_base_scores = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None)
+    dev_base_scores = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer)
     if dev_base_scores:
         dev_all_scores.update(dev_base_scores)
         for feature_name, scores in dev_base_scores.items():
@@ -505,26 +521,24 @@ def main():
                 use_minmax_normalization=args.use_minmax_normalization
             )
             
-            # モデル学習
-            if args.non_negative_coefficients:
-                fold_model = NonNegativeLogisticRegression(
-                    C=1.0,
+            # モデル学習（全てのモデルを実行する場合は、最初のモデルタイプのみ実行）
+            current_model_type = model_types_to_run[0] if run_all_models else args.model_type
+            fold_model = create_model(
+                model_type=current_model_type,
                     max_iter=args.max_iter,
                     random_state=42,
                     class_weight='balanced',
-                    tol=args.tol
-                )
-                fold_model.fit(X_fold_train_norm, y_fold_train)
+                tol=args.tol,
+                non_negative=args.non_negative_coefficients,
+                n_bootstrap=args.n_bootstrap,
+                selection_threshold=args.selection_threshold,
+                n_random_traps=args.n_random_traps,
+                cv=args.lars_cv_folds
+            )
+            # 特徴量選択モデルの場合はprint_and_save_funcを渡す
+            if current_model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+                fold_model.fit(X_fold_train_norm, y_fold_train, print_and_save_func=print_and_save)
             else:
-                fold_model = LogisticRegression(
-                    penalty='l1',
-                    solver='liblinear',
-                    C=1.0,
-                    max_iter=args.max_iter,
-                    random_state=42,
-                    class_weight='balanced',
-                    tol=args.tol
-                )
                 fold_model.fit(X_fold_train_norm, y_fold_train)
             
             # モデルを保存
@@ -600,6 +614,11 @@ def main():
         feature_dir_name = get_feature_dir_name(feature_names)
         feature_output_dir = output_dir / feature_dir_name
         feature_output_dir.mkdir(parents=True, exist_ok=True)
+        # サブフォルダを作成
+        graphs_dir = feature_output_dir / "graphs"
+        graphs_dir.mkdir(parents=True, exist_ok=True)
+        csv_dir = feature_output_dir / "csv"
+        csv_dir.mkdir(parents=True, exist_ok=True)
         output_file = feature_output_dir / "results.txt"
         
         print_and_save("\n=== クロスバリデーション完了 ===")
@@ -632,50 +651,98 @@ def main():
             
             # 各単体指標についてロジスティック回帰を実行し、ROCを計算
             single_metric_aucs = {}
+            single_metric_aps = {}
             single_metric_probas = {}
             
             # CV統合データに対して各foldで単体指標の評価を行う
+            # 非学習指標（QPPスコア）は直接使用、学習指標（BERT等）はロジスティック回帰を使用
+            from config import POST_RETRIEVAL_CONFIGS, PRE_RETRIEVAL_CONFIGS
+            from module.data_loader import NSP_METRICS, get_nsp_metric_name
+            
+            # 非学習指標のリスト（QPPスコア）
+            non_learning_metrics = set(POST_RETRIEVAL_CONFIGS.keys()) | set(PRE_RETRIEVAL_CONFIGS.keys())
+            # NSPメトリクスも非学習指標として扱う（動的に生成されるため、名前で判定）
+            nsp_metric_prefixes = [f"nsp_{metric}_topk" for metric in NSP_METRICS.keys()]
+            
             for metric_name in X_combined.columns:
-                metric_aucs = []
-                metric_probas = []
+                # 非学習指標かどうかを判定
+                is_non_learning = (
+                    metric_name in non_learning_metrics or
+                    any(metric_name.startswith(prefix) for prefix in nsp_metric_prefixes)
+                )
                 
-                for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_combined, y_combined)):
-                    X_fold_train = X_combined.iloc[train_idx].reset_index(drop=True)
-                    y_fold_train = y_combined.iloc[train_idx].reset_index(drop=True)
-                    X_fold_test = X_combined.iloc[test_idx].reset_index(drop=True)
-                    y_fold_test = y_combined.iloc[test_idx].reset_index(drop=True)
+                if is_non_learning:
+                    # 非学習指標：QPPスコアを直接使用（CV統合テストデータに対応するスコアを使用）
+                    # 全foldのテストデータに対応するスコアを収集
+                    metric_scores_list = []
+                    metric_labels_list = []
                     
-                    # 正規化
-                    X_fold_train_norm, X_fold_test_norm = normalize_features(
-                        X_fold_train, X_fold_test,
-                        use_combined_normalization=False,
-                        use_separate_normalization=False,
-                        use_minmax_normalization=args.use_minmax_normalization
-                    )
+                    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_combined, y_combined)):
+                        X_fold_test = X_combined.iloc[test_idx].reset_index(drop=True)
+                        y_fold_test = y_combined.iloc[test_idx].reset_index(drop=True)
+                        metric_scores_list.append(X_fold_test[metric_name].values)
+                        metric_labels_list.append(y_fold_test.values)
                     
-                    # 単一指標でロジスティック回帰
-                    single_metric_model = LogisticRegression(
-                        penalty='l2',
-                        solver='liblinear',
-                        C=1.0,
-                        max_iter=1000,
-                        random_state=42,
-                        class_weight='balanced'
-                    )
-                    single_metric_model.fit(X_fold_train_norm[[metric_name]], y_fold_train)
-                    y_fold_test_proba = single_metric_model.predict_proba(X_fold_test_norm[[metric_name]])[:, 1]
+                    # 全foldのスコアとラベルを統合
+                    metric_scores_all = np.concatenate(metric_scores_list)
+                    metric_labels_all = np.concatenate(metric_labels_list)
+                    
+                    # Min-Max正規化で[0,1]に変換（予測確率として使用）
+                    from sklearn.preprocessing import MinMaxScaler
+                    scaler = MinMaxScaler()
+                    metric_scores_normalized = scaler.fit_transform(metric_scores_all.reshape(-1, 1)).flatten()
                     
                     try:
-                        fold_auc = roc_auc_score(y_fold_test, y_fold_test_proba)
-                        metric_aucs.append(fold_auc)
-                        metric_probas.append(y_fold_test_proba)
+                        single_metric_aucs[metric_name] = roc_auc_score(metric_labels_all, metric_scores_normalized)
+                        single_metric_aps[metric_name] = average_precision_score(metric_labels_all, metric_scores_normalized)
+                        single_metric_probas[metric_name] = metric_scores_normalized
                     except ValueError:
                         pass
-                
-                if len(metric_aucs) > 0:
-                    single_metric_aucs[metric_name] = np.mean(metric_aucs)
-                    # 全foldの予測確率を統合
-                    single_metric_probas[metric_name] = np.concatenate(metric_probas)
+                else:
+                    # 学習指標（BERT等）：ロジスティック回帰を使用
+                    metric_aucs = []
+                    metric_probas = []
+                    
+                    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_combined, y_combined)):
+                        X_fold_train = X_combined.iloc[train_idx].reset_index(drop=True)
+                        y_fold_train = y_combined.iloc[train_idx].reset_index(drop=True)
+                        X_fold_test = X_combined.iloc[test_idx].reset_index(drop=True)
+                        y_fold_test = y_combined.iloc[test_idx].reset_index(drop=True)
+                        
+                        # 正規化
+                        X_fold_train_norm, X_fold_test_norm = normalize_features(
+                            X_fold_train, X_fold_test,
+                            use_combined_normalization=False,
+                            use_separate_normalization=False,
+                            use_minmax_normalization=args.use_minmax_normalization
+                        )
+                        
+                        # 単一指標でロジスティック回帰
+                        single_metric_model = LogisticRegression(
+                            penalty='l2',
+                            solver='liblinear',
+                            C=1.0,
+                            max_iter=1000,
+                            random_state=42,
+                            class_weight='balanced'
+                        )
+                        single_metric_model.fit(X_fold_train_norm[[metric_name]], y_fold_train)
+                        y_fold_test_proba = single_metric_model.predict_proba(X_fold_test_norm[[metric_name]])[:, 1]
+                        
+                        try:
+                            fold_auc = roc_auc_score(y_fold_test, y_fold_test_proba)
+                            fold_ap = average_precision_score(y_fold_test, y_fold_test_proba)
+                            metric_aucs.append(fold_auc)
+                            metric_probas.append(y_fold_test_proba)
+                        except ValueError:
+                            pass
+                    
+                    if len(metric_aucs) > 0:
+                        # 全foldの予測確率を統合
+                        single_metric_probas[metric_name] = np.concatenate(metric_probas)
+                        # 統合された予測確率からAUC-ROCとAUC-PRを計算（out-of-fold統合）
+                        single_metric_aucs[metric_name] = roc_auc_score(y_cv_test_labels, single_metric_probas[metric_name])
+                        single_metric_aps[metric_name] = average_precision_score(y_cv_test_labels, single_metric_probas[metric_name])
             
             if len(single_metric_aucs) > 0:
                 # 最高ROCを出した指標を見つける
@@ -683,7 +750,7 @@ def main():
                 best_metric_auc = single_metric_aucs[best_metric]
                 best_metric_proba = single_metric_probas[best_metric]
                 
-                print_and_save(f"  単体指標の最高ROC: {best_metric} (AUC = {best_metric_auc:.4f})")
+                print_and_save(f"  単体指標の最高ROC: {format_feature_name(best_metric)} (AUC = {best_metric_auc:.4f})")
                 print_and_save(f"  回帰モデルのROC: AUC = {cv_test_auc:.4f}")
                 
                 # DeLongの検定
@@ -695,14 +762,67 @@ def main():
                 
                 print_and_save(f"\n  DeLongの検定結果:")
                 print_and_save(f"    モデルA (回帰): AUC = {delong_result['auc_a']:.4f}")
-                print_and_save(f"    モデルB (単体指標 {best_metric}): AUC = {delong_result['auc_b']:.4f}")
+                print_and_save(f"    モデルB (単体指標 {format_feature_name(best_metric)}): AUC = {delong_result['auc_b']:.4f}")
                 print_and_save(f"    AUC差: {delong_result['auc_diff']:.4f}")
                 print_and_save(f"    Z統計量: {delong_result['z_stat']:.4f}")
                 print_and_save(f"    p値: {delong_result['p_value']:.4f}")
                 print_and_save(f"    有意差: {'あり' if delong_result['significant'] else 'なし'} (α=0.05)")
                 
-                # 結果を保存
-                delong_result_path = feature_output_dir / "delong_test_single_metric.csv"
+                # 各指標と回帰モデルとの比較表を作成
+                print_and_save("\n  === 各指標とモデルの比較表 ===")
+                comparison_data = []
+                
+                # 各指標のAUC-ROCとAUC-PRを計算
+                for metric_name in single_metric_aucs.keys():
+                    metric_proba = single_metric_probas[metric_name]
+                    metric_auc = single_metric_aucs[metric_name]
+                    metric_ap = single_metric_aps[metric_name]
+                    
+                    comparison_data.append({
+                        'Metric': format_feature_name(metric_name),
+                        'AUC-ROC': f"{metric_auc:.4f}",
+                        'AUC-PR': f"{metric_ap:.4f}",
+                        'p-value': '-'
+                    })
+                
+                # 回帰モデルの情報を追加（最高性能の単体指標とのDeLong検定のp-value）
+                regression_ap = average_precision_score(y_cv_test_labels, np.array(all_test_proba))
+                model_name = {
+                    'l1': 'L1 Logistic Regression',
+                    'l2': 'L2 Logistic Regression',
+                    'elasticnet': 'E-Net',
+                    'none': 'No Penalty Logistic Regression',
+                    'bolasso': 'BOLASSO',
+                    'lars_traps': 'LARS-Traps',
+                    'lars_cv': 'LARS-CV',
+                    'randomforest': 'Random Forest'
+                }.get(args.model_type, f'{args.model_type.upper()} Logistic Regression')
+                
+                # 最高性能の単体指標とのDeLong検定
+                # p値の表示：0.0000になる場合は科学記法で表示
+                if np.isnan(delong_result['p_value']):
+                    p_value_str = '-'
+                elif delong_result['p_value'] < 0.0001:
+                    p_value_str = f"{delong_result['p_value']:.2e}"
+                else:
+                    p_value_str = f"{delong_result['p_value']:.4f}"
+                
+                comparison_data.append({
+                    'Metric': model_name,
+                    'AUC-ROC': f"{cv_test_auc:.4f}",
+                    'AUC-PR': f"{regression_ap:.4f}",
+                    'p-value': p_value_str
+                })
+                
+                # 表を表示
+                comparison_df = pd.DataFrame(comparison_data)
+                # タブ区切り形式で出力（スプレッドシートにコピペしやすい）
+                print_and_save("\n" + comparison_df.to_csv(sep='\t', index=False))
+                
+                # 結果を保存（delongディレクトリに）
+                delong_dir = feature_output_dir / "delong"
+                delong_dir.mkdir(parents=True, exist_ok=True)
+                delong_result_path = delong_dir / "delong_test_single_metric.csv"
                 result_df = pd.DataFrame([{
                     'best_single_metric': best_metric,
                     'best_single_metric_auc': best_metric_auc,
@@ -711,6 +831,11 @@ def main():
                 }])
                 result_df.to_csv(delong_result_path, index=False)
                 print_and_save(f"  - DeLongの検定結果を保存: {delong_result_path}")
+                
+                # 比較表も保存
+                comparison_csv_path = delong_dir / "comparison_table.csv"
+                comparison_df.to_csv(comparison_csv_path, index=False)
+                print_and_save(f"  - 比較表を保存: {comparison_csv_path}")
             else:
                 print_and_save("  ⚠️  警告: 単体指標のROCを計算できませんでした")
         
@@ -750,7 +875,7 @@ def main():
                         ], ignore_index=True)
                         
                         # 結果を保存
-                        bootstrap_results_path = feature_output_dir / "bootstrap_results_single_vs_regression.csv"
+                        bootstrap_results_path = csv_dir / "bootstrap_results_single_vs_regression.csv"
                         save_bootstrap_results(all_bootstrap_results, bootstrap_results_path)
                         print_and_save(f"  - ブートストラップ結果を保存: {bootstrap_results_path}")
                         
@@ -770,7 +895,7 @@ def main():
                                 print_and_save(f"    {metric.upper()}: {mean_val:.4f} ± {std_val:.4f} (95% CI: [{ci_lower:.4f}, {ci_upper:.4f}])")
         
             # 予測結果を保存（回帰モデル同士の比較用）
-            predictions_path = feature_output_dir / "predictions_for_delong.csv"
+            predictions_path = csv_dir / "predictions_for_delong.csv"
             pd.DataFrame({
                 'y_true': np.array(all_test_labels),
                 'y_pred_proba': np.array(all_test_proba)
@@ -828,13 +953,11 @@ def main():
         test_ap_cv = cv_test_ap
         
         # 特徴量の係数の平均を計算（各foldのモデルの係数の平均）
-        if args.non_negative_coefficients:
-            all_coefs = np.array([model.coef_[0] for model in fold_models])
-        else:
-            all_coefs = np.array([model.coef_[0] for model in fold_models])
+        all_coefs = np.array([get_coefficients(model, X_train_norm.columns, args.model_type) for model in fold_models])
         mean_coefs = np.mean(all_coefs, axis=0)
         
-        print_and_save("\n特徴量の係数（各foldの平均）:")
+        coefficient_label = "重要度" if args.model_type == 'randomforest' else "係数"
+        print_and_save(f"\n特徴量の{coefficient_label}（各foldの平均）:")
         feature_importance = pd.DataFrame({
             'feature': X_train_norm.columns,
             'coefficient': mean_coefs
@@ -844,15 +967,16 @@ def main():
         # 係数をCSVファイルとして保存
         coefficients_csv_path = feature_output_dir / "coefficients.csv"
         feature_importance.to_csv(coefficients_csv_path, index=False)
-        print_and_save(f"  - 係数をCSVファイルに保存しました: {coefficients_csv_path}")
+        print_and_save(f"  - {coefficient_label}をCSVファイルに保存しました: {coefficients_csv_path}")
         
-        # 係数が0の特徴量を表示
-        zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
-        if len(zero_coef_features) > 0:
-            print_and_save(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
-            print_and_save(zero_coef_features[['feature']].to_string(index=False))
-        else:
-            print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
+        # 係数が0の特徴量を表示（L1正則化の場合のみ）
+        if args.model_type == 'l1':
+            zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
+            if len(zero_coef_features) > 0:
+                print_and_save(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
+                print_and_save(zero_coef_features[['feature']].to_string(index=False))
+            else:
+                print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
         
         # 可視化のために、モデルオブジェクトを作成（係数の平均を使用）
         # ただし、実際の予測は既にアンサンブルで行っているので、可視化用にダミーモデルを作成
@@ -889,7 +1013,10 @@ def main():
             feature_dir_name = get_feature_dir_name(feature_names)
             feature_output_dir = output_dir / feature_dir_name
             feature_output_dir.mkdir(parents=True, exist_ok=True)
-            predictions_path = feature_output_dir / "predictions_for_delong.csv"
+            # サブフォルダを作成
+            csv_dir = feature_output_dir / "csv"
+            csv_dir.mkdir(parents=True, exist_ok=True)
+            predictions_path = csv_dir / "predictions_for_delong.csv"
             pd.DataFrame({
                 'y_true': all_test_labels,
                 'y_pred_proba': all_test_proba
@@ -901,6 +1028,11 @@ def main():
         feature_dir_name = get_feature_dir_name(feature_names)
         feature_output_dir = output_dir / feature_dir_name
         feature_output_dir.mkdir(parents=True, exist_ok=True)
+        # サブフォルダを作成
+        graphs_dir = feature_output_dir / "graphs"
+        graphs_dir.mkdir(parents=True, exist_ok=True)
+        csv_dir = feature_output_dir / "csv"
+        csv_dir.mkdir(parents=True, exist_ok=True)
         output_file = feature_output_dir / "results.txt"
     
     # データ分布の確認（正規化前）
@@ -990,69 +1122,60 @@ def main():
     # 4. モデル学習（クロスバリデーションの場合は既に完了）
     if not args.use_cv:
         print_and_save("\n4. モデル学習中...")
-        if args.non_negative_coefficients:
+        model_type_name = {
+            'l1': 'L1正則化ロジスティック回帰',
+            'l2': 'L2正則化ロジスティック回帰',
+            'elasticnet': 'ElasticNet正則化ロジスティック回帰',
+            'randomforest': 'RandomForest分類器'
+        }.get(args.model_type, args.model_type)
+        print_and_save(f"  - モデルタイプ: {model_type_name}")
+        if args.non_negative_coefficients and args.model_type == 'l1':
             print_and_save("  - 非負制約付きモデルを使用します")
             print_and_save(f"  - 最大反復回数: {args.max_iter}")
-            model = NonNegativeLogisticRegression(
-                C=1.0,
+        model = create_model(
+            model_type=args.model_type,
                 max_iter=args.max_iter,
                 random_state=42,
                 class_weight='balanced',
-                tol=args.tol
-            )
+            tol=args.tol,
+            non_negative=args.non_negative_coefficients,
+            n_bootstrap=args.n_bootstrap,
+            selection_threshold=args.selection_threshold,
+            n_random_traps=args.n_random_traps,
+            cv=args.lars_cv_folds
+        )
+        # 特徴量選択モデルの場合はprint_and_save_funcを渡す
+        if args.model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+            model.fit(X_train_norm, y_train, print_and_save_func=print_and_save)
+        else:
             model.fit(X_train_norm, y_train)
+        
+        # 収束状況を確認（線形モデルの場合のみ）
+        if args.model_type in ['l1', 'l2', 'elasticnet', 'none']:
             actual_iter = model.n_iter_[0] if hasattr(model, 'n_iter_') and len(model.n_iter_) > 0 else 'unknown'
             print_and_save(f"  - 実際の反復回数: {actual_iter}")
-            
-            # 収束状況をチェック
-            if hasattr(model, 'optimization_result_'):
-                result = model.optimization_result_
-                if not result.success:
-                    print_and_save(f"  ⚠️  警告: 最適化が収束しませんでした")
-                    print_and_save(f"  ⚠️  メッセージ: {result.message}")
-                    if actual_iter >= args.max_iter:
-                        print_and_save(f"  ⚠️  最大反復回数（{args.max_iter}）に達しました")
-                        print_and_save(f"  ⚠️  --max-iterを増やすことを検討してください")
-                else:
-                    print_and_save("  - 正常に収束しました")
-            else:
-                print_and_save("  - 学習完了（収束状況の確認ができませんでした）")
-        else:
-            model = LogisticRegression(
-                penalty='l1',
-                solver='liblinear',
-                C=1.0,
-                max_iter=args.max_iter,
-                random_state=42,
-                class_weight='balanced',
-                tol=args.tol
-            )
             
             # 警告をキャッチして収束状況を確認
             with warnings.catch_warnings(record=True) as w:
                 warnings.simplefilter("always")
-                model.fit(X_train_norm, y_train)
-                
-                # 実際の反復回数を確認
-                actual_iter = model.n_iter_[0] if hasattr(model, 'n_iter_') and len(model.n_iter_) > 0 else 'unknown'
-                print_and_save(f"  - 実際の反復回数: {actual_iter}")
-                
                 # 警告があるかチェック（max_iterに達した場合）
                 if w:
                     for warning in w:
                         if "max_iter" in str(warning.message).lower() or "convergence" in str(warning.message).lower():
                             print_and_save(f"  ⚠️  警告: {warning.message}")
-                            print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {model.max_iter}）")
+                            print_and_save(f"  ⚠️  max_iterを増やすことを検討してください（現在: {args.max_iter}）")
                 else:
                     print_and_save("  - 正常に収束しました")
-            
+        else:
             print_and_save("  - 学習完了")
         
         # 特徴量の重要度（係数）を表示
-        print_and_save("\n特徴量の係数:")
+        coefficient_label = "重要度" if args.model_type == 'randomforest' else "係数"
+        print_and_save(f"\n特徴量の{coefficient_label}:")
+        coefficients = get_coefficients(model, X_train_norm.columns, args.model_type)
         feature_importance = pd.DataFrame({
             'feature': X_train_norm.columns,
-            'coefficient': model.coef_[0]
+            'coefficient': coefficients
         }).sort_values('coefficient', key=abs, ascending=False)
         print_and_save(feature_importance.to_string(index=False))
         
@@ -1061,17 +1184,23 @@ def main():
         feature_dir_name = get_feature_dir_name(feature_names)
         feature_output_dir = output_dir / feature_dir_name
         feature_output_dir.mkdir(parents=True, exist_ok=True)
-        coefficients_csv_path = feature_output_dir / "coefficients.csv"
+        # サブフォルダを作成
+        graphs_dir = feature_output_dir / "graphs"
+        graphs_dir.mkdir(parents=True, exist_ok=True)
+        csv_dir = feature_output_dir / "csv"
+        csv_dir.mkdir(parents=True, exist_ok=True)
+        coefficients_csv_path = csv_dir / "coefficients.csv"
         feature_importance.to_csv(coefficients_csv_path, index=False)
-        print_and_save(f"  - 係数をCSVファイルに保存しました: {coefficients_csv_path}")
+        print_and_save(f"  - {coefficient_label}をCSVファイルに保存しました: {coefficients_csv_path}")
         
-        # 係数が0の特徴量を表示
-        zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
-        if len(zero_coef_features) > 0:
-            print_and_save(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
-            print_and_save(zero_coef_features[['feature']].to_string(index=False))
-        else:
-            print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
+        # 係数が0の特徴量を表示（L1正則化の場合のみ）
+        if args.model_type == 'l1':
+            zero_coef_features = feature_importance[feature_importance['coefficient'] == 0.0]
+            if len(zero_coef_features) > 0:
+                print_and_save(f"\n係数が0の特徴量（L1正則化により除外）: {len(zero_coef_features)}個")
+                print_and_save(zero_coef_features[['feature']].to_string(index=False))
+            else:
+                print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
         
         # 5. 評価
         print_and_save("\n5. 評価中...")
@@ -1099,6 +1228,7 @@ def main():
             
             # 各単体指標についてロジスティック回帰を実行し、ROCを計算
             single_metric_aucs = {}
+            single_metric_aps = {}
             single_metric_probas = {}
             
             for metric_name in X_train.columns:
@@ -1126,7 +1256,9 @@ def main():
                 
                 try:
                     test_auc_single = roc_auc_score(y_test, y_test_proba_single)
+                    test_ap_single = average_precision_score(y_test, y_test_proba_single)
                     single_metric_aucs[metric_name] = test_auc_single
+                    single_metric_aps[metric_name] = test_ap_single
                     single_metric_probas[metric_name] = y_test_proba_single
                 except ValueError:
                     pass
@@ -1137,7 +1269,7 @@ def main():
                 best_metric_auc = single_metric_aucs[best_metric]
                 best_metric_proba = single_metric_probas[best_metric]
                 
-                print_and_save(f"  単体指標の最高ROC: {best_metric} (AUC = {best_metric_auc:.4f})")
+                print_and_save(f"  単体指標の最高ROC: {format_feature_name(best_metric)} (AUC = {best_metric_auc:.4f})")
                 print_and_save(f"  回帰モデルのROC: AUC = {test_auc:.4f}")
                 
                 # DeLongの検定
@@ -1149,14 +1281,67 @@ def main():
                 
                 print_and_save(f"\n  DeLongの検定結果:")
                 print_and_save(f"    モデルA (回帰): AUC = {delong_result['auc_a']:.4f}")
-                print_and_save(f"    モデルB (単体指標 {best_metric}): AUC = {delong_result['auc_b']:.4f}")
+                print_and_save(f"    モデルB (単体指標 {format_feature_name(best_metric)}): AUC = {delong_result['auc_b']:.4f}")
                 print_and_save(f"    AUC差: {delong_result['auc_diff']:.4f}")
                 print_and_save(f"    Z統計量: {delong_result['z_stat']:.4f}")
                 print_and_save(f"    p値: {delong_result['p_value']:.4f}")
                 print_and_save(f"    有意差: {'あり' if delong_result['significant'] else 'なし'} (α=0.05)")
                 
-                # 結果を保存
-                delong_result_path = feature_output_dir / "delong_test_single_metric.csv"
+                # 各指標と回帰モデルとの比較表を作成
+                print_and_save("\n  === 各指標とモデルの比較表 ===")
+                comparison_data = []
+                
+                # 各指標のAUC-ROCとAUC-PRを計算
+                for metric_name in single_metric_aucs.keys():
+                    metric_proba = single_metric_probas[metric_name]
+                    metric_auc = single_metric_aucs[metric_name]
+                    metric_ap = single_metric_aps[metric_name]
+                    
+                    comparison_data.append({
+                        'Metric': format_feature_name(metric_name),
+                        'AUC-ROC': f"{metric_auc:.4f}",
+                        'AUC-PR': f"{metric_ap:.4f}",
+                        'p-value': '-'
+                    })
+                
+                # 回帰モデルの情報を追加（最高性能の単体指標とのDeLong検定のp-value）
+                regression_ap = average_precision_score(y_test, y_test_proba)
+                model_name = {
+                    'l1': 'L1 Logistic Regression',
+                    'l2': 'L2 Logistic Regression',
+                    'elasticnet': 'E-Net',
+                    'none': 'No Penalty Logistic Regression',
+                    'bolasso': 'BOLASSO',
+                    'lars_traps': 'LARS-Traps',
+                    'lars_cv': 'LARS-CV',
+                    'randomforest': 'Random Forest'
+                }.get(args.model_type, f'{args.model_type.upper()} Logistic Regression')
+                
+                # 最高性能の単体指標とのDeLong検定
+                # p値の表示：0.0000になる場合は科学記法で表示
+                if np.isnan(delong_result['p_value']):
+                    p_value_str = '-'
+                elif delong_result['p_value'] < 0.0001:
+                    p_value_str = f"{delong_result['p_value']:.2e}"
+                else:
+                    p_value_str = f"{delong_result['p_value']:.4f}"
+                
+                comparison_data.append({
+                    'Metric': model_name,
+                    'AUC-ROC': f"{test_auc:.4f}",
+                    'AUC-PR': f"{regression_ap:.4f}",
+                    'p-value': p_value_str
+                })
+                
+                # 表を表示
+                comparison_df = pd.DataFrame(comparison_data)
+                # タブ区切り形式で出力（スプレッドシートにコピペしやすい）
+                print_and_save("\n" + comparison_df.to_csv(sep='\t', index=False))
+                
+                # 結果を保存（delongディレクトリに）
+                delong_dir = feature_output_dir / "delong"
+                delong_dir.mkdir(parents=True, exist_ok=True)
+                delong_result_path = delong_dir / "delong_test_single_metric.csv"
                 result_df = pd.DataFrame([{
                     'best_single_metric': best_metric,
                     'best_single_metric_auc': best_metric_auc,
@@ -1165,6 +1350,11 @@ def main():
                 }])
                 result_df.to_csv(delong_result_path, index=False)
                 print_and_save(f"  - DeLongの検定結果を保存: {delong_result_path}")
+                
+                # 比較表も保存
+                comparison_csv_path = delong_dir / "comparison_table.csv"
+                comparison_df.to_csv(comparison_csv_path, index=False)
+                print_and_save(f"  - 比較表を保存: {comparison_csv_path}")
             else:
                 print_and_save("  ⚠️  警告: 単体指標のROCを計算できませんでした")
             
@@ -1204,7 +1394,7 @@ def main():
                         ], ignore_index=True)
                         
                         # 結果を保存
-                        bootstrap_results_path = feature_output_dir / "bootstrap_results_single_vs_regression.csv"
+                        bootstrap_results_path = csv_dir / "bootstrap_results_single_vs_regression.csv"
                         save_bootstrap_results(all_bootstrap_results, bootstrap_results_path)
                         print_and_save(f"  - ブートストラップ結果を保存: {bootstrap_results_path}")
                         
@@ -1224,7 +1414,7 @@ def main():
                                 print_and_save(f"    {metric.upper()}: {mean_val:.4f} ± {std_val:.4f} (95% CI: [{ci_lower:.4f}, {ci_upper:.4f}])")
             
             # 予測結果を保存（回帰モデル同士の比較用）
-            predictions_path = feature_output_dir / "predictions_for_delong.csv"
+            predictions_path = csv_dir / "predictions_for_delong.csv"
             pd.DataFrame({
                 'y_true': y_test.values,
                 'y_pred_proba': y_test_proba
@@ -1287,6 +1477,11 @@ def main():
     feature_dir_name = get_feature_dir_name(feature_names)
     feature_output_dir = output_dir / feature_dir_name
     feature_output_dir.mkdir(parents=True, exist_ok=True)
+    # サブフォルダを作成
+    graphs_dir = feature_output_dir / "graphs"
+    graphs_dir.mkdir(parents=True, exist_ok=True)
+    csv_dir = feature_output_dir / "csv"
+    csv_dir.mkdir(parents=True, exist_ok=True)
     output_file = feature_output_dir / "results.txt"
     
     # baseスコアや複数特徴量がある場合は自動的に単一指標も表示
@@ -1304,7 +1499,7 @@ def main():
             y_test_proba=y_test_proba, 
             train_auc=train_auc, 
             test_auc=test_auc, 
-            output_dir=output_dir,
+            output_dir=graphs_dir,
             hide_train=True,  # trainは非表示
             X_train=None,  # trainは表示しない
             X_test=X_cv_test_norm if show_single else None,  # CV結果のみ表示
@@ -1314,7 +1509,7 @@ def main():
         )
     else:
         plot_roc_curves(
-            y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc, output_dir,
+            y_train, y_train_proba, y_test, y_test_proba, train_auc, test_auc, graphs_dir,
             hide_train=args.hide_train_curves,
             X_train=X_train_norm if show_single else None,
             X_test=X_test_norm if show_single else None,
@@ -1333,7 +1528,7 @@ def main():
             y_test_proba=y_test_proba,
             train_ap=train_ap,
             test_ap=test_ap,
-            output_dir=output_dir,
+            output_dir=graphs_dir,
             hide_train=True,
             X_train=None,
             X_test=X_cv_test_norm if show_single else None,
@@ -1343,7 +1538,7 @@ def main():
         )
     else:
         plot_pr_curves(
-            y_train, y_train_proba, y_test, y_test_proba, train_ap, test_ap, output_dir,
+            y_train, y_train_proba, y_test, y_test_proba, train_ap, test_ap, graphs_dir,
             hide_train=args.hide_train_curves,
             X_train=X_train_norm if show_single else None,
             X_test=X_test_norm if show_single else None,
@@ -1360,7 +1555,7 @@ def main():
             y_train_proba=y_train_proba,
             y_test=y_test,
             y_test_proba=y_test_proba,
-            output_dir=output_dir,
+            output_dir=graphs_dir,
             hide_train=True,
             X_train=None,
             X_test=X_cv_test_norm if show_single else None,
@@ -1370,7 +1565,7 @@ def main():
         )
     else:
         plot_threshold_f1_curves(
-            y_train, y_train_proba, y_test, y_test_proba, output_dir,
+            y_train, y_train_proba, y_test, y_test_proba, graphs_dir,
             hide_train=args.hide_train_curves,
             X_train=X_train_norm if show_single else None,
             X_test=X_test_norm if show_single else None,
@@ -1382,7 +1577,7 @@ def main():
     # 9. 特徴量のスコア分布の描画
     print_and_save("\n9. 特徴量のスコア分布を描画中...")
     plot_feature_distributions(
-        X_train_norm, X_test_norm, output_dir,
+        X_train_norm, X_test_norm, graphs_dir,
         hide_train=args.hide_train_curves,
         feature_names=feature_names,
         y_train=y_train,
@@ -1401,7 +1596,7 @@ def main():
             X_test=X_test_norm,
             y_train=y_train,
             y_test=y_test,
-            output_dir=output_dir,
+            output_dir=graphs_dir,
             feature_names=feature_names,
             use_combined=True
         )
@@ -1411,7 +1606,7 @@ def main():
             X_test=X_test_norm,
             y_train=y_train,
             y_test=y_test,
-            output_dir=output_dir,
+            output_dir=graphs_dir,
             feature_names=feature_names,
             use_combined=False
         )
@@ -1421,7 +1616,7 @@ def main():
     print_and_save("\n11. Confidence Analysis（確信度分析）を実行中...")
     
     # BERTの予測確率を読み込む
-    dev_base_probs = load_base_probabilities('dev', args.dataset, BASE_DIR, base_experiment_names=None)
+    dev_base_probs = load_base_probabilities('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer)
     
     if len(dev_base_probs) > 0:
         # 最初のBERT確率を使用（複数ある場合は最初のもの）
@@ -1577,7 +1772,7 @@ def main():
                     valid_ranges,
                     valid_results,
                     overall_auc_improvement,
-                    output_dir,
+                    graphs_dir,
                     feature_names=vis_feature_names
                 )
                 print_and_save("  - Confidence Analysis可視化を保存しました")
@@ -1657,7 +1852,7 @@ def main():
                 confidence_auc_single = roc_auc_score(confidence_labels, confidence_proba_single)
                 confidence_ap_single = average_precision_score(confidence_labels, confidence_proba_single)
                 
-                print_and_save(f"\n  単体指標（{best_metric}）の評価:")
+                print_and_save(f"\n  単体指標（{format_feature_name(best_metric)}）の評価:")
                 print_and_save(f"    Accuracy: {confidence_acc_single:.4f}")
                 print_and_save(f"    F1 Score: {confidence_f1_single:.4f}")
                 print_and_save(f"    AUC-ROC: {confidence_auc_single:.4f}")
@@ -1698,7 +1893,7 @@ def main():
                     print_and_save(f"\n  → Confidence範囲での改善度は全体データと同程度です。")
                 
                 # 結果をCSVファイルに保存
-                confidence_results_path = feature_output_dir / "confidence_analysis.csv"
+                confidence_results_path = csv_dir / "confidence_analysis.csv"
                 confidence_results_df = pd.DataFrame({
                     'metric': ['regression', 'single_metric'],
                     'accuracy': [confidence_acc_regression, confidence_acc_single],
@@ -1713,7 +1908,7 @@ def main():
                 print_and_save(f"  - Confidence Analysis結果を保存: {confidence_results_path}")
             else:
                 # 単体指標との比較ができない場合でも、回帰モデルの結果は保存
-                confidence_results_path = feature_output_dir / "confidence_analysis.csv"
+                confidence_results_path = csv_dir / "confidence_analysis.csv"
                 confidence_results_df = pd.DataFrame({
                     'metric': ['regression'],
                     'accuracy': [confidence_acc_regression],
@@ -1898,13 +2093,13 @@ def main():
                 
                 plot_overconfidence_analysis(
                     overconfidence_results,
-                    output_dir,
+                    graphs_dir,
                     feature_names=vis_feature_names
                 )
                 print_and_save("  - Overconfidence Analysis可視化を保存しました")
                 
                 # 結果をCSVに保存
-                overconfidence_csv_path = feature_output_dir / "overconfidence_analysis.csv"
+                overconfidence_csv_path = csv_dir / "overconfidence_analysis.csv"
                 overconfidence_data = []
                 if 'high_confidence_fp' in overconfidence_results:
                     fp_data = overconfidence_results['high_confidence_fp']
@@ -1958,6 +2153,781 @@ def main():
         print_and_save("⚠️  最終警告: この結果はリーク前提の正規化を使用しています！")
         print_and_save("⚠️  実際の予測タスクでは使用できません。")
         print_and_save("="*80)
+    
+    # 全てのモデルを実行して比較（model_typeが"all"の場合）
+    if run_all_models:
+        print_and_save("\n" + "="*80)
+        print_and_save("全てのモデルタイプを実行して比較します")
+        print_and_save("="*80)
+        
+        models_results = []
+        feature_names = list(X_train.columns) if 'X_train' in locals() else list(X_combined.columns) if 'X_combined' in locals() else []
+        
+        # 正規化済みデータを準備（既に正規化されている場合はそのまま使用）
+        if args.use_cv:
+            # クロスバリデーションの場合は統合データを使用
+            X_data = X_combined
+            y_data = y_combined
+            # 正規化
+            X_data_norm, _ = normalize_features(
+                X_data, X_data,
+                use_combined_normalization=False,
+                use_separate_normalization=False,
+                use_minmax_normalization=args.use_minmax_normalization
+            )
+            # クロスバリデーションで評価
+            skf = StratifiedKFold(n_splits=args.cv_folds, shuffle=True, random_state=42)
+            all_test_proba_all_models = {model_type: [] for model_type in model_types_to_run}
+            all_test_labels_all_models = []
+            
+            for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_data_norm, y_data)):
+                X_fold_train = X_data_norm.iloc[train_idx].reset_index(drop=True)
+                y_fold_train = y_data.iloc[train_idx].reset_index(drop=True)
+                X_fold_test = X_data_norm.iloc[test_idx].reset_index(drop=True)
+                y_fold_test = y_data.iloc[test_idx].reset_index(drop=True)
+                
+                for model_type in model_types_to_run:
+                    model = create_model(
+                        model_type=model_type,
+                        max_iter=args.max_iter,
+                        random_state=42 + fold_idx,
+                        class_weight='balanced',
+                        tol=args.tol,
+                        non_negative=False,
+                        n_bootstrap=args.n_bootstrap,
+                        selection_threshold=args.selection_threshold,
+                        n_random_traps=args.n_random_traps,
+                        cv=args.lars_cv_folds
+                    )
+                    
+                    if model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+                        model.fit(X_fold_train, y_fold_train, print_and_save_func=lambda x: None)
+                    else:
+                        model.fit(X_fold_train, y_fold_train)
+                    
+                    y_fold_test_proba = model.predict_proba(X_fold_test)[:, 1]
+                    all_test_proba_all_models[model_type].extend(y_fold_test_proba)
+                
+                all_test_labels_all_models.extend(y_fold_test.tolist())
+            
+            # 各モデルの結果を収集
+            for model_type in model_types_to_run:
+                y_test_proba = np.array(all_test_proba_all_models[model_type])
+                y_test_labels = pd.Series(all_test_labels_all_models)
+                
+                test_auc = roc_auc_score(y_test_labels, y_test_proba)
+                test_ap = average_precision_score(y_test_labels, y_test_proba)
+                test_pred = (y_test_proba >= 0.5).astype(int)
+                test_acc = accuracy_score(y_test_labels, test_pred)
+                test_f1 = f1_score(y_test_labels, test_pred)
+                
+                model_type_name = {
+                    'l1': 'L1',
+                    'l2': 'L2',
+                    'elasticnet': 'ElasticNet',
+                    'none': 'No Penalty',
+                    'bolasso': 'BOLASSO',
+                    'lars_traps': 'LARS-Traps',
+                    'lars_cv': 'LARS-CV',
+                    'randomforest': 'RandomForest'
+                }.get(model_type, model_type)
+                
+                models_results.append({
+                    'model_name': model_type_name,
+                    'y_test_proba': y_test_proba,
+                    'test_auc': test_auc,
+                    'test_ap': test_ap,
+                    'test_acc': test_acc,
+                    'test_f1': test_f1
+                })
+                
+                print_and_save(f"\n{model_type_name}:")
+                print_and_save(f"  Accuracy: {test_acc:.4f}")
+                print_and_save(f"  F1 Score: {test_f1:.4f}")
+                print_and_save(f"  AUC-ROC: {test_auc:.4f}")
+                print_and_save(f"  Average Precision: {test_ap:.4f}")
+                
+                # DeLong検定を実行（--delong-testが指定されている場合）
+                if args.delong_test:
+                    print_and_save(f"\n  --- {model_type_name} モデルのDeLong検定を実行中 ---")
+                    
+                    # 各単体指標についてロジスティック回帰を実行し、ROCを計算
+                    single_metric_aucs = {}
+                    single_metric_probas = {}
+                    
+                    # CV統合データに対して各foldで単体指標の評価を行う
+                    skf = StratifiedKFold(n_splits=args.cv_folds, shuffle=True, random_state=42)
+                    for metric_name in X_combined.columns:
+                        metric_aucs = []
+                        metric_probas = []
+                        
+                        for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_combined, y_combined)):
+                            X_fold_train = X_combined.iloc[train_idx].reset_index(drop=True)
+                            y_fold_train = y_combined.iloc[train_idx].reset_index(drop=True)
+                            X_fold_test = X_combined.iloc[test_idx].reset_index(drop=True)
+                            y_fold_test = y_combined.iloc[test_idx].reset_index(drop=True)
+                            
+                            # 正規化
+                            X_fold_train_norm, X_fold_test_norm = normalize_features(
+                                X_fold_train, X_fold_test,
+                                use_combined_normalization=False,
+                                use_separate_normalization=False,
+                                use_minmax_normalization=args.use_minmax_normalization
+                            )
+                            
+                            # 単一指標でロジスティック回帰
+                            single_metric_model = LogisticRegression(
+                                penalty='l2',
+                                solver='liblinear',
+                                C=1.0,
+                                max_iter=1000,
+                                random_state=42,
+                                class_weight='balanced'
+                            )
+                            single_metric_model.fit(X_fold_train_norm[[metric_name]], y_fold_train)
+                            y_fold_test_proba = single_metric_model.predict_proba(X_fold_test_norm[[metric_name]])[:, 1]
+                            
+                            try:
+                                fold_auc = roc_auc_score(y_fold_test, y_fold_test_proba)
+                                metric_aucs.append(fold_auc)
+                                metric_probas.append(y_fold_test_proba)
+                            except ValueError:
+                                pass
+                        
+                        if len(metric_aucs) > 0:
+                            # 全foldの予測確率を統合
+                            single_metric_probas[metric_name] = np.concatenate(metric_probas)
+                            # 統合された予測確率からAUC-ROCとAUC-PRを計算（out-of-fold統合）
+                            single_metric_aucs[metric_name] = roc_auc_score(y_test_labels, single_metric_probas[metric_name])
+                            single_metric_aps[metric_name] = average_precision_score(y_test_labels, single_metric_probas[metric_name])
+                    
+                    if len(single_metric_aucs) > 0:
+                        # 最高ROCを出した指標を見つける
+                        best_metric = max(single_metric_aucs, key=single_metric_aucs.get)
+                        best_metric_auc = single_metric_aucs[best_metric]
+                        best_metric_proba = single_metric_probas[best_metric]
+                        
+                        print_and_save(f"  単体指標の最高ROC: {best_metric} (AUC = {best_metric_auc:.4f})")
+                        print_and_save(f"  回帰モデルのROC: AUC = {test_auc:.4f}")
+                        
+                        # DeLongの検定
+                        delong_result = delong_test(
+                            y_true=y_test_labels.values,
+                            y_pred_proba_a=y_test_proba,
+                            y_pred_proba_b=best_metric_proba
+                        )
+                        
+                        print_and_save(f"\n  DeLongの検定結果:")
+                        print_and_save(f"    モデルA ({model_type_name}): AUC = {delong_result['auc_a']:.4f}")
+                        print_and_save(f"    モデルB (単体指標 {best_metric}): AUC = {delong_result['auc_b']:.4f}")
+                        print_and_save(f"    AUC差: {delong_result['auc_diff']:.4f}")
+                        print_and_save(f"    Z統計量: {delong_result['z_stat']:.4f}")
+                        print_and_save(f"    p値: {delong_result['p_value']:.4f}")
+                        print_and_save(f"    有意差: {'あり' if delong_result['significant'] else 'なし'} (α=0.05)")
+                        
+                        # 各指標と回帰モデルとの比較表を作成
+                        print_and_save("\n  === 各指標とモデルの比較表 ===")
+                        comparison_data = []
+                        
+                        # 各指標のAUC-ROCとAUC-PRを計算
+                        for metric_name in single_metric_aucs.keys():
+                            metric_proba = single_metric_probas[metric_name]
+                            metric_auc = single_metric_aucs[metric_name]
+                            metric_ap = average_precision_score(y_test_labels, metric_proba)
+                            
+                            comparison_data.append({
+                                'Metric': format_feature_name(metric_name),
+                                'AUC-ROC': f"{metric_auc:.4f}",
+                                'AUC-PR': f"{metric_ap:.4f}",
+                                'p-value': '-'
+                            })
+                        
+                        # 回帰モデルの情報を追加（最高性能の単体指標とのDeLong検定のp-value）
+                        regression_ap = average_precision_score(y_test_labels, y_test_proba)
+                        
+                        # 最高性能の単体指標とのDeLong検定
+                        # p値の表示：0.0000になる場合は科学記法で表示
+                        if np.isnan(delong_result['p_value']):
+                            p_value_str = '-'
+                        elif delong_result['p_value'] < 0.0001:
+                            p_value_str = f"{delong_result['p_value']:.2e}"
+                        else:
+                            p_value_str = f"{delong_result['p_value']:.4f}"
+                        
+                        comparison_data.append({
+                            'Metric': model_type_name,
+                            'AUC-ROC': f"{test_auc:.4f}",
+                            'AUC-PR': f"{regression_ap:.4f}",
+                            'p-value': p_value_str
+                        })
+                        
+                        # 表を表示
+                        comparison_df = pd.DataFrame(comparison_data)
+                        # タブ区切り形式で出力（スプレッドシートにコピペしやすい）
+                        print_and_save("\n" + comparison_df.to_csv(sep='\t', index=False))
+                        
+                        # 結果を保存（delongディレクトリに）
+                        feature_dir_name = get_feature_dir_name(feature_names)
+                        delong_dir = output_dir / feature_dir_name / "delong"
+                        delong_dir.mkdir(parents=True, exist_ok=True)
+                        delong_result_path = delong_dir / f"delong_test_{model_type}.csv"
+                        result_df = pd.DataFrame([{
+                            'best_single_metric': best_metric,
+                            'best_single_metric_auc': best_metric_auc,
+                            'regression_auc': test_auc,
+                            **delong_result
+                        }])
+                        result_df.to_csv(delong_result_path, index=False)
+                        print_and_save(f"  - DeLongの検定結果を保存: {delong_result_path}")
+                        
+                        # 比較表も保存
+                        comparison_csv_path = delong_dir / f"comparison_table_{model_type}.csv"
+                        comparison_df.to_csv(comparison_csv_path, index=False)
+                        print_and_save(f"  - 比較表を保存: {comparison_csv_path}")
+                    else:
+                        print_and_save("  ⚠️  警告: 単体指標のROCを計算できませんでした")
+        else:
+            # 通常学習の場合
+            X_train_norm, X_test_norm = normalize_features(
+                X_train, X_test,
+                use_combined_normalization=args.use_combined_normalization,
+                use_separate_normalization=args.use_separate_normalization,
+                use_minmax_normalization=args.use_minmax_normalization
+            )
+            
+            for model_type in model_types_to_run:
+                print_and_save(f"\n--- {model_type} モデルを実行中 ---")
+                model = create_model(
+                    model_type=model_type,
+                    max_iter=args.max_iter,
+                    random_state=42,
+                    class_weight='balanced',
+                    tol=args.tol,
+                    non_negative=False,
+                    n_bootstrap=args.n_bootstrap,
+                    selection_threshold=args.selection_threshold,
+                    n_random_traps=args.n_random_traps,
+                    cv=args.lars_cv_folds
+                )
+                
+                if model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+                    model.fit(X_train_norm, y_train, print_and_save_func=print_and_save)
+                else:
+                    model.fit(X_train_norm, y_train)
+                
+                y_test_proba = model.predict_proba(X_test_norm)[:, 1]
+                y_test_pred = model.predict(X_test_norm)
+                
+                test_auc = roc_auc_score(y_test, y_test_proba)
+                test_ap = average_precision_score(y_test, y_test_proba)
+                test_acc = accuracy_score(y_test, y_test_pred)
+                test_f1 = f1_score(y_test, y_test_pred)
+                
+                model_type_name = {
+                    'l1': 'L1',
+                    'l2': 'L2',
+                    'elasticnet': 'ElasticNet',
+                    'none': 'No Penalty',
+                    'bolasso': 'BOLASSO',
+                    'lars_traps': 'LARS-Traps',
+                    'lars_cv': 'LARS-CV',
+                    'randomforest': 'RandomForest'
+                }.get(model_type, model_type)
+                
+                models_results.append({
+                    'model_name': model_type_name,
+                    'y_test_proba': y_test_proba,
+                    'test_auc': test_auc,
+                    'test_ap': test_ap,
+                    'test_acc': test_acc,
+                    'test_f1': test_f1
+                })
+                
+                print_and_save(f"  Accuracy: {test_acc:.4f}")
+                print_and_save(f"  F1 Score: {test_f1:.4f}")
+                print_and_save(f"  AUC-ROC: {test_auc:.4f}")
+                print_and_save(f"  Average Precision: {test_ap:.4f}")
+                
+                # DeLong検定を実行（--delong-testが指定されている場合）
+                if args.delong_test:
+                    print_and_save(f"\n  --- {model_type_name} モデルのDeLong検定を実行中 ---")
+                    
+                    # 各単体指標についてロジスティック回帰を実行し、ROCを計算
+                    single_metric_aucs = {}
+                    single_metric_aps = {}
+                    single_metric_probas = {}
+                    
+                    for metric_name in X_train_norm.columns:
+                        # 正規化
+                        X_train_metric = X_train_norm[[metric_name]]
+                        X_test_metric = X_test_norm[[metric_name]]
+                        
+                        # 単一指標でロジスティック回帰
+                        single_metric_model = LogisticRegression(
+                            penalty='l2',
+                            solver='liblinear',
+                            C=1.0,
+                            max_iter=1000,
+                            random_state=42,
+                            class_weight='balanced'
+                        )
+                        single_metric_model.fit(X_train_metric, y_train)
+                        y_test_proba_single = single_metric_model.predict_proba(X_test_metric)[:, 1]
+                        
+                        try:
+                            test_auc_single = roc_auc_score(y_test, y_test_proba_single)
+                            test_ap_single = average_precision_score(y_test, y_test_proba_single)
+                            single_metric_aucs[metric_name] = test_auc_single
+                            single_metric_aps[metric_name] = test_ap_single
+                            single_metric_probas[metric_name] = y_test_proba_single
+                        except ValueError:
+                            pass
+                    
+                    if len(single_metric_aucs) > 0:
+                        # 最高ROCを出した指標を見つける
+                        best_metric = max(single_metric_aucs, key=single_metric_aucs.get)
+                        best_metric_auc = single_metric_aucs[best_metric]
+                        best_metric_proba = single_metric_probas[best_metric]
+                        
+                        print_and_save(f"  単体指標の最高ROC: {best_metric} (AUC = {best_metric_auc:.4f})")
+                        print_and_save(f"  回帰モデルのROC: AUC = {test_auc:.4f}")
+                        
+                        # DeLongの検定
+                        delong_result = delong_test(
+                            y_true=y_test.values,
+                            y_pred_proba_a=y_test_proba,
+                            y_pred_proba_b=best_metric_proba
+                        )
+                        
+                        print_and_save(f"\n  DeLongの検定結果:")
+                        print_and_save(f"    モデルA ({model_type_name}): AUC = {delong_result['auc_a']:.4f}")
+                        print_and_save(f"    モデルB (単体指標 {best_metric}): AUC = {delong_result['auc_b']:.4f}")
+                        print_and_save(f"    AUC差: {delong_result['auc_diff']:.4f}")
+                        print_and_save(f"    Z統計量: {delong_result['z_stat']:.4f}")
+                        print_and_save(f"    p値: {delong_result['p_value']:.4f}")
+                        print_and_save(f"    有意差: {'あり' if delong_result['significant'] else 'なし'} (α=0.05)")
+                        
+                        # 各指標と回帰モデルとの比較表を作成
+                        print_and_save("\n  === 各指標とモデルの比較表 ===")
+                        comparison_data = []
+                        
+                        # 各指標のAUC-ROCとAUC-PRを計算
+                        for metric_name in single_metric_aucs.keys():
+                            metric_proba = single_metric_probas[metric_name]
+                            metric_auc = single_metric_aucs[metric_name]
+                            metric_ap = single_metric_aps[metric_name]
+                            
+                            comparison_data.append({
+                                'Metric': format_feature_name(metric_name),
+                                'AUC-ROC': f"{metric_auc:.4f}",
+                                'AUC-PR': f"{metric_ap:.4f}",
+                                'p-value': '-'
+                            })
+                        
+                        # 回帰モデルの情報を追加（最高性能の単体指標とのDeLong検定のp-value）
+                        regression_ap = average_precision_score(y_test, y_test_proba)
+                        
+                        # 最高性能の単体指標とのDeLong検定
+                        # p値の表示：0.0000になる場合は科学記法で表示
+                        if np.isnan(delong_result['p_value']):
+                            p_value_str = '-'
+                        elif delong_result['p_value'] < 0.0001:
+                            p_value_str = f"{delong_result['p_value']:.2e}"
+                        else:
+                            p_value_str = f"{delong_result['p_value']:.4f}"
+                        
+                        comparison_data.append({
+                            'Metric': model_type_name,
+                            'AUC-ROC': f"{test_auc:.4f}",
+                            'AUC-PR': f"{regression_ap:.4f}",
+                            'p-value': p_value_str
+                        })
+                        
+                        # 表を表示
+                        comparison_df = pd.DataFrame(comparison_data)
+                        # タブ区切り形式で出力（スプレッドシートにコピペしやすい）
+                        print_and_save("\n" + comparison_df.to_csv(sep='\t', index=False))
+                        
+                        # 結果を保存（delongディレクトリに）
+                        feature_dir_name = get_feature_dir_name(feature_names)
+                        delong_dir = output_dir / feature_dir_name / "delong"
+                        delong_dir.mkdir(parents=True, exist_ok=True)
+                        delong_result_path = delong_dir / f"delong_test_{model_type}.csv"
+                        result_df = pd.DataFrame([{
+                            'best_single_metric': best_metric,
+                            'best_single_metric_auc': best_metric_auc,
+                            'regression_auc': test_auc,
+                            **delong_result
+                        }])
+                        result_df.to_csv(delong_result_path, index=False)
+                        print_and_save(f"  - DeLongの検定結果を保存: {delong_result_path}")
+                        
+                        # 比較表も保存
+                        comparison_csv_path = delong_dir / f"comparison_table_{model_type}.csv"
+                        comparison_df.to_csv(comparison_csv_path, index=False)
+                        print_and_save(f"  - 比較表を保存: {comparison_csv_path}")
+                    else:
+                        print_and_save("  ⚠️  警告: 単体指標のROCを計算できませんでした")
+        
+        # 全モデル統合比較表を作成（--delong-testが指定されている場合）
+        if args.delong_test and len(models_results) > 0:
+            print_and_save("\n" + "="*80)
+            print_and_save("全モデル統合比較表を作成中...")
+            print_and_save("="*80)
+            
+            # 単体指標の結果を収集（最初のモデルで計算したものを使用）
+            single_metric_aucs_all = {}
+            single_metric_aps_all = {}
+            single_metric_probas_all = {}
+            best_single_metric_auc = 0.0
+            best_single_metric_name = None
+            best_single_metric_proba = None
+            
+            # 単体指標の評価を実行（1回だけ）
+            # 非学習指標（QPPスコア）は直接使用、学習指標（BERT等）はロジスティック回帰を使用
+            from config import POST_RETRIEVAL_CONFIGS, PRE_RETRIEVAL_CONFIGS
+            from module.data_loader import NSP_METRICS, get_nsp_metric_name
+            
+            # 非学習指標のリスト（QPPスコア）
+            non_learning_metrics = set(POST_RETRIEVAL_CONFIGS.keys()) | set(PRE_RETRIEVAL_CONFIGS.keys())
+            # NSPメトリクスも非学習指標として扱う（動的に生成されるため、名前で判定）
+            nsp_metric_prefixes = [f"nsp_{metric}_topk" for metric in NSP_METRICS.keys()]
+            
+            skf = StratifiedKFold(n_splits=args.cv_folds, shuffle=True, random_state=42)
+            for metric_name in X_combined.columns:
+                # 非学習指標かどうかを判定
+                is_non_learning = (
+                    metric_name in non_learning_metrics or
+                    any(metric_name.startswith(prefix) for prefix in nsp_metric_prefixes)
+                )
+                
+                if is_non_learning:
+                    # 非学習指標：QPPスコアを直接使用（全foldのテストデータに対応するスコアを使用）
+                    metric_scores_list = []
+                    metric_labels_list = []
+                    
+                    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_combined, y_combined)):
+                        X_fold_test = X_combined.iloc[test_idx].reset_index(drop=True)
+                        y_fold_test = y_combined.iloc[test_idx].reset_index(drop=True)
+                        metric_scores_list.append(X_fold_test[metric_name].values)
+                        metric_labels_list.append(y_fold_test.values)
+                    
+                    # 全foldのスコアとラベルを統合
+                    metric_scores_all = np.concatenate(metric_scores_list)
+                    metric_labels_all = np.concatenate(metric_labels_list)
+                    
+                    # Min-Max正規化で[0,1]に変換（予測確率として使用）
+                    from sklearn.preprocessing import MinMaxScaler
+                    scaler = MinMaxScaler()
+                    metric_scores_normalized = scaler.fit_transform(metric_scores_all.reshape(-1, 1)).flatten()
+                    
+                    try:
+                        single_metric_aucs_all[metric_name] = roc_auc_score(metric_labels_all, metric_scores_normalized)
+                        single_metric_aps_all[metric_name] = average_precision_score(metric_labels_all, metric_scores_normalized)
+                        single_metric_probas_all[metric_name] = metric_scores_normalized
+                        
+                        # 最高性能の単体指標を記録
+                        if single_metric_aucs_all[metric_name] > best_single_metric_auc:
+                            best_single_metric_auc = single_metric_aucs_all[metric_name]
+                            best_single_metric_name = metric_name
+                            best_single_metric_proba = single_metric_probas_all[metric_name]
+                    except ValueError:
+                        pass
+                else:
+                    # 学習指標（BERT等）：ロジスティック回帰を使用
+                    metric_aucs = []
+                    metric_probas = []
+                    
+                    for fold_idx, (train_idx, test_idx) in enumerate(skf.split(X_combined, y_combined)):
+                        X_fold_train = X_combined.iloc[train_idx].reset_index(drop=True)
+                        y_fold_train = y_combined.iloc[train_idx].reset_index(drop=True)
+                        X_fold_test = X_combined.iloc[test_idx].reset_index(drop=True)
+                        y_fold_test = y_combined.iloc[test_idx].reset_index(drop=True)
+                        
+                        # 正規化
+                        X_fold_train_norm, X_fold_test_norm = normalize_features(
+                            X_fold_train, X_fold_test,
+                            use_combined_normalization=False,
+                            use_separate_normalization=False,
+                            use_minmax_normalization=args.use_minmax_normalization
+                        )
+                        
+                        # 単一指標でロジスティック回帰
+                        single_metric_model = LogisticRegression(
+                            penalty='l2',
+                            solver='liblinear',
+                            C=1.0,
+                            max_iter=1000,
+                            random_state=42,
+                            class_weight='balanced'
+                        )
+                        single_metric_model.fit(X_fold_train_norm[[metric_name]], y_fold_train)
+                        y_fold_test_proba = single_metric_model.predict_proba(X_fold_test_norm[[metric_name]])[:, 1]
+                        
+                        try:
+                            fold_auc = roc_auc_score(y_fold_test, y_fold_test_proba)
+                            metric_aucs.append(fold_auc)
+                            metric_probas.append(y_fold_test_proba)
+                        except ValueError:
+                            pass
+                    
+                    if len(metric_aucs) > 0:
+                        # 全foldの予測確率を統合
+                        single_metric_probas_all[metric_name] = np.concatenate(metric_probas)
+                        # 統合された予測確率からAUC-ROCとAUC-PRを計算（out-of-fold統合）
+                        single_metric_aucs_all[metric_name] = roc_auc_score(
+                            pd.Series(all_test_labels_all_models), 
+                            single_metric_probas_all[metric_name]
+                        )
+                        single_metric_aps_all[metric_name] = average_precision_score(
+                            pd.Series(all_test_labels_all_models), 
+                            single_metric_probas_all[metric_name]
+                        )
+                    
+                    # 最高性能の単体指標を記録
+                    if metric_name in single_metric_aucs_all and single_metric_aucs_all[metric_name] > best_single_metric_auc:
+                        best_single_metric_auc = single_metric_aucs_all[metric_name]
+                        best_single_metric_name = metric_name
+                        if metric_name in single_metric_probas_all:
+                            best_single_metric_proba = single_metric_probas_all[metric_name]
+            
+            # 最高性能の単体指標を確認（デバッグ用）
+            if best_single_metric_proba is None:
+                print_and_save(f"  ⚠️  警告: 最高性能の単体指標の予測確率が設定されていません（best_single_metric_name: {best_single_metric_name}）")
+                if len(single_metric_probas_all) > 0:
+                    # 代替として、最初の単体指標を使用
+                    first_metric = list(single_metric_probas_all.keys())[0]
+                    best_single_metric_proba = single_metric_probas_all[first_metric]
+                    best_single_metric_name = first_metric
+                    print_and_save(f"  → 代替として、最初の単体指標 '{first_metric}' を使用します")
+            
+            # 統合比較表を作成
+            comparison_data_all = []
+            
+            # 単体指標を追加
+            for metric_name in sorted(single_metric_aucs_all.keys()):
+                comparison_data_all.append({
+                    'Metric': format_feature_name(metric_name),
+                    'AUC-ROC': f"{single_metric_aucs_all[metric_name]:.4f}",
+                    'AUC-PR': f"{single_metric_aps_all[metric_name]:.4f}",
+                    'p-value': '-'
+                })
+            
+            # モデル名のマッピング（実行順序も定義）
+            model_name_mapping = {
+                'l1': 'L1 Logistic Regression',
+                'l2': 'L2 Logistic Regression',
+                'elasticnet': 'E-Net',
+                'none': 'No Penalty Logistic Regression',
+                'bolasso': 'BOLASSO',
+                'lars_traps': 'LARS-Traps',
+                'lars_cv': 'LARS-CV',
+                'randomforest': 'Random Forest'
+            }
+            
+            # models_resultsのmodel_nameからmodel_display_nameへの逆マッピング
+            model_name_to_display = {
+                'L1': 'L1 Logistic Regression',
+                'L2': 'L2 Logistic Regression',
+                'ElasticNet': 'E-Net',
+                'No Penalty': 'No Penalty Logistic Regression',
+                'BOLASSO': 'BOLASSO',
+                'LARS-Traps': 'LARS-Traps',
+                'LARS-CV': 'LARS-CV',
+                'RandomForest': 'Random Forest'
+            }
+            
+            # 実行されたモデルの結果を辞書に格納（model_display_nameをキーとして使用）
+            executed_models = {}
+            for result in models_results:
+                model_name = result['model_name']
+                # model_nameをmodel_display_nameに変換
+                model_display_name = model_name_to_display.get(model_name, model_name)
+                executed_models[model_display_name] = {
+                    'auc': result['test_auc'],
+                    'ap': result['test_ap'],
+                    'proba': result['y_test_proba']
+                }
+            
+            # 全てのモデルタイプを順番に追加（実行されていないものは空欄）
+            for model_type_key, model_display_name in model_name_mapping.items():
+                if model_display_name in executed_models:
+                    # 実行されたモデル
+                    model_data = executed_models[model_display_name]
+                    model_auc = model_data['auc']
+                    model_ap = model_data['ap']
+                    model_proba = model_data['proba']
+                    
+                    # 最高性能の単体指標とのDeLong検定
+                    if best_single_metric_proba is not None:
+                        delong_result = delong_test(
+                            y_true=pd.Series(all_test_labels_all_models),
+                            y_pred_proba_a=model_proba,
+                            y_pred_proba_b=best_single_metric_proba
+                        )
+                        # p値の表示：0.0000になる場合は科学記法で表示
+                        if np.isnan(delong_result['p_value']):
+                            p_value_str = '-'
+                        elif delong_result['p_value'] < 0.0001:
+                            p_value_str = f"{delong_result['p_value']:.2e}"
+                        else:
+                            p_value_str = f"{delong_result['p_value']:.4f}"
+                    else:
+                        p_value_str = '-'
+                    
+                    comparison_data_all.append({
+                        'Metric': model_display_name,
+                        'AUC-ROC': f"{model_auc:.4f}",
+                        'AUC-PR': f"{model_ap:.4f}",
+                        'p-value': p_value_str
+                    })
+                else:
+                    # 実行されていないモデル（空欄）
+                    comparison_data_all.append({
+                        'Metric': model_display_name,
+                        'AUC-ROC': '',
+                        'AUC-PR': '',
+                        'p-value': ''
+                    })
+            
+            # 表を表示（スプレッドシートにコピペしやすいタブ区切り形式）
+            comparison_df_all = pd.DataFrame(comparison_data_all)
+            print_and_save("\n=== 全モデル統合比較表 ===")
+            # タブ区切り形式で出力（スプレッドシートにコピペしやすい）
+            print_and_save(comparison_df_all.to_csv(sep='\t', index=False))
+            
+            # 表を保存
+            feature_dir_name = get_feature_dir_name(feature_names)
+            delong_dir = output_dir / feature_dir_name / "delong"
+            delong_dir.mkdir(parents=True, exist_ok=True)
+            comparison_csv_path = delong_dir / "comprehensive_comparison_table.csv"
+            comparison_df_all.to_csv(comparison_csv_path, index=False)
+            print_and_save(f"  - 統合比較表（DeLong検定）を保存: {comparison_csv_path}")
+            
+            # ブートストラップ検定バージョンの表を作成（--bootstrap-testが指定されている場合）
+            if args.bootstrap_test and args.bootstrap_samples_path and best_single_metric_proba is not None:
+                bootstrap_samples_path = Path(args.bootstrap_samples_path)
+                if bootstrap_samples_path.exists():
+                    print_and_save("\n" + "="*80)
+                    print_and_save("ブートストラップ検定による全モデル統合比較表を作成中...")
+                    print_and_save("="*80)
+                    
+                    # ブートストラップサンプルを読み込み
+                    bootstrap_samples = load_bootstrap_samples(bootstrap_samples_path)
+                    print_and_save(f"  - ブートストラップサンプルを読み込み: {len(bootstrap_samples)} 反復")
+                    
+                    # 最高性能の単体指標のブートストラップ評価
+                    best_single_metric_bootstrap_results = evaluate_bootstrap(
+                        y_true=np.array(all_test_labels_all_models),
+                        y_pred_proba=best_single_metric_proba,
+                        bootstrap_samples=bootstrap_samples,
+                        feature_combination_name=f"single_{best_single_metric_name}"
+                    )
+                    
+                    # ブートストラップ検定バージョンの比較表を作成
+                    comparison_data_bootstrap = []
+                    
+                    # 単体指標を追加
+                    for metric_name in sorted(single_metric_aucs_all.keys()):
+                        comparison_data_bootstrap.append({
+                            'Metric': format_feature_name(metric_name),
+                            'AUC-ROC': f"{single_metric_aucs_all[metric_name]:.4f}",
+                            'AUC-PR': f"{single_metric_aps_all[metric_name]:.4f}",
+                            'p-value': '-'
+                        })
+                    
+                    # 各モデルについてブートストラップ検定を実行
+                    for model_type_key, model_display_name in model_name_mapping.items():
+                        if model_display_name in executed_models:
+                            # 実行されたモデル
+                            model_data = executed_models[model_display_name]
+                            model_auc = model_data['auc']
+                            model_ap = model_data['ap']
+                            model_proba = model_data['proba']
+                            
+                            # モデルのブートストラップ評価
+                            model_bootstrap_results = evaluate_bootstrap(
+                                y_true=np.array(all_test_labels_all_models),
+                                y_pred_proba=model_proba,
+                                bootstrap_samples=bootstrap_samples,
+                                feature_combination_name=f"model_{model_display_name.replace(' ', '_')}"
+                            )
+                            
+                            # 最高性能の単体指標とのブートストラップ検定
+                            bootstrap_comparison = compare_feature_combinations(
+                                bootstrap_results=pd.concat([
+                                    model_bootstrap_results,
+                                    best_single_metric_bootstrap_results
+                                ], ignore_index=True),
+                                combination_a=f"model_{model_display_name.replace(' ', '_')}",
+                                combination_b=f"single_{best_single_metric_name}",
+                                metric_name='auc',
+                                alpha=0.05
+                            )
+                            
+                            # p値の表示：0.0000になる場合は科学記法で表示
+                            if np.isnan(bootstrap_comparison['p_value']):
+                                p_value_str = '-'
+                            elif bootstrap_comparison['p_value'] < 0.0001:
+                                p_value_str = f"{bootstrap_comparison['p_value']:.2e}"
+                            else:
+                                p_value_str = f"{bootstrap_comparison['p_value']:.4f}"
+                            
+                            comparison_data_bootstrap.append({
+                                'Metric': model_display_name,
+                                'AUC-ROC': f"{model_auc:.4f}",
+                                'AUC-PR': f"{model_ap:.4f}",
+                                'p-value': p_value_str
+                            })
+                        else:
+                            # 実行されていないモデル（空欄）
+                            comparison_data_bootstrap.append({
+                                'Metric': model_display_name,
+                                'AUC-ROC': '',
+                                'AUC-PR': '',
+                                'p-value': ''
+                            })
+                    
+                    # 表を表示（スプレッドシートにコピペしやすいタブ区切り形式）
+                    comparison_df_bootstrap = pd.DataFrame(comparison_data_bootstrap)
+                    print_and_save("\n=== 全モデル統合比較表（ブートストラップ検定） ===")
+                    # タブ区切り形式で出力（スプレッドシートにコピペしやすい）
+                    print_and_save(comparison_df_bootstrap.to_csv(sep='\t', index=False))
+                    
+                    # 表を保存
+                    comparison_bootstrap_csv_path = delong_dir / "comprehensive_comparison_table_bootstrap.csv"
+                    comparison_df_bootstrap.to_csv(comparison_bootstrap_csv_path, index=False)
+                    print_and_save(f"  - 統合比較表（ブートストラップ検定）を保存: {comparison_bootstrap_csv_path}")
+                else:
+                    print_and_save(f"  ⚠️  警告: ブートストラップサンプルファイルが見つかりません: {bootstrap_samples_path}")
+            elif args.bootstrap_test:
+                print_and_save("\n  ⚠️  警告: --bootstrap-testを使用する場合は--bootstrap-samples-pathを指定してください")
+        
+        # 比較グラフを描画
+        if len(models_results) > 0:
+            print_and_save("\n" + "="*80)
+            print_and_save("モデル比較グラフを描画中...")
+            print_and_save("="*80)
+            
+            y_test_for_comparison = y_test if not args.use_cv else pd.Series(all_test_labels_all_models)
+            # 全モデル実行時のグラフ保存先を設定
+            feature_dir_name = get_feature_dir_name(feature_names)
+            feature_output_dir = output_dir / feature_dir_name
+            graphs_dir = feature_output_dir / "graphs"
+            graphs_dir.mkdir(parents=True, exist_ok=True)
+            
+            plot_multiple_models_comparison(
+                models_results=models_results,
+                y_test=y_test_for_comparison,
+                output_dir=graphs_dir,
+                feature_names=feature_names
+            )
+            print_and_save("  - モデル比較グラフを保存しました")
+        
+        # 全モデル実行時の処理の出力もresults.txtに含める
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(output_buffer.getvalue())
+        print_and_save(f"\n結果をファイルに保存しました（全モデル実行結果を含む）: {output_file}")
     
     print_and_save("\n=== 完了 ===")
 
