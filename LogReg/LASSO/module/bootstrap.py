@@ -283,27 +283,24 @@ def compare_feature_combinations(
 ) -> Dict:
     """
     2つの特徴量組み合わせ間で優位性検定を行う（ブートストラップベース）
-    
-    Args:
-        bootstrap_results: ブートストラップ結果のDataFrame
-        combination_a: 特徴量組み合わせAの名前
-        combination_b: 特徴量組み合わせBの名前
-        metric_name: 比較する指標名（'auc', 'ap', 'f1', 'accuracy'）
-        alpha: 有意水準（デフォルト: 0.05）
-    
-    Returns:
-        検定結果の辞書（mean_diff, ci_lower, ci_upper, p_value, significant）
     """
-    # 各組み合わせの結果を抽出
-    results_a = bootstrap_results[
+    # 各組み合わせの結果を抽出し、bootstrap_idでソートして対応を保証
+    results_a_df = bootstrap_results[
         (bootstrap_results['feature_combination'] == combination_a) &
         (bootstrap_results['metric_name'] == metric_name)
-    ]['value'].values
+    ].sort_values('bootstrap_id')
     
-    results_b = bootstrap_results[
+    results_b_df = bootstrap_results[
         (bootstrap_results['feature_combination'] == combination_b) &
         (bootstrap_results['metric_name'] == metric_name)
-    ]['value'].values
+    ].sort_values('bootstrap_id')
+    
+    # bootstrap_idが一致することを確認
+    if not np.array_equal(results_a_df['bootstrap_id'].values, results_b_df['bootstrap_id'].values):
+        raise ValueError("bootstrap_idが一致しません。対応のあるブートストラップが正しく実行されていません。")
+    
+    results_a = results_a_df['value'].values
+    results_b = results_b_df['value'].values
     
     # 差を計算（対応のあるブートストラップ）
     differences = results_a - results_b
@@ -318,12 +315,15 @@ def compare_feature_combinations(
     ci_upper = np.percentile(differences, (1 - alpha / 2) * 100)
     
     # p値（両側検定: H0: mean_diff = 0）
-    if std_diff > 0:
-        t_stat = mean_diff / (std_diff / np.sqrt(n))
-        # 簡易的なp値計算（正規分布を仮定）
-        p_value = 2 * (1 - stats.norm.cdf(abs(t_stat)))
-    else:
-        p_value = 1.0
+    # ブートストラップ分布から直接p値を計算（パーセンタイル法）
+    # 0より大きい差の割合と0より小さい差の割合の小さい方を2倍
+    p_value = 2 * min(
+        np.mean(differences > 0),
+        np.mean(differences < 0)
+    )
+    # 差が0の場合の処理
+    if p_value == 0:
+        p_value = 1.0 / n  # 最小のp値
     
     significant = p_value < alpha
     

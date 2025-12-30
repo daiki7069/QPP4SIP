@@ -48,6 +48,8 @@ if command -v parallel &> /dev/null; then
             --dataset ${DATASET} \
             --use-minmax-normalization \
             --delong-test \
+            --bootstrap-test \
+            --bootstrap-samples-path outputs/${DATASET}/bootstrap_samples.pkl \
             --feature-types $combo \
             > "$log_file" 2>&1; \
         if [ $? -eq 0 ]; then \

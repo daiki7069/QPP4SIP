@@ -123,7 +123,7 @@ def find_common_nsp_top_k(nsp_output_dir: Path, splits: List[str] = None) -> int
     return max(common_top_k) if common_top_k else None
 
 
-def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:
+def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False, use_full_train_model_for_dev: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
     ベーススコア（logit_clarification）を読み込む
     戻り値: {feature_name: {(conv_id, turn_id): score}}
@@ -136,6 +136,8 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
         use_bert: BERT実験を使用するか（デフォルト: True）
         use_roberta: RoBERTa実験を使用するか（デフォルト: True）
         use_transfer: Transfer learning実験を使用するか（デフォルト: False）
+        use_full_train_model_for_dev: devデータの場合、train全体でFTしたモデルを使用するか（デフォルト: False）
+                                      Trueの場合、_kfold5を削除した実験名を参照
     
     Returns:
         ベーススコアの辞書 {prefix_logit_clarification: {key: score}}
@@ -157,7 +159,14 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
             # bertはrobertaでない場合のみチェック
             is_bert = not is_roberta and ('bert-base' in exp_name or 'bert' in exp_name.lower())
             if (is_bert and use_bert) or (is_roberta and use_roberta):
-                base_experiment_names.append(exp_name)
+                # devデータでtrain全体でFTしたモデルを使用する場合、_kfold5を削除
+                if split == 'dev' and use_full_train_model_for_dev:
+                    # _kfold5を削除（例: AmbigNQ_bert-base_lr2e-05_bs16_kfold5 -> AmbigNQ_bert-base_lr2e-05_bs16）
+                    # _earlystop_kfold5も削除（例: AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5 -> AmbigNQ_roberta-base_lr2e-05_bs16_earlystop）
+                    exp_name_modified = exp_name.replace('_kfold5', '').replace('_earlystop_kfold5', '_earlystop')
+                    base_experiment_names.append(exp_name_modified)
+                else:
+                    base_experiment_names.append(exp_name)
         
         # Transfer learningの実験名を検出して追加
         if use_transfer:
@@ -246,7 +255,7 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
     return base_scores
 
 
-def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:
+def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False, use_full_train_model_for_dev: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
     BERTの予測確率（prob_clarification）を読み込む
     戻り値: {feature_name: {(conv_id, turn_id): probability}}
@@ -259,6 +268,8 @@ def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_exper
         use_bert: BERT実験を使用するか（デフォルト: True）
         use_roberta: RoBERTa実験を使用するか（デフォルト: True）
         use_transfer: Transfer learning実験を使用するか（デフォルト: False）
+        use_full_train_model_for_dev: devデータの場合、train全体でFTしたモデルを使用するか（デフォルト: False）
+                                      Trueの場合、_kfold5を削除した実験名を参照
     
     Returns:
         ベース確率の辞書 {prefix_prob_clarification: {key: probability}}
@@ -280,7 +291,14 @@ def load_base_probabilities(split: str, dataset: str, base_dir: Path, base_exper
             # bertはrobertaでない場合のみチェック
             is_bert = not is_roberta and ('bert-base' in exp_name or 'bert' in exp_name.lower())
             if (is_bert and use_bert) or (is_roberta and use_roberta):
-                base_experiment_names.append(exp_name)
+                # devデータでtrain全体でFTしたモデルを使用する場合、_kfold5を削除
+                if split == 'dev' and use_full_train_model_for_dev:
+                    # _kfold5を削除（例: AmbigNQ_bert-base_lr2e-05_bs16_kfold5 -> AmbigNQ_bert-base_lr2e-05_bs16）
+                    # _earlystop_kfold5も削除（例: AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5 -> AmbigNQ_roberta-base_lr2e-05_bs16_earlystop）
+                    exp_name_modified = exp_name.replace('_kfold5', '').replace('_earlystop_kfold5', '_earlystop')
+                    base_experiment_names.append(exp_name_modified)
+                else:
+                    base_experiment_names.append(exp_name)
         
         # Transfer learningの実験名を検出して追加
         if use_transfer:

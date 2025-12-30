@@ -5,12 +5,12 @@ cd "$(dirname "$0")/.." || exit
 
 # 実行する特徴量タイプの組み合わせ
 FEATURE_COMBINATIONS=(
-    "pre"
-    "post"
-    "pre post"
+    # "pre"
+    # "post"
+    # "pre post"
     "pre post bert"
-    "pre bert"
-    "post bert"
+    # "pre bert"
+    # "post bert"
     "pre post roberta"
 )
 
@@ -42,6 +42,7 @@ for combo in "${FEATURE_COMBINATIONS[@]}"; do
         FEATURE_TYPES="$combo" python main.py \
             --dataset AmbigNQ \
             --use-minmax-normalization \
+            --no-cv \
             --delong-test \
             --feature-types $combo \
             > "$log_file" 2>&1

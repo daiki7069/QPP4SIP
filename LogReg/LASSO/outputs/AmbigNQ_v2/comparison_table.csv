@@ -1,0 +1,8 @@
+Experiment,Accuracy,F1 Score,AUC-ROC,AP,Num Features
+Post (QPP only),N/A,N/A,N/A,N/A,5
+Post + BERT,N/A,N/A,N/A,N/A,6
+Pre (QPP only),N/A,N/A,N/A,N/A,5
+Pre + BERT,N/A,N/A,N/A,N/A,6
+Pre+Post (QPP only),N/A,N/A,N/A,N/A,10
+Pre+Post + BERT,N/A,N/A,N/A,N/A,11
+Pre+Post + BERT (rob),N/A,N/A,N/A,N/A,11

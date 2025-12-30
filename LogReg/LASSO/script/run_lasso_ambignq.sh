@@ -5,7 +5,7 @@
 # 使用する特徴量タイプを指定（post, pre, bert, roberta）
 # 例: FEATURE_TYPES="post pre" または FEATURE_TYPES="post bert"
 # 指定しない場合はconfig.pyの設定を使用
-FEATURE_TYPES="post pre transfer"
+FEATURE_TYPES="post pre"
 
 cd "$(dirname "$0")/.." || exit
 
