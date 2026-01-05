@@ -1,0 +1,324 @@
+================================================================================
+Detailed Case Studies: LogReg Wins (Top 10 by Score Difference)
+================================================================================
+
+Case 1
+--------------------------------------------------------------------------------
+Query: Who sings with nickelback in she keeps me up?
+Answer: Alexandra Tamposi, Ali Tamposi
+
+Predictions:
+  BERT confidence: 0.4808 (predicted: answer)
+  LogReg score: 0.6575 (predicted: clarification)
+  Score difference: 0.1767
+
+QPP Features:
+  WIG: 2.4828
+  NQC: 0.0329
+  SMV: 4.7569
+  Clarity: 1.2723
+  nSigma: 0.7711
+
+Retrieval Results (Top 5):
+  1. "Broken Temples"
+  2. "She Keeps Me Up"
+  3. "Up (The Saturdays song)"
+  4. "Johnny & June"
+  5. "Up! Close and Personal"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 3.316
+  Score range: 9.483
+  Has answer in top 10: False
+
+================================================================================
+
+Case 2
+--------------------------------------------------------------------------------
+Query: The correct order of the emergency chain of survival is?
+Answer: early access, early CPR, early defibrillation, and early advanced cardiac life support, Early access, early CPR, early defibrillation, early advanced cardiac life support, early advanced care
+
+Predictions:
+  BERT confidence: 0.3569 (predicted: answer)
+  LogReg score: 0.5280 (predicted: clarification)
+  Score difference: 0.1711
+
+QPP Features:
+  WIG: 2.4954
+  NQC: 0.0242
+  SMV: 3.4259
+  Clarity: 1.4945
+  nSigma: 0.6544
+
+Retrieval Results (Top 5):
+  1. "Phonological change"
+  2. "Chain of survival"
+  3. "Chain of survival"
+  4. "Chain of survival"
+  5. Emergency!
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 2.118
+  Score range: 6.487
+  Has answer in top 10: False
+
+================================================================================
+
+Case 3
+--------------------------------------------------------------------------------
+Query: Who is the mc of the nfl honors?
+Answer: Keegan-Michael Key, Conan O'Brien, Seth Meyers
+
+Predictions:
+  BERT confidence: 0.4580 (predicted: answer)
+  LogReg score: 0.6187 (predicted: clarification)
+  Score difference: 0.1607
+
+QPP Features:
+  WIG: 2.6388
+  NQC: 0.0267
+  SMV: 4.3284
+  Clarity: 1.1781
+  nSigma: 0.7356
+
+Retrieval Results (Top 5):
+  1. "Andreas Petermann"
+  2. "4th Annual NFL Honors"
+  3. "National Football League"
+  4. "Athletes in Action"
+  5. "2nd Annual NFL Honors"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 0.333
+  Score range: 1.078
+  Has answer in top 10: False
+
+================================================================================
+
+Case 4
+--------------------------------------------------------------------------------
+Query: When did peanut butter captain crunch come out?
+Answer: 1969
+
+Predictions:
+  BERT confidence: 0.4451 (predicted: answer)
+  LogReg score: 0.6047 (predicted: clarification)
+  Score difference: 0.1595
+
+QPP Features:
+  WIG: 2.3599
+  NQC: 0.0230
+  SMV: 2.8007
+  Clarity: 1.4859
+  nSigma: 0.5917
+
+Retrieval Results (Top 5):
+  1. "Amsterdam (novel)"
+  2. WAXX
+  3. Cruncheroos
+  4. "Crispy Crunch"
+  5. "Violet Crumble"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 1.001
+  Score range: 3.788
+  Has answer in top 10: False
+
+================================================================================
+
+Case 5
+--------------------------------------------------------------------------------
+Query: When did leonardo da vinci finish painting the mona lisa?
+Answer: c. 1506, c.1517
+
+Predictions:
+  BERT confidence: 0.4062 (predicted: answer)
+  LogReg score: 0.5618 (predicted: clarification)
+  Score difference: 0.1556
+
+QPP Features:
+  WIG: 1.5616
+  NQC: 0.0166
+  SMV: 1.4044
+  Clarity: 1.4094
+  nSigma: 0.4190
+
+Retrieval Results (Top 5):
+  1. "Mona Lisa"
+  2. "Mona Lisa"
+  3. "Quarterback Princess"
+  4. "Culture of Sydney"
+  5. "Lisa del Giocondo"
+
+Retrieval Statistics:
+  Diversity: 0.700
+  Score std: 1.433
+  Score range: 4.497
+  Has answer in top 10: False
+
+================================================================================
+
+Case 6
+--------------------------------------------------------------------------------
+Query: Who started the first news paper in india?
+Answer: James Augustus Hicky
+
+Predictions:
+  BERT confidence: 0.4935 (predicted: answer)
+  LogReg score: 0.6390 (predicted: clarification)
+  Score difference: 0.1454
+
+QPP Features:
+  WIG: 2.1269
+  NQC: 0.0307
+  SMV: 4.1353
+  Clarity: 1.3991
+  nSigma: 0.7190
+
+Retrieval Results (Top 5):
+  1. "History of journalism"
+  2. "History of newspaper publishing"
+  3. "Media of India"
+  4. "Wandad Hurmuzd"
+  5. "Hindi media"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 1.426
+  Score range: 4.673
+  Has answer in top 10: False
+
+================================================================================
+
+Case 7
+--------------------------------------------------------------------------------
+Query: Who was drafted first in the 2017 nfl draft?
+Answer: Myles Garrett, Myles Lorenz Garrett, Cleveland Browns, Texas A&M, Southeastern Conference, SEC
+
+Predictions:
+  BERT confidence: 0.3583 (predicted: answer)
+  LogReg score: 0.5004 (predicted: clarification)
+  Score difference: 0.1421
+
+QPP Features:
+  WIG: 3.4063
+  NQC: 0.0300
+  SMV: 5.2835
+  Clarity: 1.5302
+  nSigma: 0.7662
+
+Retrieval Results (Top 5):
+  1. "2017 NFL Draft"
+  2. "2018 NFL Draft"
+  3. "2016 NFL Draft"
+  4. "2017 NBA draft"
+  5. "2017 NHL Entry Draft"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 1.786
+  Score range: 5.745
+  Has answer in top 10: False
+
+================================================================================
+
+Case 8
+--------------------------------------------------------------------------------
+Query: Who wrote just you and me by chicago?
+Answer: James Pankow
+
+Predictions:
+  BERT confidence: 0.4657 (predicted: answer)
+  LogReg score: 0.6031 (predicted: clarification)
+  Score difference: 0.1373
+
+QPP Features:
+  WIG: 2.5581
+  NQC: 0.0311
+  SMV: 5.6060
+  Clarity: 1.2244
+  nSigma: 0.8949
+
+Retrieval Results (Top 5):
+  1. "Dorothy Edwards"
+  2. "Just You 'n' Me"
+  3. Schwannomatosis
+  4. "Chicago (Graham Nash song)"
+  5. "Chicago (band)"
+
+Retrieval Statistics:
+  Diversity: 0.900
+  Score std: 2.145
+  Score range: 5.464
+  Has answer in top 10: False
+
+================================================================================
+
+Case 9
+--------------------------------------------------------------------------------
+Query: Who presented gardeners world from 2008 to 2010?
+Answer: Toby Buckland, Toby Neale Buckland
+
+Predictions:
+  BERT confidence: 0.4884 (predicted: answer)
+  LogReg score: 0.6234 (predicted: clarification)
+  Score difference: 0.1349
+
+QPP Features:
+  WIG: 3.2715
+  NQC: 0.0322
+  SMV: 5.1776
+  Clarity: 1.4717
+  nSigma: 0.7585
+
+Retrieval Results (Top 5):
+  1. "Geoff Hamilton"
+  2. "Burnie Port Authority v General Jones Pty Ltd"
+  3. "RAF Prestwick"
+  4. "Gardeners' World"
+  5. "1750 Eckert"
+
+Retrieval Statistics:
+  Diversity: 0.900
+  Score std: 1.466
+  Score range: 4.325
+  Has answer in top 10: False
+
+================================================================================
+
+Case 10
+--------------------------------------------------------------------------------
+Query: When was the last time a $2 bill was printed?
+Answer: 2017, 2016, 2015, August 1966,, February 18, 1996
+
+Predictions:
+  BERT confidence: 0.4221 (predicted: answer)
+  LogReg score: 0.5563 (predicted: clarification)
+  Score difference: 0.1342
+
+QPP Features:
+  WIG: 2.7257
+  NQC: 0.0303
+  SMV: 5.1822
+  Clarity: 1.2934
+  nSigma: 0.8048
+
+Retrieval Results (Top 5):
+  1. "Maximilian Renner"
+  2. "United States two-dollar bill"
+  3. "United States two-dollar bill"
+  4. "United States two-dollar bill"
+  5. "United States two-dollar bill"
+
+Retrieval Statistics:
+  Diversity: 0.200
+  Score std: 1.710
+  Score range: 5.519
+  Has answer in top 10: False
+
+================================================================================
+

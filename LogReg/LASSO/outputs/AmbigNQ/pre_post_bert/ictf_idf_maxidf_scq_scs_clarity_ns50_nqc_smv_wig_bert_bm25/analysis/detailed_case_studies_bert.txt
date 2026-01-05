@@ -1,0 +1,324 @@
+================================================================================
+Detailed Case Studies: LogReg Wins (Top 10 by Score Difference)
+================================================================================
+
+Case 1
+--------------------------------------------------------------------------------
+Query: From which body part shurpnakha drive her name?
+Answer: fingernails
+
+Predictions:
+  BERT confidence: 0.4580 (predicted: answer)
+  LogReg score: 0.5765 (predicted: clarification)
+  Score difference: 0.1186
+
+QPP Features:
+  WIG: 0.3906
+  NQC: 0.0406
+  SMV: 0.0708
+  Clarity: 1.2646
+  nSigma: 0.0941
+
+Retrieval Results (Top 5):
+  1. "BBC Arabic"
+  2. "Boardman House (Saugus, Massachusetts)"
+  3. "Travis Binnion"
+  4. Urvashi
+  5. Soslan
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 0.616
+  Score range: 1.910
+  Has answer in top 10: False
+
+================================================================================
+
+Case 2
+--------------------------------------------------------------------------------
+Query: When did they start filming guardians of the galaxy?
+Answer: July 6, 2013, around July 6, 2013, February 11, 2016, February 17, 2016, February 17
+
+Predictions:
+  BERT confidence: 0.4808 (predicted: answer)
+  LogReg score: 0.5831 (predicted: clarification)
+  Score difference: 0.1023
+
+QPP Features:
+  WIG: 0.9274
+  NQC: 0.0607
+  SMV: 0.3405
+  Clarity: 1.2859
+  nSigma: 0.2063
+
+Retrieval Results (Top 5):
+  1. "Guardians of the Galaxy (film)"
+  2. "Guardians of the Galaxy (film)"
+  3. "Guardians of the Galaxy (film)"
+  4. "Guardians of the Galaxy Vol. 2"
+  5. "Guardians of the Galaxy Vol. 2"
+
+Retrieval Statistics:
+  Diversity: 0.200
+  Score std: 2.204
+  Score range: 8.028
+  Has answer in top 10: False
+
+================================================================================
+
+Case 3
+--------------------------------------------------------------------------------
+Query: Who played wicked witch of the west in oz?
+Answer: Mila Kunis, Milena Markovna "Mila" Kunis, Margaret Hamilton, Margaret Brainard Hamilton, Debra Winger, Eliza Swenson
+
+Predictions:
+  BERT confidence: 0.4439 (predicted: answer)
+  LogReg score: 0.5326 (predicted: clarification)
+  Score difference: 0.0887
+
+QPP Features:
+  WIG: 0.4809
+  NQC: 0.0469
+  SMV: 0.1172
+  Clarity: 1.1804
+  nSigma: 0.1141
+
+Retrieval Results (Top 5):
+  1. SoBe
+  2. "Wicked Witch of the West"
+  3. "GOST (block cipher)"
+  4. "Wicked Witch of the West"
+  5. "Clara Blandick"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 2.782
+  Score range: 9.822
+  Has answer in top 10: False
+
+================================================================================
+
+Case 4
+--------------------------------------------------------------------------------
+Query: Who played the original scott robinson in neighbours?
+Answer: Darius Perkins, Perkins, Darius Anton Perkins
+
+Predictions:
+  BERT confidence: 0.4766 (predicted: answer)
+  LogReg score: 0.5613 (predicted: clarification)
+  Score difference: 0.0847
+
+QPP Features:
+  WIG: 0.4836
+  NQC: 0.0395
+  SMV: 0.0919
+  Clarity: 1.1037
+  nSigma: 0.1072
+
+Retrieval Results (Top 5):
+  1. "Sebastian Stock"
+  2. "Scott Robinson (Neighbours)"
+  3. "Catholic Church in Lebanon"
+  4. "Darius Perkins"
+  5. "Mike Bowers"
+
+Retrieval Statistics:
+  Diversity: 0.900
+  Score std: 2.059
+  Score range: 5.399
+  Has answer in top 10: False
+
+================================================================================
+
+Case 5
+--------------------------------------------------------------------------------
+Query: When was the last time usa womens hockey won gold?
+Answer: 2019, 2018
+
+Predictions:
+  BERT confidence: 0.4738 (predicted: answer)
+  LogReg score: 0.5551 (predicted: clarification)
+  Score difference: 0.0814
+
+QPP Features:
+  WIG: 0.5209
+  NQC: 0.0438
+  SMV: 0.1128
+  Clarity: 1.1602
+  nSigma: 0.1187
+
+Retrieval Results (Top 5):
+  1. "United States women's national ice hockey team"
+  2. "Green-throated mango"
+  3. "NCAA Women's Ice Hockey Tournament"
+  4. "United States women's national gymnastics team"
+  5. "Minnesota Golden Gophers women's gymnastics"
+
+Retrieval Statistics:
+  Diversity: 0.900
+  Score std: 1.311
+  Score range: 3.985
+  Has answer in top 10: False
+
+================================================================================
+
+Case 6
+--------------------------------------------------------------------------------
+Query: When did the golden age of athens end?
+Answer: 404 BC
+
+Predictions:
+  BERT confidence: 0.4600 (predicted: answer)
+  LogReg score: 0.5405 (predicted: clarification)
+  Score difference: 0.0805
+
+QPP Features:
+  WIG: 0.9196
+  NQC: 0.0752
+  SMV: 0.3798
+  Clarity: 1.3084
+  nSigma: 0.2179
+
+Retrieval Results (Top 5):
+  1. "Władysław Dominik Zasławski"
+  2. "Archaic Greece"
+  3. "Classical Greece"
+  4. "Archaic Greece"
+  5. "History of Athens"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 1.564
+  Score range: 4.309
+  Has answer in top 10: False
+
+================================================================================
+
+Case 7
+--------------------------------------------------------------------------------
+Query: Who was the mayor of detroit in 1967?
+Answer: Jerome Cavanagh, Jerome Patrick Cavanagh
+
+Predictions:
+  BERT confidence: 0.4657 (predicted: answer)
+  LogReg score: 0.5442 (predicted: clarification)
+  Score difference: 0.0785
+
+QPP Features:
+  WIG: 0.6234
+  NQC: 0.0648
+  SMV: 0.2167
+  Clarity: 1.3570
+  nSigma: 0.1759
+
+Retrieval Results (Top 5):
+  1. Juicer
+  2. "Jerome Cavanagh"
+  3. "1967 Detroit riot"
+  4. "1967 Detroit riot"
+  5. "1967 Detroit riot"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 1.220
+  Score range: 4.119
+  Has answer in top 10: False
+
+================================================================================
+
+Case 8
+--------------------------------------------------------------------------------
+Query: When did new zealand first win the america's cup?
+Answer: 1995 America's Cup, 6–13 May 1995, 13 May 1995
+
+Predictions:
+  BERT confidence: 0.4491 (predicted: answer)
+  LogReg score: 0.5248 (predicted: clarification)
+  Score difference: 0.0757
+
+QPP Features:
+  WIG: 0.3787
+  NQC: 0.0370
+  SMV: 0.0644
+  Clarity: 1.2118
+  nSigma: 0.0897
+
+Retrieval Results (Top 5):
+  1. "Cork City North-West (Dáil constituency)"
+  2. "America's Cup"
+  3. "America's Cup"
+  4. "America's Cup"
+  5. "America's Cup"
+
+Retrieval Statistics:
+  Diversity: 0.300
+  Score std: 1.266
+  Score range: 3.759
+  Has answer in top 10: False
+
+================================================================================
+
+Case 9
+--------------------------------------------------------------------------------
+Query: When was the first bottle of champagne made?
+Answer: 1662, 1663
+
+Predictions:
+  BERT confidence: 0.4451 (predicted: answer)
+  LogReg score: 0.5192 (predicted: clarification)
+  Score difference: 0.0740
+
+QPP Features:
+  WIG: 0.8352
+  NQC: 0.0726
+  SMV: 0.4206
+  Clarity: 1.5282
+  nSigma: 0.2293
+
+Retrieval Results (Top 5):
+  1. "History of Champagne"
+  2. "Petition of the three colonels"
+  3. "History of Champagne"
+  4. "History of alcoholic drinks"
+  5. Champagne
+
+Retrieval Statistics:
+  Diversity: 0.600
+  Score std: 0.896
+  Score range: 3.146
+  Has answer in top 10: False
+
+================================================================================
+
+Case 10
+--------------------------------------------------------------------------------
+Query: Who coined the phrase manifest destiny and what does it mean?
+Answer: John O'Sullivan, Jane Cazneau, extending the area of freedom, "a sense of mission to redeem the Old World by high example ... generated by the potentialities of a new earth for building a new heaven
+
+Predictions:
+  BERT confidence: 0.4636 (predicted: answer)
+  LogReg score: 0.5365 (predicted: clarification)
+  Score difference: 0.0729
+
+QPP Features:
+  WIG: 0.5799
+  NQC: 0.0516
+  SMV: 0.1690
+  Clarity: 1.1609
+  nSigma: 0.1453
+
+Retrieval Results (Top 5):
+  1. "Manifest destiny"
+  2. Throat
+  3. "Manifest destiny"
+  4. "Michael Horton (theologian)"
+  5. "Manifest destiny"
+
+Retrieval Statistics:
+  Diversity: 0.300
+  Score std: 0.800
+  Score range: 2.645
+  Has answer in top 10: False
+
+================================================================================
+

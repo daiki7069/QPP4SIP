@@ -13,8 +13,8 @@ WIG,0.5535,0.5766,-
 L1 Logistic Regression,0.7151,0.7271,0.2818
 L2 Logistic Regression,0.7145,0.7249,0.2215
 E-Net,0.7148,0.7258,0.2458
-No Penalty Logistic Regression,0.7158,0.7273,0.4919
+No Penalty Logistic Regression,0.7158,0.7273,0.4917
 BOLASSO,0.7151,0.7271,0.2818
 LARS-Traps,0.7145,0.7249,0.2215
-LARS-CV,0.7145,0.7250,0.2259
-Random Forest,0.6445,0.6626,1.81e-12
+LARS-CV,0.7146,0.7250,0.2363
+Random Forest,0.6433,0.6626,1.18e-14

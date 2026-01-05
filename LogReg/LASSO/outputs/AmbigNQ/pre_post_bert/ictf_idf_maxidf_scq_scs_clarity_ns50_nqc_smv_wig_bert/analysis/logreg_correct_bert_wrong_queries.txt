@@ -1,0 +1,939 @@
+Label: 1, LogReg: 0.5090, BERT: -0.2063
+Query: Who is the prime minister of england 2018?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5184, BERT: -0.1467
+Query: When was the last time the us had a budget surplus?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5345, BERT: -0.0822
+Query: How many jimmy john's are there in the world?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5470, BERT: -0.1626
+Query: Who is the administrator of the small business administration?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5170, BERT: -0.1084
+Query: Where was the movie lean on me filmed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5089, BERT: -0.1018
+Query: According to mahabharata who constructed unparalleled palace of pandavas?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6234, BERT: -0.0462
+Query: Who presented gardeners world from 2008 to 2010?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5009, BERT: -0.3365
+Query: Who has the most nascar wins in history?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5048, BERT: -0.2649
+Query: Who did germany invade on may 10 1940?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5616, BERT: -0.0911
+Query: Who signed the treaty of versailles from germany?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5168, BERT: -0.2613
+Query: Who did jackie end up with in that 70s show?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4646, BERT: 0.0249
+Query: Highest runs in t20 international in an innings?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5114, BERT: -0.2189
+Query: Where did the idea of representative government first develop?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5369, BERT: -0.3365
+Query: How many chests of tea were dumped in the boston harbor?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5559, BERT: -0.0654
+Query: Who sang the song coat of many colors?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5127, BERT: -0.2229
+Query: What geographical feature of the ocean floor is between the shoreline and the continental slope?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5040, BERT: -0.1832
+Query: Who has the legal authority to bind the us government on a us government contract?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5019, BERT: -0.1472
+Query: Who sang i don't want to live without your love?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5557, BERT: -0.0381
+Query: Who won the battle of blackburn's ford?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5201, BERT: -0.3386
+Query: Bambi love and hip hop atlanta real name?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5138, BERT: -0.0709
+Query: Who is considered the home team for super bowl 52?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5630, BERT: -0.1232
+Query: How many grammy awards does whitney houston have?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4979, BERT: 0.1086
+Query: How many islands are included in the federated states of micronesia?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5523, BERT: -0.0589
+Query: Where do you find a simple gear train?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5460, BERT: -0.0451
+Query: When did india conduct the nuclear test at pokhran?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5272, BERT: -0.0596
+Query: When did breaking dawn part 2 come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5128, BERT: -0.0346
+Query: When did iced coffee become popular in the us?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5550, BERT: -0.0726
+Query: Where does implantation of the fertilized ovum usually occur?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5553, BERT: -0.1722
+Query: Who made the song when i see you again?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6117, BERT: -0.0496
+Query: When did goosebumps by travis scott come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5290, BERT: -0.1504
+Query: Who won the first super bowl in 1967?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5119, BERT: -0.0358
+Query: Who sings the theme song for the show half and half?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5046, BERT: -0.1196
+Query: When was the immorality act repealed in south africa?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5336, BERT: -0.1166
+Query: When is ap men's basketball poll released?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5232, BERT: -0.0485
+Query: Who is the winner of 2018 royal rumble?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5614, BERT: -0.2254
+Query: When was the last time the cubs won the world series before 2016?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5547, BERT: -0.0783
+Query: Who played aang in the last airbender movie?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6023, BERT: -0.0596
+Query: Where does the tv show this is us take place?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5044, BERT: -0.1062
+Query: What channel will rick and morty season 3 be on?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5085, BERT: -0.1195
+Query: How many arms of government are there in nigeria?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5615, BERT: -0.0793
+Query: Who was the murderer in the first broadchurch?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6007, BERT: -0.0253
+Query: What county is old forge new york in?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5009, BERT: -0.0880
+Query: How many houses are in the british parliament?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5002, BERT: -0.0285
+Query: What was the name of the frat in animal house?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5436, BERT: -0.0977
+Query: Who sang the theme tune to dear john?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5476, BERT: -0.0763
+Query: What kind of car was ramone from cars?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4490, BERT: 0.0027
+Query: Who conducted the little albert study on conditioned fear?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5203, BERT: -0.0106
+Query: Who opened the gate in the prison walking dead?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5508, BERT: -0.0858
+Query: Characteristic that is related to a star's temperature?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5137, BERT: -0.2358
+Query: Delhi is situated on the bank of the river?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5950, BERT: -0.1128
+Query: Who determined that all animals are made of cells?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5185, BERT: -0.0750
+Query: When did the last wooly mammoths die out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5280, BERT: -0.5888
+Query: The correct order of the emergency chain of survival is?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5700, BERT: -0.0278
+Query: Where is the gum wall in seattle washington?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5376, BERT: -0.3638
+Query: Who sang what a difference a day make?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5428, BERT: -0.0853
+Query: In which state is rana pratap sagar atomic power plant located?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5621, BERT: -0.0750
+Query: Who did liverpool beat in the champions league final?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5207, BERT: -0.1517
+Query: Who wrote i smoke two joints in the morning?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6058, BERT: -0.0880
+Query: Who won sports personality of the year 2017 ireland?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5349, BERT: -0.1280
+Query: Who wrote i know a heartache when i see one?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5016, BERT: -0.1870
+Query: What is the name of the tallest peak in canada?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5160, BERT: -0.1594
+Query: Who was the only roman catholic ever elected president?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5489, BERT: -0.0636
+Query: When did the treaty of guadalupe hidalgo happen?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5686, BERT: -0.0498
+Query: How many teams in the nba in 1956?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5234, BERT: -0.0922
+Query: The type of reproduction that requires the union of sperm and egg?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5776, BERT: -0.1936
+Query: Who got stuck in the belly of a whale?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5293, BERT: -0.0324
+Query: What was the assyrians form of writing known as?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5454, BERT: -0.0184
+Query: When did the rams go to st louis?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5336, BERT: -0.1050
+Query: Which nfl team has the most superbowl wins in a row?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5023, BERT: -0.0397
+Query: Who wrote the south carolina ordinance of secession?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5343, BERT: -0.0502
+Query: When did the brewers join the national league?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5057, BERT: -0.0195
+Query: The ratio of the wave height to its wave length is called?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5165, BERT: -0.1001
+Query: When did india win the cricket world cup?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5769, BERT: -0.1130
+Query: Who plays ashley on fresh prince of bel-air?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5447, BERT: -0.0432
+Query: Where do cardiac impulses originate in the heart?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5519, BERT: -0.1353
+Query: What is the name of the oven used to fire clay objects so that they become ceramics?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5510, BERT: -0.0200
+Query: Who owns green and black's organic chocolate?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5280, BERT: -0.0481
+Query: Who did the artwork for pink floyd's wall?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5218, BERT: -0.0435
+Query: When were personal computers first sold to the public?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5099, BERT: -0.0903
+Query: When does season 4 of orange is the new black start?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5246, BERT: -0.2468
+Query: Who plays max on one day at a time netflix?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5006, BERT: -0.3011
+Query: Who sang lead on something by the beatles?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5339, BERT: -0.0691
+Query: Who came up with the conservation of mass?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6195, BERT: -0.0047
+Query: When did italy enter the first world war?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6021, BERT: -0.1050
+Query: Who sang the song he stopped loving her today?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4600, BERT: 0.0580
+Query: Who made the song total eclipse of the heart?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5768, BERT: -0.1041
+Query: When did the us enter the second world war in europe?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5864, BERT: -0.0708
+Query: Where was the hottest temperature recorded on earth?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5982, BERT: -0.0625
+Query: Who did raven marry in that's so raven?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5326, BERT: -0.1304
+Query: When did the kim family come to power?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5606, BERT: -0.1211
+Query: Who wrote 13 books in the new testament?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5422, BERT: -0.0556
+Query: Silence of the lambs book series in order?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6047, BERT: -0.2203
+Query: When did peanut butter captain crunch come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5008, BERT: -0.2100
+Query: The bill of rights applies to the states through this amendment?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5291, BERT: -0.0813
+Query: When does the next episode of the next step come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5450, BERT: -0.2402
+Query: What is the dominant ethnic group of southern south america including argentina and uruguay?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5382, BERT: -0.1099
+Query: What instrument do you blow into with a keyboard?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5308, BERT: -0.0062
+Query: Who was the first singing brothers in the hall of fame?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5136, BERT: -0.2008
+Query: Who plays pee wee in pee wee's big holiday?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5121, BERT: -0.0374
+Query: Who commanded the british army at yorktown virginia?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5833, BERT: -0.1599
+Query: Who plays barbara on girlfriends guide to divorce?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5623, BERT: -0.1396
+Query: When does the new army uniform come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5375, BERT: -0.0198
+Query: Who plays agent brody on ncis new orleans?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5218, BERT: -0.2819
+Query: What animal is 1982 in the chinese zodiac?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5074, BERT: -0.1193
+Query: When does house of cards start in canada?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5004, BERT: -0.5828
+Query: Who was drafted first in the 2017 nfl draft?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5014, BERT: -0.1783
+Query: Who sings the theme song for the suite life on deck?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5338, BERT: -0.0673
+Query: Where did the pilgrims originally plan to land in north america?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5365, BERT: -0.1606
+Query: Who plays klaus in a series of unfortunate events netflix?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5282, BERT: -0.2984
+Query: Who died during the filming of flight of the phoenix?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5377, BERT: -0.0016
+Query: In which country there is a provision of due process of law?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5652, BERT: -0.0852
+Query: What laws directed the flow of goods between england and the colonies?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5726, BERT: -0.0309
+Query: Latin for dont let the bastards wear you down?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5027, BERT: -0.1767
+Query: Who sang the song she's got betty davis eyes?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5307, BERT: -0.1270
+Query: When did bruce springsteen play the super bowl?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5009, BERT: -0.4223
+Query: Who has scored most own goals in premier league?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5405, BERT: -0.2429
+Query: Who did idris elba play in the wire?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5021, BERT: -0.2360
+Query: Who played penny woods on leave it to beaver?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5105, BERT: -0.4652
+Query: Who played the riddler in the original batman series?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5262, BERT: -0.0669
+Query: Name a us president that ends with son?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5767, BERT: -0.1058
+Query: When did they start filming guardians of the galaxy?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5155, BERT: -0.1166
+Query: Most number of national awards for best actress?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5574, BERT: -0.1831
+Query: Who played the leprechaun in the movies leprechaun?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5825, BERT: -0.0059
+Query: When did ben stone leave law and order?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5454, BERT: -0.1439
+Query: What is the most recent season of the blacklist?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5098, BERT: -0.0833
+Query: When did the golden age of athens end?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5093, BERT: -0.0711
+Query: What does vale mean before a dead person's name?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5544, BERT: -0.0618
+Query: Who wrote the i'm lovin it jingle?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5196, BERT: -0.2172
+Query: Where is the world cup going to be in 2019?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5176, BERT: -0.0755
+Query: Who has died from earth wind and fire?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5055, BERT: -0.2252
+Query: Who played bass on and justice for all?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5039, BERT: -0.0288
+Query: When does season 5 forged in fire start?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5490, BERT: -0.1595
+Query: When did mccrory's go out of business?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5764, BERT: -0.0402
+Query: Who wrote give me a home among the gum trees?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5008, BERT: -0.1229
+Query: When does the new independence day come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5178, BERT: -0.0756
+Query: Where was war on the planet of the apes filmed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5502, BERT: -0.0435
+Query: When was france occupied by germany in ww2?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5031, BERT: -0.1377
+Query: Who got the most rebounds in one game?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5736, BERT: -0.1136
+Query: Who plays chef jeff on switched at birth?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5075, BERT: -0.2383
+Query: Who has the most rbis in major league history?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5122, BERT: -0.1180
+Query: During which time period did the third party system take place in american politics answers.com?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5150, BERT: -0.0843
+Query: Who set up the first stockyard for texas cattle in abilene kansas?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5043, BERT: -0.1120
+Query: Who was a french aristocrat and military officer who served as a general in the continental army?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6031, BERT: -0.1374
+Query: Who wrote just you and me by chicago?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5087, BERT: -0.2993
+Query: When did the united states purchase the louisiana territory?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5221, BERT: -0.2050
+Query: Who plays myrcella in game of thrones season 5?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5336, BERT: -0.0147
+Query: Civil court of the city of new york jurisdictional limit?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5560, BERT: -0.1103
+Query: What is stacey's surname in gavin and stacey?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5604, BERT: -0.0466
+Query: Who sang the song i want a hippopotamus for christmas?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5256, BERT: -0.0833
+Query: Who plays victor on fear the walking dead?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5074, BERT: -0.2230
+Query: When is the last time the astros won a world series?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5265, BERT: -0.1608
+Query: Orange is the new black who plays piper?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5176, BERT: -0.2563
+Query: How many episodes in chicago med season 3?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5659, BERT: -0.1009
+Query: When did clemson win the national championship in football?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5161, BERT: -0.0828
+Query: Where was the movie going in style filmed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5442, BERT: -0.2355
+Query: Who was the captain when india played its first-ever odi?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5768, BERT: -0.1276
+Query: Who plays sonny in love's long journey?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5343, BERT: -0.0089
+Query: Powder actuated tools are similar in operation to which other device?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5860, BERT: -0.1605
+Query: Who is buried in santa croce in florence?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5618, BERT: -0.3796
+Query: When did leonardo da vinci finish painting the mona lisa?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5043, BERT: -0.2654
+Query: What is the record for most strikeouts in a season by a hitter?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5084, BERT: -0.0458
+Query: What is the airport code for negril jamaica?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5712, BERT: -0.0183
+Query: Who played the judge in hang em high?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5265, BERT: -0.2374
+Query: Who's henry's father in once upon a time?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5284, BERT: -0.1112
+Query: German scientist that discovered cells come from preexisting cells?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5154, BERT: -0.0753
+Query: Who wrote the song if i ruled the world?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5250, BERT: -0.0650
+Query: When did apple begin to sell the lisa computer?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5902, BERT: -0.0368
+Query: When did the redskins win the super bowl?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5430, BERT: -0.1350
+Query: When did morning tv start in the uk?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5439, BERT: -0.1077
+Query: Who is opening for shania twain in ottawa?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5591, BERT: -0.0434
+Query: What was the mad kings name in got?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5958, BERT: -0.1458
+Query: What does the zip in zip code stand for?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5638, BERT: -0.1603
+Query: Who plays charlie on it's always sunny?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5090, BERT: -0.0305
+Query: When did the samsung gear s come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5726, BERT: -0.0423
+Query: Who won the battle of philippi civil war?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5221, BERT: -0.2625
+Query: What came out first arkham city or arkham asylum?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5336, BERT: -0.2560
+Query: How many starbucks are there around the world?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5461, BERT: -0.0809
+Query: When did texas become part of united states?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5444, BERT: -0.1308
+Query: Where does the flat iron cut of meat come from?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5727, BERT: -0.0145
+Query: Where does the coin go in a french drop?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5329, BERT: -0.0599
+Query: Longest word in the english language with one vowel?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5050, BERT: -0.0939
+Query: Where does the new fallout game take place?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5070, BERT: -0.0103
+Query: Who is the actress that portrays wonder woman?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5030, BERT: -0.2511
+Query: Who produced toni braxton just be a man about it?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5525, BERT: -0.0035
+Query: What is the age limit to go on an lds mission?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5129, BERT: -0.0612
+Query: Who is the person who has lived the longest?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5956, BERT: -0.0341
+Query: The type of thunderstorm that has the most damaging winds and precipitation is a?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5192, BERT: -0.1652
+Query: Who played mama on throw momma from the train?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5571, BERT: -0.0116
+Query: Which character in les miserables sings on my own?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4689, BERT: 0.0317
+Query: Who has won the 2017 ecuador presidential election?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5254, BERT: -0.2010
+Query: When did the apple tv 4k come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5563, BERT: -0.3141
+Query: When was the last time a $2 bill was printed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5747, BERT: -0.2002
+Query: Who is the top goal scorer for brazil?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5669, BERT: -0.0042
+Query: When did us currency leave the gold standard?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5261, BERT: -0.0579
+Query: Who played in the world series in 1989?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5218, BERT: -0.0046
+Query: What group came to power because of the russian revolution of 1917?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5267, BERT: -0.0554
+Query: When did the song can't touch this come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5401, BERT: -0.0212
+Query: Where are the highest temperatures on earth recorded?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5564, BERT: -0.0574
+Query: Where are bases found on the ph scale?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5342, BERT: -0.0193
+Query: When was the first winnie the pooh book written?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5079, BERT: -0.1332
+Query: What was the first literature of the anglo-saxons?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5174, BERT: -0.1315
+Query: How many books are in stephen king's dark tower?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5304, BERT: -0.2216
+Query: What language do they speak in meteor garden 2018?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5244, BERT: -0.1086
+Query: When did the largest swarm of earthquakes at long valley take place?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5052, BERT: -0.4665
+Query: When was the statue of liberty delivered to the united states?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5319, BERT: -0.2967
+Query: In which year did djokovic win roland garros?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5242, BERT: -0.2763
+Query: Who played the chicago cubs in the world series last year?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5119, BERT: -0.1212
+Query: How many copies of bohemian rhapsody were sold?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5104, BERT: -0.0667
+Query: Who did the british side with in the french and indian war?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5705, BERT: -0.2015
+Query: When was pink floyd's dark side of the moon released?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5544, BERT: -0.1819
+Query: When was the new international version bible written?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5780, BERT: -0.1589
+Query: When did the new york rangers last win the stanley cup?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5368, BERT: -0.1149
+Query: How many nfl mvp does tom brady have?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5768, BERT: -0.0904
+Query: Beatles do you want to know a secret singer?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5292, BERT: -0.0299
+Query: What is the os of samsung smart tv?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5415, BERT: -0.2374
+Query: What is the last comma in a series called?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5381, BERT: -0.0376
+Query: When does the new super troopers movie come out?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4416, BERT: 0.0492
+Query: When is ariana grande album sweetener coming out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5419, BERT: -0.0684
+Query: Who does the voice of bob's burgers?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5647, BERT: -0.1391
+Query: Who was the greatest warrior for the trojans?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5138, BERT: -0.1053
+Query: What part of cow does ribeye come from?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5275, BERT: -0.0756
+Query: Where was the first north american indigenous games held?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5499, BERT: -0.1383
+Query: When was alice in chains jar of flies released?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5567, BERT: -0.0394
+Query: Who does the voice for bender on futurama?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5231, BERT: -0.0680
+Query: Who played piscatella in orange is the new black?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5480, BERT: -0.1658
+Query: Who was the comedian who said chase me?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5860, BERT: -0.0142
+Query: When does the rockefeller christmas tree go up?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5114, BERT: -0.4028
+Query: When does ex on the beach season 8 start?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5420, BERT: -0.0193
+Query: Who wrote remember me i'm the one who loves you?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5370, BERT: -0.1255
+Query: When was the english bill of rights signed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5044, BERT: -0.3113
+Query: When was the last time galway won the hurling all ireland?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5672, BERT: -0.1226
+Query: How many times did brazil win the fifa world cup?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5347, BERT: -0.0888
+Query: Who wins hell's kitchen all stars spoiler?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5181, BERT: -0.0305
+Query: Nominated in the best foreign film category at the oscars mother india lost to?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5177, BERT: -0.2151
+Query: Who is jay park asia's got talent?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5011, BERT: -0.1437
+Query: What is the record for most wins in jeopardy?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5981, BERT: -0.0936
+Query: When did the song country roads come out?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4697, BERT: 0.0973
+Query: When did the old guy on pawn stars die?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5415, BERT: -0.1249
+Query: When did the teenage mutant ninja turtles cartoon come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5647, BERT: -0.1865
+Query: The repetition of phrases or sentences with similar structures or meanings is called?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5360, BERT: -0.1144
+Query: Who plays max in secret life of pets?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5187, BERT: -0.2008
+Query: Which is the latest version of ubuntu operating system?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5116, BERT: -0.0767
+Query: When is the last time the astros been to the world series?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5275, BERT: -0.0842
+Query: What's the most home runs hit in the home run derby?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5729, BERT: -0.0522
+Query: What is the last episode of soul eater?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5509, BERT: -0.1644
+Query: What is the purpose of a traffic circle?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6034, BERT: -0.0090
+Query: Who plays the female doctor in doctor strange?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5732, BERT: -0.1869
+Query: What is the old name of axis bank?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5649, BERT: -0.0784
+Query: Using the letters of a word to make a poem?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5097, BERT: -0.1845
+Query: Song at the end of who dat boy?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5064, BERT: -0.1205
+Query: Who played flash gordon in the tv series?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5213, BERT: -0.1111
+Query: Who plays alicia on fear the walking dead?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5672, BERT: -0.0170
+Query: Who has made the most money on jeopardy?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5238, BERT: -0.0831
+Query: Who hosts the friday sports panel on radio 5 live?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5869, BERT: -0.0825
+Query: Who voices lindas mom in bob's burgers?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5436, BERT: -0.0039
+Query: Who coined the phrase manifest destiny and what does it mean?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5951, BERT: -0.0311
+Query: Who played tulsa in the space between us?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5366, BERT: -0.1198
+Query: Who came up with the rule no work no eat?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5031, BERT: -0.1277
+Query: Who sings lead on anna by the beatles?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5276, BERT: -0.2246
+Query: Who sings when i kissed the teacher in mamma mia?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6390, BERT: -0.0259
+Query: Who started the first news paper in india?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6187, BERT: -0.1685
+Query: Who is the mc of the nfl honors?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5763, BERT: -0.0264
+Query: Who wrote the song fairytale of new york?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5448, BERT: -0.0258
+Query: Who was the only president buried in washington dc?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5367, BERT: -0.3386
+Query: Who played yondu in guardians of the galaxy 2?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5529, BERT: -0.0461
+Query: Who produced the ten commandments of computer ethics?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6575, BERT: -0.0769
+Query: Who sings with nickelback in she keeps me up?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5091, BERT: -0.0402
+Query: How much does it cost to raise the costa concordia?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5220, BERT: -0.1214
+Query: When is the new henry danger coming on?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5031, BERT: -0.0849
+Query: How many episodes does riverdale season one have?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5685, BERT: -0.0304
+Query: Which monarch separated england from the catholic church?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5145, BERT: -0.1376
+Query: Who plays cat in beauty and the beast?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5052, BERT: -0.2103
+Query: When was the last western roman emperor overthrown?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5531, BERT: -0.0132
+Query: Who directed taylor swift out of the woods?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5652, BERT: -0.0601
+Query: When was delhi designated the national capital territory?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5368, BERT: -0.0248
+Query: When did the albany plan of union take place?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5117, BERT: -0.0628
+Query: Who played lindsay on two and a half men?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5428, BERT: -0.1162
+Query: What type of primary does not label the party of the candidates?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5890, BERT: -0.0300
+Query: How many mlb players are in the hall of fame?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5193, BERT: -0.1118
+Query: Who initiated the game of cricket among india and how?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5334, BERT: -0.2119
+Query: Who made communication by wireless telegraphy for the first time?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5091, BERT: -0.1924
+Query: When did harry potter deathly hallows come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5203, BERT: -0.1292
+Query: Who is the character tess in this is us?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5465, BERT: -0.1462
+Query: Who sang the original devil went down to georgia?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5065, BERT: -0.0392
+Query: Who played frodo in the hunchback of notre dame?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5105, BERT: -0.3707
+Query: When was tasmania cut off from the mainland?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5417, BERT: -0.0294
+Query: When did the great fire of london happen?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5923, BERT: -0.0887
+Query: Who plays linda belcher on bob's burgers?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5761, BERT: -0.1149
+Query: Who plays as alvin in alvin and the chipmunks?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5056, BERT: -0.1618
+Query: Who is the all time hit leader in mlb?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5581, BERT: -0.1526
+Query: How many ford gts are in the world?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5427, BERT: -0.0514
+Query: Who played helen on life of the party?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5139, BERT: -0.4568
+Query: The number on kiss me thru the phone?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5189, BERT: -0.2824
+Query: Who plays emma in blue lagoon the awakening?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5629, BERT: -0.0622
+Query: Who wins at the end of friday night lights?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5460, BERT: -0.0660
+Query: Who played stands with fists in dances with wolves?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5149, BERT: -0.1969
+Query: When were the first magnetic compasses used by chinese ships?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5282, BERT: -0.0629
+Query: When is black ink crew chicago coming back?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5124, BERT: -0.2162
+Query: When did look what u made me do come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5146, BERT: -0.2400
+Query: When did star spangled banner become our national anthem?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5540, BERT: -0.0486
+Query: Who plays the queen on game of thrones?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5549, BERT: -0.2325
+Query: Where was the movie august osage county filmed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5387, BERT: -0.2028
+Query: Who plays barney stinson in how i met your mother?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5786, BERT: -0.2043
+Query: Who said i have but one life to give?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5443, BERT: -0.2139
+Query: Who is magic in blood in blood out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5976, BERT: -0.0886
+Query: Who played spock's dad on star trek?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.6001, BERT: -0.0537
+Query: In 1893 new zealand became the first country in the world to grant voting rights to?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5361, BERT: -0.1250
+Query: What does pax romana mean and why is it important?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5444, BERT: -0.2476
+Query: How many episodes in season 1 of handmades tale?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5338, BERT: -0.2457
+Query: What does the dc in washington dc stand for?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5400, BERT: -0.3190
+Query: Who is 30 seconds to mars touring with?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5415, BERT: -0.0949
+Query: Who is the little boy in kramer vs kramer?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5613, BERT: -0.0375
+Query: Where did the free settlers settle in australia?
+--------------------------------------------------------------------------------

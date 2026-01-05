@@ -1,0 +1,61 @@
+================================================================================
+QPPを使うべき場面の判定ルール (FP分析)
+================================================================================
+
+ベースモデル: BERT
+分析対象: FP
+有意水準: p < 0.05
+効果量閾値: |Cohen's d| > 0.2
+
+================================================================================
+
+ルール 1: WIG
+--------------------------------------------------------------------------------
+  条件: WIG が 2.0535 より 低い
+  かつ BERTが clarification と予測
+  → QPPを使って answer 側に補正すべき
+
+  統計情報:
+    - Cohen's d: -0.0497
+    - p値: 0.065247
+    - 誤分類グループの中央値: 2.0535
+    - 正解グループの中央値: 2.1015
+
+ルール 2: SClarity
+--------------------------------------------------------------------------------
+  条件: SClarity が 7.9151 より 低い
+  かつ BERTが clarification と予測
+  → QPPを使って answer 側に補正すべき
+
+  統計情報:
+    - Cohen's d: -0.0428
+    - p値: 0.085178
+    - 誤分類グループの中央値: 7.9151
+    - 正解グループの中央値: 8.0917
+
+
+================================================================================
+Pythonコード形式の判定関数
+================================================================================
+
+def should_use_qpp_correction(qpp_features, bert_prediction):
+    """
+    BERTの予測をQPPで補正すべきかどうかを判定
+    
+    Args:
+        qpp_features: dict, QPP特徴量の辞書
+        bert_prediction: str, BERTの予測 ('clarification' または 'answer')
+    
+    Returns:
+        tuple: (should_correct: bool, correction_direction: str or None)
+    """
+    
+    # ルール 1: WIG
+    if qpp_features.get('WIG', float('inf')) < 2.0535 and bert_prediction == 'clarification':
+        return True, 'answer'
+    
+    # ルール 2: SClarity
+    if qpp_features.get('SClarity', float('inf')) < 7.9151 and bert_prediction == 'clarification':
+        return True, 'answer'
+    
+    return False, None  # QPP補正不要

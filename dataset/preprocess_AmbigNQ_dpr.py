@@ -182,18 +182,19 @@ def map_response_type(ambigqa_type: str) -> str:
     return type_mapping.get(ambigqa_type, "directAnswer")
 
 
-def extract_answers_and_types(annotations: List[Dict[str, Any]]) -> tuple[List[str], List[str]]:
+def extract_answers_and_types(annotations: List[Dict[str, Any]]) -> tuple[List[str], List[str], int]:
     """
-    annotationsから回答とresponse_typeを抽出
+    annotationsから回答とresponse_type、QAペア数を抽出
     
     Args:
         annotations: AmbigQAのannotationsリスト
         
     Returns:
-        (回答のリスト, response_typeのリスト)
+        (回答のリスト, response_typeのリスト, qa_pairs_count)
     """
     answers = []
     response_types = []
+    qa_pairs_count = 0
     
     for ann in annotations:
         # response_typeを取得
@@ -205,7 +206,9 @@ def extract_answers_and_types(annotations: List[Dict[str, Any]]) -> tuple[List[s
         if ann_type == "multipleQAs":
             # multipleQAsの場合はqaPairsから回答を抽出
             if "qaPairs" in ann:
-                for qa_pair in ann["qaPairs"]:
+                qa_pairs_list = ann["qaPairs"]
+                qa_pairs_count += len(qa_pairs_list)  # QAペア数をカウント
+                for qa_pair in qa_pairs_list:
                     if "answer" in qa_pair:
                         if isinstance(qa_pair["answer"], list):
                             answers.extend(qa_pair["answer"])
@@ -229,7 +232,7 @@ def extract_answers_and_types(annotations: List[Dict[str, Any]]) -> tuple[List[s
     # response_typeの重複除去
     unique_types = list(dict.fromkeys(response_types))  # 順序を保持しながら重複除去
     
-    return unique_answers, unique_types
+    return unique_answers, unique_types, qa_pairs_count
 
 
 def create_inscit_format(
@@ -252,6 +255,7 @@ def create_inscit_format(
       - response_type: レスポンスタイプ（複数ある場合は " [SEP] " で結合）
       - dialogue_history: 対話履歴（文字列のリスト、AmbigNQの場合は空）
       - ctxs: 検索されたpassageのリスト（オプション、musicモデルでは使用しない）
+      - qa_pairs_count: QAペア数（multipleQAsタイプの場合のqaPairsの数）
     
     Args:
         questions: 質問データのリスト
@@ -276,9 +280,9 @@ def create_inscit_format(
         # 質問文
         q_text = question.get("question", "")
         
-        # 回答とresponse_typeを抽出
+        # 回答とresponse_type、QAペア数を抽出
         annotations = question.get("annotations", [])
-        answers, response_types = extract_answers_and_types(annotations)
+        answers, response_types, qa_pairs_count = extract_answers_and_types(annotations)
         
         # response_typeを結合（複数ある場合は " [SEP] " で結合）
         response_type_joined = " [SEP] ".join(response_types) if response_types else ""
@@ -345,7 +349,8 @@ def create_inscit_format(
             "answer": answers,
             "response_type": response_type_joined,
             "dialogue_history": [],  # AmbigNQは各質問が独立しているため空
-            "ctxs": ctxs  # 検索されたpassageのリスト（musicモデルでは使用しないが、データ形式として保持）
+            "ctxs": ctxs,  # 検索されたpassageのリスト（musicモデルでは使用しないが、データ形式として保持）
+            "qa_pairs_count": qa_pairs_count  # QAペア数
         }
         
         # 1ターンだけの会話として追加

@@ -1,0 +1,198 @@
+Label: 1, LogReg: 0.5142, RoBERTa: -0.1515
+Query: When was the commission fir sc/st established?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4855, RoBERTa: 0.0301
+Query: According to mahabharata who constructed unparalleled palace of pandavas?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4383, RoBERTa: 0.1161
+Query: What type of cell contributes to the blood-brain barrier in the central nervous system?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4887, RoBERTa: 0.0721
+Query: How many championships did the cleveland browns win?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4780, RoBERTa: 0.0376
+Query: When did new zealand win the americas cup?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4963, RoBERTa: 0.0137
+Query: What episode of dc legends of tomorrow is invasion?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4970, RoBERTa: 0.0924
+Query: When did the metropolitan police force become a service?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5398, RoBERTa: -0.0704
+Query: Who wrote the song superstar by the carpenters?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4855, RoBERTa: 0.1687
+Query: What channel will rick and morty season 3 be on?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5142, RoBERTa: -0.0025
+Query: Who is the current sheriff of maricopa county arizona?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4824, RoBERTa: 0.0522
+Query: How many medals did australia win in the 2000 olympics?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4932, RoBERTa: 0.2277
+Query: When did labrador become a part of newfoundland?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5030, RoBERTa: -0.0129
+Query: Who played jill abbott on the young and the restless?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4837, RoBERTa: 0.1149
+Query: How many seats in rajya sabha in assam?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4780, RoBERTa: 0.0462
+Query: Who plays ronald reagan in lee daniels the butler?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5040, RoBERTa: -0.0082
+Query: Ryan eggold character on young and the restless?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4808, RoBERTa: 0.0805
+Query: How many seats does the audi r8 have?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4934, RoBERTa: 0.0959
+Query: Who is the singer of main tera boyfriend?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4681, RoBERTa: 0.0780
+Query: Who plays max on one day at a time netflix?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5024, RoBERTa: -0.0046
+Query: Who plays michael on new will and grace?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4614, RoBERTa: 0.0404
+Query: How many trillion miles in a light year?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5209, RoBERTa: -0.0786
+Query: Who is the minister of health in malawi?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4857, RoBERTa: 0.0207
+Query: How many original harry potter books are there?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5084, RoBERTa: -0.0761
+Query: Who starred in the 1988 christmas movie scrooged?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4902, RoBERTa: 0.0356
+Query: Who did idris elba play in the wire?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4954, RoBERTa: 0.0280
+Query: Who was the governor of new york during 9/11?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5035, RoBERTa: -0.0525
+Query: When did they start filming guardians of the galaxy?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5241, RoBERTa: -0.0690
+Query: When is the day as long as the night?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4965, RoBERTa: 0.0684
+Query: Who plays tom riddle in harry potter chamber of secrets?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5071, RoBERTa: -0.0724
+Query: Who has won the world snooker championship the most times?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5240, RoBERTa: -0.0861
+Query: Who brought sam winchester back from the cage?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5148, RoBERTa: -0.0599
+Query: Who plays myrcella in game of thrones season 5?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4583, RoBERTa: 0.0465
+Query: Who plays jimmy's mother in boardwalk empire?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4643, RoBERTa: 0.0421
+Query: Who wrote the song mary did you know?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5118, RoBERTa: -0.0149
+Query: St. peter’s basilica the head of the catholic religion is located in?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5064, RoBERTa: -0.1059
+Query: Where is the screen actors guild awards being held?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5255, RoBERTa: -0.0435
+Query: Who is buried in santa croce in florence?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5261, RoBERTa: -0.0492
+Query: Who did jeff bridges play in iron man?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5096, RoBERTa: -0.0515
+Query: Who's henry's father in once upon a time?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4646, RoBERTa: 0.0449
+Query: Who sang youll never walk alone in carousel?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4977, RoBERTa: 0.0366
+Query: How many times has green bay beat the bears?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5169, RoBERTa: -0.0189
+Query: The type of thunderstorm that has the most damaging winds and precipitation is a?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4783, RoBERTa: 0.2059
+Query: When did the apple tv 4k come out?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4841, RoBERTa: 0.1318
+Query: Who wrote the first five books of moses?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5013, RoBERTa: -0.1353
+Query: What is the statue in piccadilly circus called?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4535, RoBERTa: 0.1391
+Query: When did the first black player play in the nfl?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4823, RoBERTa: 0.1736
+Query: When did ragtime flourished in the united states?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4476, RoBERTa: 0.0129
+Query: What season of greys anatomy was the plane crash?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4870, RoBERTa: 0.0655
+Query: Who wrote love and war by tamar braxton?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5163, RoBERTa: -0.0641
+Query: Largest state of south india according to areas?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4918, RoBERTa: 0.0326
+Query: Who produced sign of the times by harry styles?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4362, RoBERTa: 0.0384
+Query: How many episodes are in wolfblood season 1?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4850, RoBERTa: 0.0264
+Query: When does callie come in grey's anatomy?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4900, RoBERTa: 0.0543
+Query: When was the first hand held camera invented?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4994, RoBERTa: 0.0748
+Query: When do you buy a rosca de reyes?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4738, RoBERTa: 0.0341
+Query: How many episodes are there in season 2 of the shannara chronicles?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4896, RoBERTa: 0.0607
+Query: When did cars become more common than horses?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5093, RoBERTa: -0.0316
+Query: When did the brisbane broncos last won a premiership?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4929, RoBERTa: 0.1268
+Query: Who is the most subscribed vlogger on youtube?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4548, RoBERTa: 0.0847
+Query: How many mlb players are in the hall of fame?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4903, RoBERTa: 0.0345
+Query: What is the most played song ever on spotify?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4751, RoBERTa: 0.1871
+Query: Where is the cardiac center located in the brain?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4961, RoBERTa: 0.0656
+Query: When did the king size bed come out?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4953, RoBERTa: 0.2691
+Query: Where does the metabolic activity in a cell occur?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5168, RoBERTa: -0.1101
+Query: Who founded jamestown in what is now virginia?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4947, RoBERTa: 0.1503
+Query: Who is 30 seconds to mars touring with?
+--------------------------------------------------------------------------------

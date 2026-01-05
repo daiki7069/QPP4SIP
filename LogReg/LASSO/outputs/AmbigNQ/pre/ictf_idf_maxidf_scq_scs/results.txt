@@ -377,10 +377,10 @@ No Penalty	0.5964	0.6108	2.47e-05
     - 選択された特徴量: 4/5
     - 選択頻度:
       ✓ pre_avgidf: 100.00% (100/100)
+      ✓ pre_maxidf: 100.00% (100/100)
+      ✓ pre_maxscq: 100.00% (100/100)
       ✓ pre_simplified_clarity: 100.00% (100/100)
-      ✓ pre_maxscq: 99.00% (99/100)
-      ✓ pre_maxidf: 98.00% (98/100)
-      ✗ pre_avgictf: 27.00% (27/100)
+      ✗ pre_avgictf: 39.00% (39/100)
   Accuracy: 0.5739
   F1 Score: 0.5967
   AUC-ROC: 0.5956
@@ -485,21 +485,21 @@ LARS-CV	0.5810	0.5980	2.09e-06
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table_lars_cv.csv
 
 --- randomforest モデルを実行中 ---
-  Accuracy: 0.5420
-  F1 Score: 0.5151
-  AUC-ROC: 0.5781
-  Average Precision: 0.6135
+  Accuracy: 0.5475
+  F1 Score: 0.5222
+  AUC-ROC: 0.5707
+  Average Precision: 0.6009
 
   --- RandomForest モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: pre_avgidf (AUC = 0.5505)
-  回帰モデルのROC: AUC = 0.5781
+  回帰モデルのROC: AUC = 0.5707
 
   DeLongの検定結果:
-    モデルA (RandomForest): AUC = 0.5781
+    モデルA (RandomForest): AUC = 0.5707
     モデルB (単体指標 pre_avgidf): AUC = 0.5505
-    AUC差: 0.0276
-    Z統計量: 1.7731
-    p値: 0.0762
+    AUC差: 0.0202
+    Z統計量: 1.2930
+    p値: 0.1960
     有意差: なし (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -510,7 +510,7 @@ AvgICTF	0.5433	0.5742	-
 MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
-RandomForest	0.5781	0.6135	0.0762
+RandomForest	0.5707	0.6009	0.1960
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/delong_test_randomforest.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table_randomforest.csv
@@ -533,7 +533,7 @@ No Penalty Logistic Regression	0.5964	0.6108	2.47e-05
 BOLASSO	0.5956	0.6088	3.79e-06
 LARS-Traps	0.5810	0.5980	2.09e-06
 LARS-CV	0.5810	0.5980	2.09e-06
-Random Forest	0.5781	0.6135	0.0762
+Random Forest	0.5707	0.6009	0.1960
 
   - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comprehensive_comparison_table.csv
 

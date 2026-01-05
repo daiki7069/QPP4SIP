@@ -251,44 +251,45 @@ Average Precision差: +0.0708 (テスト 高)
   - 抽出率: 20.83%
 
   回帰モデル（QPP統合）の評価:
-    Accuracy: 0.6211
-    F1 Score: 0.6274
-    AUC-ROC: 0.6773
-    Average Precision: 0.6995
+    Accuracy: 0.6355
+    F1 Score: 0.6311
+    AUC-ROC: 0.6883
+    Average Precision: 0.6510
 
   単体指標（BERT）の評価:
     Accuracy: 0.6475
-    F1 Score: 0.6636
-    AUC-ROC: 0.7104
-    Average Precision: 0.7427
+    F1 Score: 0.6352
+    AUC-ROC: 0.7084
+    Average Precision: 0.6915
 
   QPP統合による改善度:
-    AUC-ROC改善: -0.0331
-    Average Precision改善: -0.0431
-    F1 Score改善: -0.0363
+    AUC-ROC改善: -0.0201
+    Average Precision改善: -0.0405
+    F1 Score改善: -0.0042
 
   全体データでの改善度との比較:
     全体データ - AUC改善: -0.0326
-    Confidence範囲 - AUC改善: -0.0331
-    改善度の差: -0.0004
+    Confidence範囲 - AUC改善: -0.0201
+    改善度の差: +0.0125
 
-  → Confidence範囲での改善度は全体データと同程度です。
+  ✓ QPP統合の効果は、BERTが迷った時（確率0.5付近）により大きくなっています！
+  → 「BERTが迷った時の最後の一押し（Tie-breaker）」としてQPPが有効であると主張できます。
   - Confidence Analysis結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post_bert/clarity_ns50_nqc_smv_wig_bert/csv/confidence_analysis.csv
 
 12. Overconfidence Analysis（過信分析）を実行中...
 
   False Positive (高確信度で誤分類):
-    - サンプル数: 214
-    - 回帰モデル 平均予測確率: 0.4580 (std: 0.0752)
-    - 単体指標 平均予測確率: 0.4242 (std: 0.1190)
-    - 改善度（0からの距離の減少）: -0.0338
+    - サンプル数: 204
+    - 回帰モデル 平均予測確率: 0.4695 (std: 0.0812)
+    - 単体指標 平均予測確率: 0.4472 (std: 0.1273)
+    - 改善度（0からの距離の減少）: -0.0223
     → QPP統合による改善は見られませんでした
 
   False Negative (高確信度で誤分類):
-    - サンプル数: 158
-    - 回帰モデル 平均予測確率: 0.5182 (std: 0.0730)
-    - 単体指標 平均予測確率: 0.5396 (std: 0.1302)
-    - 改善度（1からの距離の減少）: -0.0214
+    - サンプル数: 164
+    - 回帰モデル 平均予測確率: 0.5103 (std: 0.0744)
+    - 単体指標 平均予測確率: 0.5446 (std: 0.1309)
+    - 改善度（1からの距離の減少）: -0.0343
     → QPP統合による改善は見られませんでした
   - Overconfidence Analysis可視化を保存しました
   - Overconfidence Analysis結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post_bert/clarity_ns50_nqc_smv_wig_bert/csv/overconfidence_analysis.csv
@@ -448,10 +449,10 @@ No Penalty	0.6794	0.6802	0.0033
     - 選択頻度:
       ✓ clarity: 100.00% (100/100)
       ✓ bert_logit_clarification: 100.00% (100/100)
-      ✓ n_sigma_50: 92.00% (92/100)
-      ✓ wig: 81.00% (81/100)
+      ✓ wig: 84.00% (84/100)
+      ✓ n_sigma_50: 84.00% (84/100)
       ✓ nqc: 54.00% (54/100)
-      ✗ smv: 46.00% (46/100)
+      ✗ smv: 36.00% (36/100)
   Accuracy: 0.6284
   F1 Score: 0.6374
   AUC-ROC: 0.6821
@@ -559,20 +560,20 @@ LARS-CV	0.6828	0.6856	0.0100
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post_bert/clarity_ns50_nqc_smv_wig_bert/delong/comparison_table_lars_cv.csv
 
 --- randomforest モデルを実行中 ---
-  Accuracy: 0.5485
-  F1 Score: 0.5267
-  AUC-ROC: 0.5840
-  Average Precision: 0.5895
+  Accuracy: 0.5490
+  F1 Score: 0.5527
+  AUC-ROC: 0.5620
+  Average Precision: 0.5786
 
   --- RandomForest モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: bert_logit_clarification (AUC = 0.6987)
-  回帰モデルのROC: AUC = 0.5840
+  回帰モデルのROC: AUC = 0.5620
 
   DeLongの検定結果:
-    モデルA (RandomForest): AUC = 0.5840
+    モデルA (RandomForest): AUC = 0.5620
     モデルB (単体指標 bert_logit_clarification): AUC = 0.6987
-    AUC差: -0.1146
-    Z統計量: -7.9659
+    AUC差: -0.1366
+    Z統計量: -9.4563
     p値: 0.0000
     有意差: あり (α=0.05)
 
@@ -585,7 +586,7 @@ WIG	0.5535	0.5766	-
 SMV	0.5368	0.5570	-
 n(σ%)	0.5454	0.5643	-
 BERT	0.6987	0.7145	-
-RandomForest	0.5840	0.5895	1.55e-15
+RandomForest	0.5620	0.5786	0.00e+00
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post_bert/clarity_ns50_nqc_smv_wig_bert/delong/delong_test_randomforest.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post_bert/clarity_ns50_nqc_smv_wig_bert/delong/comparison_table_randomforest.csv
@@ -609,7 +610,7 @@ No Penalty Logistic Regression	0.6794	0.6802	0.0033
 BOLASSO	0.6821	0.6844	0.0061
 LARS-Traps	0.6809	0.6822	0.0044
 LARS-CV	0.6828	0.6856	0.0100
-Random Forest	0.5840	0.5895	1.55e-15
+Random Forest	0.5620	0.5786	0.00e+00
 
   - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post_bert/clarity_ns50_nqc_smv_wig_bert/delong/comprehensive_comparison_table.csv
 

@@ -1,0 +1,324 @@
+================================================================================
+Detailed Case Studies: LogReg Wins (Top 10 by Score Difference)
+================================================================================
+
+Case 1
+--------------------------------------------------------------------------------
+Query: Who wrote the song superstar by the carpenters?
+Answer: Bonnie Bramlett,Leon Russell and Delaney Bramlett, Bonnie Bramlett and Leon Russell, Delaney Bramlett
+
+Predictions:
+  RoBERTa confidence: 0.4824 (predicted: answer)
+  LogReg score: 0.5398 (predicted: clarification)
+  Score difference: 0.0574
+
+QPP Features:
+  WIG: 2.3313
+  NQC: 0.1839
+  SMV: 3.3116
+  Clarity: 2.3457
+  nSigma: 0.6434
+
+Retrieval Results (Top 5):
+  1. "A Very Fine Love"
+  2. "Superstar: The Karen Carpenter Story"
+  3. "Piano Concerto No. 23 (Mozart)"
+  4. "Superstar: The Karen Carpenter Story"
+  5. "Superstar (Delaney and Bonnie song)"
+
+Retrieval Statistics:
+  Diversity: 0.600
+  Score std: 3.096
+  Score range: 9.992
+  Has answer in top 10: False
+
+================================================================================
+
+Case 2
+--------------------------------------------------------------------------------
+Query: When was the commission fir sc/st established?
+Answer: August 1978, 2004
+
+Predictions:
+  RoBERTa confidence: 0.4622 (predicted: answer)
+  LogReg score: 0.5142 (predicted: clarification)
+  Score difference: 0.0520
+
+QPP Features:
+  WIG: 0.5799
+  NQC: 0.0516
+  SMV: 0.1690
+  Clarity: 1.1609
+  nSigma: 0.1453
+
+Retrieval Results (Top 5):
+  1. "Happily N'Ever After"
+  2. "National Consumer Disputes Redressal Commission"
+  3. "Serious Fraud Investigation Office"
+  4. "Sacred Heart of Jesus Church (Cleveland, Ohio)"
+  5. "Indian Statistical Service"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 0.733
+  Score range: 2.380
+  Has answer in top 10: False
+
+================================================================================
+
+Case 3
+--------------------------------------------------------------------------------
+Query: Who brought sam winchester back from the cage?
+Answer: Death, Dean, Dean Winchester, Jensen Ackles
+
+Predictions:
+  RoBERTa confidence: 0.4785 (predicted: answer)
+  LogReg score: 0.5240 (predicted: clarification)
+  Score difference: 0.0455
+
+QPP Features:
+  WIG: 0.7282
+  NQC: 0.0481
+  SMV: 0.2320
+  Clarity: 1.4091
+  nSigma: 0.1703
+
+Retrieval Results (Top 5):
+  1. "Sam Winchester"
+  2. "Sam Winchester"
+  3. "John Winchester (Supernatural)"
+  4. "Sam Winchester"
+  5. "Sam Winchester"
+
+Retrieval Statistics:
+  Diversity: 0.200
+  Score std: 0.598
+  Score range: 1.974
+  Has answer in top 10: False
+
+================================================================================
+
+Case 4
+--------------------------------------------------------------------------------
+Query: Who founded jamestown in what is now virginia?
+Answer: Captain John Smith, John Smith, The Virginia Company of London, London Company, Virginia Company of London, English settlement, Edward Maria Wingfield, Virginia Company of london, the Virginia Company of London
+
+Predictions:
+  RoBERTa confidence: 0.4725 (predicted: answer)
+  LogReg score: 0.5168 (predicted: clarification)
+  Score difference: 0.0443
+
+QPP Features:
+  WIG: 0.6531
+  NQC: 0.0557
+  SMV: 0.1986
+  Clarity: 1.4701
+  nSigma: 0.1576
+
+Retrieval Results (Top 5):
+  1. Consistency
+  2. "Jamestown, Virginia"
+  3. "Jamestown, Virginia"
+  4. "Holywood Rudolf Steiner School"
+  5. "Jamestown, North Carolina"
+
+Retrieval Statistics:
+  Diversity: 0.600
+  Score std: 1.381
+  Score range: 4.240
+  Has answer in top 10: False
+
+================================================================================
+
+Case 5
+--------------------------------------------------------------------------------
+Query: When is the day as long as the night?
+Answer: around 20 March, around 23 September, equinox, 23 September, 20 March, northward equinox, vernal equinox, March equinox, spring equinox, autumnal equinox, September equinox, Southward equinox, March 20, between September 21 and 24
+
+Predictions:
+  RoBERTa confidence: 0.4828 (predicted: answer)
+  LogReg score: 0.5241 (predicted: clarification)
+  Score difference: 0.0414
+
+QPP Features:
+  WIG: 3.6670
+  NQC: 0.1767
+  SMV: 6.4488
+  Clarity: 3.0408
+  nSigma: 0.8465
+
+Retrieval Results (Top 5):
+  1. "Royal Commission on the Ancient and Historical Monuments of Scotland"
+  2. Night
+  3. Daytime
+  4. Night
+  5. Wing
+
+Retrieval Statistics:
+  Diversity: 0.900
+  Score std: 0.937
+  Score range: 2.918
+  Has answer in top 10: False
+
+================================================================================
+
+Case 6
+--------------------------------------------------------------------------------
+Query: Who is the minister of health in malawi?
+Answer: Hon. Peter Kumpalume MP, Jean Kalilani, Ralph Jooma, Bingo wa Mutharika, Felton Mulli, Gloria Mwale
+
+Predictions:
+  RoBERTa confidence: 0.4804 (predicted: answer)
+  LogReg score: 0.5209 (predicted: clarification)
+  Score difference: 0.0405
+
+QPP Features:
+  WIG: 1.0119
+  NQC: 0.0799
+  SMV: 0.5012
+  Clarity: 1.6053
+  nSigma: 0.2503
+
+Retrieval Results (Top 5):
+  1. "Lidia Argondizzo"
+  2. "Maarten Dirk van Renesse van Duivenbode"
+  3. "Walk on Water (Eminem song)"
+  4. "Ministry of Health (Kenya)"
+  5. "Eddie Hayes (lawyer)"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 0.791
+  Score range: 2.580
+  Has answer in top 10: False
+
+================================================================================
+
+Case 7
+--------------------------------------------------------------------------------
+Query: Who did jeff bridges play in iron man?
+Answer: Obadiah Stane, Iron Monge
+
+Predictions:
+  RoBERTa confidence: 0.4877 (predicted: answer)
+  LogReg score: 0.5261 (predicted: clarification)
+  Score difference: 0.0385
+
+QPP Features:
+  WIG: 1.6446
+  NQC: 0.1205
+  SMV: 1.0846
+  Clarity: 1.6643
+  nSigma: 0.3682
+
+Retrieval Results (Top 5):
+  1. "Jeff Bridges"
+  2. "Transmission (magazine)"
+  3. "Iron Man (2008 film)"
+  4. "Steel (John Henry Irons)"
+  5. "Iron Man (2008 film)"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 0.979
+  Score range: 3.439
+  Has answer in top 10: False
+
+================================================================================
+
+Case 8
+--------------------------------------------------------------------------------
+Query: Who is buried in santa croce in florence?
+Answer: Michelangelo, Galileo, Machiavelli, Foscolo, Gentile, Rossini
+
+Predictions:
+  RoBERTa confidence: 0.4891 (predicted: answer)
+  LogReg score: 0.5255 (predicted: clarification)
+  Score difference: 0.0363
+
+QPP Features:
+  WIG: 0.7342
+  NQC: 0.0599
+  SMV: 0.2659
+  Clarity: 1.2373
+  nSigma: 0.1823
+
+Retrieval Results (Top 5):
+  1. "George Shearing"
+  2. "Nephila komaci"
+  3. Florence
+  4. "Santa Croce, Florence"
+  5. "Northern Pacific Railway Depot (Fargo, North Dakota)"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 2.817
+  Score range: 9.656
+  Has answer in top 10: False
+
+================================================================================
+
+Case 9
+--------------------------------------------------------------------------------
+Query: What is the statue in piccadilly circus called?
+Answer: Anteros, statue of Anteros, Shaftesbury Memorial Fountain, Eros, Statue of Anteros
+
+Predictions:
+  RoBERTa confidence: 0.4662 (predicted: answer)
+  LogReg score: 0.5013 (predicted: clarification)
+  Score difference: 0.0350
+
+QPP Features:
+  WIG: 2.4411
+  NQC: 0.1905
+  SMV: 3.9673
+  Clarity: 2.9166
+  nSigma: 0.8271
+
+Retrieval Results (Top 5):
+  1. "Piccadilly Circus"
+  2. "Nikolai Khmelnitsky"
+  3. "Piccadilly Circus"
+  4. "Piccadilly Circus in popular culture"
+  5. "Sefton Park"
+
+Retrieval Statistics:
+  Diversity: 0.600
+  Score std: 2.062
+  Score range: 6.243
+  Has answer in top 10: False
+
+================================================================================
+
+Case 10
+--------------------------------------------------------------------------------
+Query: Where is the screen actors guild awards being held?
+Answer: Los Angeles, California, Shrine Auditorium in Los Angeles, Los Angeles, the Shrine Auditorium
+
+Predictions:
+  RoBERTa confidence: 0.4735 (predicted: answer)
+  LogReg score: 0.5064 (predicted: clarification)
+  Score difference: 0.0328
+
+QPP Features:
+  WIG: 2.1361
+  NQC: 0.1393
+  SMV: 2.1886
+  Clarity: 2.2302
+  nSigma: 0.5230
+
+Retrieval Results (Top 5):
+  1. "Screen Actors Guild Award"
+  2. "Screen Actors Guild"
+  3. "The Empire Lights"
+  4. "Hu Zejun"
+  5. "Anton Bulin"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 1.744
+  Score range: 5.571
+  Has answer in top 10: False
+
+================================================================================
+

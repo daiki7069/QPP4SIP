@@ -9,4 +9,4 @@ AvgICTF,0.5433,0.5742,-
 MaxIDF,0.5374,0.5745,-
 MaxSCQ,0.5409,0.5737,-
 Simplified Clarity,0.5374,0.5703,-
-RandomForest,0.5451,0.5670,0.6268
+RandomForest,0.5368,0.5563,0.3301

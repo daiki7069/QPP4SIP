@@ -1,0 +1,43 @@
+{
+  "total_entries": 2002,
+  "filtered_entries": 1172,
+  "qa_pairs_distribution": {
+    "1 QA pair": 830,
+    "4+ QA pairs": 587,
+    "2 QA pairs": 397,
+    "3 QA pairs": 188
+  },
+  "filtered_qa_pairs_distribution": {
+    "4+ QA pairs": 587,
+    "2 QA pairs": 397,
+    "3 QA pairs": 188
+  },
+  "correlations": [
+    {
+      "Score": "QPP",
+      "Pearson_r": 0.03771586785065515,
+      "Pearson_p": 0.19695879993478863,
+      "Spearman_rho": 0.09986334950723817,
+      "Spearman_p": 0.0006177847923535587,
+      "N": 1172
+    },
+    {
+      "Score": "BERT",
+      "Pearson_r": -0.04489359340189173,
+      "Pearson_p": 0.12452770364169986,
+      "Spearman_rho": -0.05585222371732154,
+      "Spearman_p": 0.05593727322534163,
+      "N": 1172
+    },
+    {
+      "Score": "Integrated",
+      "Pearson_r": 0.03456322798817755,
+      "Pearson_p": 0.2370688503455559,
+      "Spearman_rho": -0.016043764097457783,
+      "Spearman_p": 0.5832118730570858,
+      "N": 1172
+    }
+  ],
+  "threshold_percentile": 75.0,
+  "note": "Analysis follows prior work: QPP uses NQC only, filtered to 1+ QA pairs"
+}

@@ -1,0 +1,324 @@
+================================================================================
+Detailed Case Studies: LogReg Wins (Top 10 by Score Difference)
+================================================================================
+
+Case 1
+--------------------------------------------------------------------------------
+Query: When was the clock tower in london built?
+Answer: 1846, 1902, 31 May 1859, 1851, 1892, 1868
+
+Predictions:
+  RoBERTa confidence: 0.3916 (predicted: answer)
+  LogReg score: 0.5100 (predicted: clarification)
+  Score difference: 0.1184
+
+QPP Features:
+  WIG: 2.4954
+  NQC: 0.0242
+  SMV: 3.4259
+  Clarity: 1.4945
+  nSigma: 0.6544
+
+Retrieval Results (Top 5):
+  1. "City of London"
+  2. "Victoria Tower"
+  3. "London King's Cross railway station"
+  4. "Architecture of Mumbai"
+  5. "Cornhill, London"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 0.306
+  Score range: 0.790
+  Has answer in top 10: False
+
+================================================================================
+
+Case 2
+--------------------------------------------------------------------------------
+Query: For whom was the battle of king's mountain a victory?
+Answer: Patriot militia, Patriot, James Johnston, Joseph Winston, Benjamin Cleveland, Frederick Hambright, Joseph McDowell, Isaac Shelby, John Sevier, James Williams, William Campbell, William Chronicle
+
+Predictions:
+  RoBERTa confidence: 0.4804 (predicted: answer)
+  LogReg score: 0.5864 (predicted: clarification)
+  Score difference: 0.1061
+
+QPP Features:
+  WIG: 2.1401
+  NQC: 0.0278
+  SMV: 3.8493
+  Clarity: 1.2671
+  nSigma: 0.6937
+
+Retrieval Results (Top 5):
+  1. "Battle of Kings Mountain"
+  2. "Battle of Kings Mountain"
+  3. "Louisiana Hayride"
+  4. "Battle of Kings Mountain"
+  5. "Oriana Cinema"
+
+Retrieval Statistics:
+  Diversity: 0.700
+  Score std: 0.424
+  Score range: 1.317
+  Has answer in top 10: False
+
+================================================================================
+
+Case 3
+--------------------------------------------------------------------------------
+Query: Who was the 31st president of the united states of america?
+Answer: Herbert Hoover, Herbert Clark Hoover
+
+Predictions:
+  RoBERTa confidence: 0.4824 (predicted: answer)
+  LogReg score: 0.5857 (predicted: clarification)
+  Score difference: 0.1033
+
+QPP Features:
+  WIG: 3.0285
+  NQC: 0.0358
+  SMV: 6.6386
+  Clarity: 1.2569
+  nSigma: 0.9109
+
+Retrieval Results (Top 5):
+  1. "Presidents of the United States on U.S. postage stamps"
+  2. "Jimmy Carter"
+  3. "Fearless (1993 film)"
+  4. "Presidents of the United States on U.S. postage stamps"
+  5. Hyperinflation
+
+Retrieval Statistics:
+  Diversity: 0.900
+  Score std: 1.004
+  Score range: 3.541
+  Has answer in top 10: False
+
+================================================================================
+
+Case 4
+--------------------------------------------------------------------------------
+Query: Ratio of length and width of indian flag?
+Answer: two by three, 2:3, 2/3, length 1.5 times width
+
+Predictions:
+  RoBERTa confidence: 0.4622 (predicted: answer)
+  LogReg score: 0.5620 (predicted: clarification)
+  Score difference: 0.0998
+
+QPP Features:
+  WIG: 3.5734
+  NQC: 0.0313
+  SMV: 5.2703
+  Clarity: 1.3015
+  nSigma: 0.8117
+
+Retrieval Results (Top 5):
+  1. "Phocylides (crater)"
+  2. "Flag of India"
+  3. "Flag of India"
+  4. "Flag code of India"
+  5. "Flag of Pakistan"
+
+Retrieval Statistics:
+  Diversity: 0.600
+  Score std: 1.216
+  Score range: 3.761
+  Has answer in top 10: False
+
+================================================================================
+
+Case 5
+--------------------------------------------------------------------------------
+Query: Who played smith jared in sex and the city?
+Answer: Jason Lewis
+
+Predictions:
+  RoBERTa confidence: 0.4571 (predicted: answer)
+  LogReg score: 0.5554 (predicted: clarification)
+  Score difference: 0.0983
+
+QPP Features:
+  WIG: 2.6042
+  NQC: 0.0217
+  SMV: 3.2305
+  Clarity: 1.4615
+  nSigma: 0.6355
+
+Retrieval Results (Top 5):
+  1. "Jason Lewis (actor)"
+  2. "Riki Rachtman"
+  3. "Ōtoyo, Kōchi"
+  4. "Candaba, Pampanga"
+  5. "Samantha Jones (Sex and the City)"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 3.073
+  Score range: 8.156
+  Has answer in top 10: False
+
+================================================================================
+
+Case 6
+--------------------------------------------------------------------------------
+Query: Who was crucified on an x shaped cross?
+Answer: Andrew the Apostle, Saint Andrew, Eulària, Aulazia, Saint Eulalia, Olalla, Aulaire
+
+Predictions:
+  RoBERTa confidence: 0.4735 (predicted: answer)
+  LogReg score: 0.5697 (predicted: clarification)
+  Score difference: 0.0962
+
+QPP Features:
+  WIG: 1.2263
+  NQC: 0.0162
+  SMV: 1.4042
+  Clarity: 1.4686
+  nSigma: 0.4190
+
+Retrieval Results (Top 5):
+  1. "Andrew the Apostle"
+  2. "McKusick–Kaufman syndrome"
+  3. "Instrument of Jesus' crucifixion"
+  4. "Saint Tiburtius"
+  5. "Nadine Ramkisson"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 0.602
+  Score range: 1.708
+  Has answer in top 10: False
+
+================================================================================
+
+Case 7
+--------------------------------------------------------------------------------
+Query: Who voices lindas mom in bob's burgers?
+Answer: Renée Taylor, Renee Taylor
+
+Predictions:
+  RoBERTa confidence: 0.4785 (predicted: answer)
+  LogReg score: 0.5733 (predicted: clarification)
+  Score difference: 0.0948
+
+QPP Features:
+  WIG: 2.4057
+  NQC: 0.0204
+  SMV: 2.5727
+  Clarity: 1.3470
+  nSigma: 0.5671
+
+Retrieval Results (Top 5):
+  1. "Whitey Morgan and the 78's"
+  2. "Kristen Schaal"
+  3. "Irina Embrich"
+  4. "Bob's Burgers"
+  5. "Alison LaPlaca"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 3.225
+  Score range: 9.737
+  Has answer in top 10: False
+
+================================================================================
+
+Case 8
+--------------------------------------------------------------------------------
+Query: As blues moved into chicago's south side what style of blues developed?
+Answer: Chicago blues, British blues, gospelized rhythm and blues, soul, Soul music
+
+Predictions:
+  RoBERTa confidence: 0.4828 (predicted: answer)
+  LogReg score: 0.5774 (predicted: clarification)
+  Score difference: 0.0946
+
+QPP Features:
+  WIG: 2.8482
+  NQC: 0.0318
+  SMV: 5.8992
+  Clarity: 1.4349
+  nSigma: 0.8096
+
+Retrieval Results (Top 5):
+  1. "Kōwhai"
+  2. "Origins of the blues"
+  3. "Chicago blues"
+  4. "New Orleans blues"
+  5. "Music of Chicago"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 1.105
+  Score range: 3.483
+  Has answer in top 10: False
+
+================================================================================
+
+Case 9
+--------------------------------------------------------------------------------
+Query: Who plays avery in when we first met?
+Answer: Alexandra Daddario, Alexandra Anna Daddario, Daddario
+
+Predictions:
+  RoBERTa confidence: 0.4850 (predicted: answer)
+  LogReg score: 0.5744 (predicted: clarification)
+  Score difference: 0.0894
+
+QPP Features:
+  WIG: 4.3171
+  NQC: 0.0407
+  SMV: 9.6979
+  Clarity: 1.3058
+  nSigma: 1.1010
+
+Retrieval Results (Top 5):
+  1. "2016 Racquetball World Championships – Women's Singles"
+  2. "When We First Met"
+  3. Khonani
+  4. "Melissa Francis"
+  5. "The Return of Avery Jessup"
+
+Retrieval Statistics:
+  Diversity: 0.800
+  Score std: 1.081
+  Score range: 3.585
+  Has answer in top 10: False
+
+================================================================================
+
+Case 10
+--------------------------------------------------------------------------------
+Query: Who sang i can't let maggie go?
+Answer: Honeybus, Equipe 84, J. Vincent Edwards, the Sideburns, Sideburns, David Essex OBE, David Albert Cook, David Essex
+
+Predictions:
+  RoBERTa confidence: 0.4615 (predicted: answer)
+  LogReg score: 0.5450 (predicted: clarification)
+  Score difference: 0.0834
+
+QPP Features:
+  WIG: 2.0634
+  NQC: 0.0217
+  SMV: 2.2401
+  Clarity: 1.3276
+  nSigma: 0.5292
+
+Retrieval Results (Top 5):
+  1. Theppothsava
+  2. "I Can't Let Maggie Go"
+  3. "House of Argavieso"
+  4. "Rampurhat II"
+  5. "Water supply and sanitation in Hong Kong"
+
+Retrieval Statistics:
+  Diversity: 1.000
+  Score std: 3.011
+  Score range: 10.407
+  Has answer in top 10: False
+
+================================================================================
+

@@ -1,0 +1,501 @@
+NSP top_k値: 50 (trainとdevで共通)
+
+================================================================================
+実験設定: pre (特徴量: pre)
+================================================================================
+データを読み込み中...
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=4747, ラベル0=0, ラベル1=4747
+  directAnswer: 総数=5289, ラベル0=5289, ラベル1=0
+総ラベル分布: 0=5289, 1=4747
+
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=1070, ラベル0=0, ラベル1=1070
+  directAnswer: 総数=932, ラベル0=932, ラベル1=0
+総ラベル分布: 0=932, 1=1070
+
+Loaded 10036 pre_avgidf scores for train
+Loaded 10036 pre_avgictf scores for train
+Loaded 10036 pre_maxidf scores for train
+Loaded 10036 pre_maxscq scores for train
+Loaded 10036 pre_simplified_clarity scores for train
+Loaded 2002 pre_avgidf scores for dev
+Loaded 2002 pre_avgictf scores for dev
+Loaded 2002 pre_maxidf scores for dev
+Loaded 2002 pre_maxscq scores for dev
+Loaded 2002 pre_simplified_clarity scores for dev
+  結合データ: 12038 サンプル, 5 特徴量
+  ラベル分布: {0: 6221, 1: 5817} (正例率: 0.4832)
+  [pre] none モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5882
+    Fold 2/10: AUC = 0.5693
+    Fold 3/10: AUC = 0.5826
+    Fold 4/10: AUC = 0.5615
+    Fold 5/10: AUC = 0.6328
+    Fold 6/10: AUC = 0.6135
+    Fold 7/10: AUC = 0.5730
+    Fold 8/10: AUC = 0.5938
+    Fold 9/10: AUC = 0.5937
+    Fold 10/10: AUC = 0.5765
+  [pre] l1 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5852
+    Fold 2/10: AUC = 0.5715
+    Fold 3/10: AUC = 0.5856
+    Fold 4/10: AUC = 0.5607
+    Fold 5/10: AUC = 0.6314
+    Fold 6/10: AUC = 0.6116
+    Fold 7/10: AUC = 0.5720
+    Fold 8/10: AUC = 0.5951
+    Fold 9/10: AUC = 0.5936
+    Fold 10/10: AUC = 0.5796
+  [pre] l2 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5646
+    Fold 2/10: AUC = 0.5642
+    Fold 3/10: AUC = 0.5902
+    Fold 4/10: AUC = 0.5533
+    Fold 5/10: AUC = 0.6160
+    Fold 6/10: AUC = 0.5946
+    Fold 7/10: AUC = 0.5642
+    Fold 8/10: AUC = 0.5846
+    Fold 9/10: AUC = 0.5826
+    Fold 10/10: AUC = 0.5834
+  [pre] elasticnet モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5709
+    Fold 2/10: AUC = 0.5665
+    Fold 3/10: AUC = 0.5912
+    Fold 4/10: AUC = 0.5565
+    Fold 5/10: AUC = 0.6222
+    Fold 6/10: AUC = 0.6005
+    Fold 7/10: AUC = 0.5676
+    Fold 8/10: AUC = 0.5887
+    Fold 9/10: AUC = 0.5874
+    Fold 10/10: AUC = 0.5837
+
+================================================================================
+実験設定: post (特徴量: post)
+================================================================================
+データを読み込み中...
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=4747, ラベル0=0, ラベル1=4747
+  directAnswer: 総数=5289, ラベル0=5289, ラベル1=0
+総ラベル分布: 0=5289, 1=4747
+
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=1070, ラベル0=0, ラベル1=1070
+  directAnswer: 総数=932, ラベル0=932, ラベル1=0
+総ラベル分布: 0=932, 1=1070
+
+Loaded 10036 nqc scores for train
+Loaded 10036 clarity scores for train
+Loaded 10036 wig scores for train
+Loaded 10036 smv scores for train
+Loaded 10036 n_sigma_50 scores for train
+Loaded 2002 nqc scores for dev
+Loaded 2002 clarity scores for dev
+Loaded 2002 wig scores for dev
+Loaded 2002 smv scores for dev
+Loaded 2002 n_sigma_50 scores for dev
+  結合データ: 12038 サンプル, 5 特徴量
+  ラベル分布: {0: 6221, 1: 5817} (正例率: 0.4832)
+  [post] none モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.4969
+    Fold 2/10: AUC = 0.5198
+    Fold 3/10: AUC = 0.5045
+    Fold 4/10: AUC = 0.5454
+    Fold 5/10: AUC = 0.5179
+    Fold 6/10: AUC = 0.5329
+    Fold 7/10: AUC = 0.5191
+    Fold 8/10: AUC = 0.5163
+    Fold 9/10: AUC = 0.5425
+    Fold 10/10: AUC = 0.4965
+  [post] l1 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.4993
+    Fold 2/10: AUC = 0.5055
+    Fold 3/10: AUC = 0.4983
+    Fold 4/10: AUC = 0.5405
+    Fold 5/10: AUC = 0.5150
+    Fold 6/10: AUC = 0.5321
+    Fold 7/10: AUC = 0.5050
+    Fold 8/10: AUC = 0.5120
+    Fold 9/10: AUC = 0.5615
+    Fold 10/10: AUC = 0.5021
+  [post] l2 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.4978
+    Fold 2/10: AUC = 0.5091
+    Fold 3/10: AUC = 0.4986
+    Fold 4/10: AUC = 0.5425
+    Fold 5/10: AUC = 0.5179
+    Fold 6/10: AUC = 0.5328
+    Fold 7/10: AUC = 0.5074
+    Fold 8/10: AUC = 0.5151
+    Fold 9/10: AUC = 0.5620
+    Fold 10/10: AUC = 0.5004
+  [post] elasticnet モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.4990
+    Fold 2/10: AUC = 0.5070
+    Fold 3/10: AUC = 0.4981
+    Fold 4/10: AUC = 0.5408
+    Fold 5/10: AUC = 0.5166
+    Fold 6/10: AUC = 0.5318
+    Fold 7/10: AUC = 0.5055
+    Fold 8/10: AUC = 0.5134
+    Fold 9/10: AUC = 0.5633
+    Fold 10/10: AUC = 0.5013
+
+================================================================================
+実験設定: pre_post (特徴量: pre, post)
+================================================================================
+データを読み込み中...
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=4747, ラベル0=0, ラベル1=4747
+  directAnswer: 総数=5289, ラベル0=5289, ラベル1=0
+総ラベル分布: 0=5289, 1=4747
+
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=1070, ラベル0=0, ラベル1=1070
+  directAnswer: 総数=932, ラベル0=932, ラベル1=0
+総ラベル分布: 0=932, 1=1070
+
+Loaded 10036 nqc scores for train
+Loaded 10036 clarity scores for train
+Loaded 10036 wig scores for train
+Loaded 10036 smv scores for train
+Loaded 10036 n_sigma_50 scores for train
+Loaded 2002 nqc scores for dev
+Loaded 2002 clarity scores for dev
+Loaded 2002 wig scores for dev
+Loaded 2002 smv scores for dev
+Loaded 2002 n_sigma_50 scores for dev
+Loaded 10036 pre_avgidf scores for train
+Loaded 10036 pre_avgictf scores for train
+Loaded 10036 pre_maxidf scores for train
+Loaded 10036 pre_maxscq scores for train
+Loaded 10036 pre_simplified_clarity scores for train
+Loaded 2002 pre_avgidf scores for dev
+Loaded 2002 pre_avgictf scores for dev
+Loaded 2002 pre_maxidf scores for dev
+Loaded 2002 pre_maxscq scores for dev
+Loaded 2002 pre_simplified_clarity scores for dev
+  結合データ: 12038 サンプル, 10 特徴量
+  ラベル分布: {0: 6221, 1: 5817} (正例率: 0.4832)
+  [pre_post] none モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5866
+    Fold 2/10: AUC = 0.5674
+    Fold 3/10: AUC = 0.5795
+    Fold 4/10: AUC = 0.5646
+    Fold 5/10: AUC = 0.6311
+    Fold 6/10: AUC = 0.6163
+    Fold 7/10: AUC = 0.5751
+    Fold 8/10: AUC = 0.5914
+    Fold 9/10: AUC = 0.5931
+    Fold 10/10: AUC = 0.5730
+  [pre_post] l1 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5835
+    Fold 2/10: AUC = 0.5670
+    Fold 3/10: AUC = 0.5848
+    Fold 4/10: AUC = 0.5634
+    Fold 5/10: AUC = 0.6301
+    Fold 6/10: AUC = 0.6140
+    Fold 7/10: AUC = 0.5740
+    Fold 8/10: AUC = 0.5921
+    Fold 9/10: AUC = 0.5937
+    Fold 10/10: AUC = 0.5777
+  [pre_post] l2 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5604
+    Fold 2/10: AUC = 0.5610
+    Fold 3/10: AUC = 0.5876
+    Fold 4/10: AUC = 0.5606
+    Fold 5/10: AUC = 0.6130
+    Fold 6/10: AUC = 0.5982
+    Fold 7/10: AUC = 0.5664
+    Fold 8/10: AUC = 0.5804
+    Fold 9/10: AUC = 0.5834
+    Fold 10/10: AUC = 0.5791
+  [pre_post] elasticnet モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5680
+    Fold 2/10: AUC = 0.5637
+    Fold 3/10: AUC = 0.5891
+    Fold 4/10: AUC = 0.5628
+    Fold 5/10: AUC = 0.6188
+    Fold 6/10: AUC = 0.6038
+    Fold 7/10: AUC = 0.5698
+    Fold 8/10: AUC = 0.5846
+    Fold 9/10: AUC = 0.5889
+    Fold 10/10: AUC = 0.5797
+
+================================================================================
+実験設定: pre_post_bert (特徴量: pre, post, bert)
+================================================================================
+データを読み込み中...
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=4747, ラベル0=0, ラベル1=4747
+  directAnswer: 総数=5289, ラベル0=5289, ラベル1=0
+総ラベル分布: 0=5289, 1=4747
+
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=1070, ラベル0=0, ラベル1=1070
+  directAnswer: 総数=932, ラベル0=932, ラベル1=0
+総ラベル分布: 0=932, 1=1070
+
+Loaded 10036 nqc scores for train
+Loaded 10036 clarity scores for train
+Loaded 10036 wig scores for train
+Loaded 10036 smv scores for train
+Loaded 10036 n_sigma_50 scores for train
+Loaded 2002 nqc scores for dev
+Loaded 2002 clarity scores for dev
+Loaded 2002 wig scores for dev
+Loaded 2002 smv scores for dev
+Loaded 2002 n_sigma_50 scores for dev
+Loaded 10036 pre_avgidf scores for train
+Loaded 10036 pre_avgictf scores for train
+Loaded 10036 pre_maxidf scores for train
+Loaded 10036 pre_maxscq scores for train
+Loaded 10036 pre_simplified_clarity scores for train
+Loaded 2002 pre_avgidf scores for dev
+Loaded 2002 pre_avgictf scores for dev
+Loaded 2002 pre_maxidf scores for dev
+Loaded 2002 pre_maxscq scores for dev
+Loaded 2002 pre_simplified_clarity scores for dev
+Warning: /home/daiki_shibata/pj/QPP4SIP/SIP/FT-PLM/output/AmbigNQ/bert/train_with_predictions.json not found, skipping bert
+  → 実験ディレクトリが存在しないか、ファイル名が異なります
+Warning: No available base experiments found. Returning empty base_scores.
+Warning: /home/daiki_shibata/pj/QPP4SIP/SIP/FT-PLM/output/AmbigNQ/bert/dev_with_predictions.json not found, skipping bert
+  → 実験ディレクトリが存在しないか、ファイル名が異なります
+Warning: No available base experiments found. Returning empty base_scores.
+  結合データ: 12038 サンプル, 10 特徴量
+  ラベル分布: {0: 6221, 1: 5817} (正例率: 0.4832)
+  [pre_post_bert] none モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5866
+    Fold 2/10: AUC = 0.5674
+    Fold 3/10: AUC = 0.5795
+    Fold 4/10: AUC = 0.5646
+    Fold 5/10: AUC = 0.6311
+    Fold 6/10: AUC = 0.6163
+    Fold 7/10: AUC = 0.5751
+    Fold 8/10: AUC = 0.5914
+    Fold 9/10: AUC = 0.5931
+    Fold 10/10: AUC = 0.5730
+  [pre_post_bert] l1 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5835
+    Fold 2/10: AUC = 0.5670
+    Fold 3/10: AUC = 0.5848
+    Fold 4/10: AUC = 0.5634
+    Fold 5/10: AUC = 0.6301
+    Fold 6/10: AUC = 0.6140
+    Fold 7/10: AUC = 0.5740
+    Fold 8/10: AUC = 0.5921
+    Fold 9/10: AUC = 0.5937
+    Fold 10/10: AUC = 0.5777
+  [pre_post_bert] l2 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5604
+    Fold 2/10: AUC = 0.5610
+    Fold 3/10: AUC = 0.5876
+    Fold 4/10: AUC = 0.5606
+    Fold 5/10: AUC = 0.6130
+    Fold 6/10: AUC = 0.5982
+    Fold 7/10: AUC = 0.5664
+    Fold 8/10: AUC = 0.5804
+    Fold 9/10: AUC = 0.5834
+    Fold 10/10: AUC = 0.5791
+  [pre_post_bert] elasticnet モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5680
+    Fold 2/10: AUC = 0.5637
+    Fold 3/10: AUC = 0.5891
+    Fold 4/10: AUC = 0.5628
+    Fold 5/10: AUC = 0.6188
+    Fold 6/10: AUC = 0.6038
+    Fold 7/10: AUC = 0.5698
+    Fold 8/10: AUC = 0.5846
+    Fold 9/10: AUC = 0.5889
+    Fold 10/10: AUC = 0.5797
+
+================================================================================
+実験設定: pre_post_roberta (特徴量: pre, post, roberta)
+================================================================================
+データを読み込み中...
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=4747, ラベル0=0, ラベル1=4747
+  directAnswer: 総数=5289, ラベル0=5289, ラベル1=0
+総ラベル分布: 0=5289, 1=4747
+
+
+【ラベル抽出のデバッグ情報】
+response_type別の分布:
+  clarification: 総数=1070, ラベル0=0, ラベル1=1070
+  directAnswer: 総数=932, ラベル0=932, ラベル1=0
+総ラベル分布: 0=932, 1=1070
+
+Loaded 10036 nqc scores for train
+Loaded 10036 clarity scores for train
+Loaded 10036 wig scores for train
+Loaded 10036 smv scores for train
+Loaded 10036 n_sigma_50 scores for train
+Loaded 2002 nqc scores for dev
+Loaded 2002 clarity scores for dev
+Loaded 2002 wig scores for dev
+Loaded 2002 smv scores for dev
+Loaded 2002 n_sigma_50 scores for dev
+Loaded 10036 pre_avgidf scores for train
+Loaded 10036 pre_avgictf scores for train
+Loaded 10036 pre_maxidf scores for train
+Loaded 10036 pre_maxscq scores for train
+Loaded 10036 pre_simplified_clarity scores for train
+Loaded 2002 pre_avgidf scores for dev
+Loaded 2002 pre_avgictf scores for dev
+Loaded 2002 pre_maxidf scores for dev
+Loaded 2002 pre_maxscq scores for dev
+Loaded 2002 pre_simplified_clarity scores for dev
+Warning: /home/daiki_shibata/pj/QPP4SIP/SIP/FT-PLM/output/AmbigNQ/roberta/train_with_predictions.json not found, skipping roberta
+  → 実験ディレクトリが存在しないか、ファイル名が異なります
+Warning: No available base experiments found. Returning empty base_scores.
+Warning: /home/daiki_shibata/pj/QPP4SIP/SIP/FT-PLM/output/AmbigNQ/roberta/dev_with_predictions.json not found, skipping roberta
+  → 実験ディレクトリが存在しないか、ファイル名が異なります
+Warning: No available base experiments found. Returning empty base_scores.
+  結合データ: 12038 サンプル, 10 特徴量
+  ラベル分布: {0: 6221, 1: 5817} (正例率: 0.4832)
+  [pre_post_roberta] none モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5866
+    Fold 2/10: AUC = 0.5674
+    Fold 3/10: AUC = 0.5795
+    Fold 4/10: AUC = 0.5646
+    Fold 5/10: AUC = 0.6311
+    Fold 6/10: AUC = 0.6163
+    Fold 7/10: AUC = 0.5751
+    Fold 8/10: AUC = 0.5914
+    Fold 9/10: AUC = 0.5931
+    Fold 10/10: AUC = 0.5730
+  [pre_post_roberta] l1 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5835
+    Fold 2/10: AUC = 0.5670
+    Fold 3/10: AUC = 0.5848
+    Fold 4/10: AUC = 0.5634
+    Fold 5/10: AUC = 0.6301
+    Fold 6/10: AUC = 0.6140
+    Fold 7/10: AUC = 0.5740
+    Fold 8/10: AUC = 0.5921
+    Fold 9/10: AUC = 0.5937
+    Fold 10/10: AUC = 0.5777
+  [pre_post_roberta] l2 モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5604
+    Fold 2/10: AUC = 0.5610
+    Fold 3/10: AUC = 0.5876
+    Fold 4/10: AUC = 0.5606
+    Fold 5/10: AUC = 0.6130
+    Fold 6/10: AUC = 0.5982
+    Fold 7/10: AUC = 0.5664
+    Fold 8/10: AUC = 0.5804
+    Fold 9/10: AUC = 0.5834
+    Fold 10/10: AUC = 0.5791
+  [pre_post_roberta] elasticnet モデルで10-fold CVを実行中...
+    Fold 1/10: AUC = 0.5680
+    Fold 2/10: AUC = 0.5637
+    Fold 3/10: AUC = 0.5891
+    Fold 4/10: AUC = 0.5628
+    Fold 5/10: AUC = 0.6188
+    Fold 6/10: AUC = 0.6038
+    Fold 7/10: AUC = 0.5698
+    Fold 8/10: AUC = 0.5846
+    Fold 9/10: AUC = 0.5889
+    Fold 10/10: AUC = 0.5797
+
+================================================================================
+結果を保存しました: outputs/AmbigNQ/statistical_evaluation/eval_results_bm25.csv
+================================================================================
+
+データ形状: (1800, 5)
+
+最初の10行:
+   fold_id    system_name  auc_score feature_setting retrieval_method
+0        1  Integrated_LR   0.588238             pre             bm25
+1        1         AvgIDF   0.543540             pre             bm25
+2        1        AvgICTF   0.532957             pre             bm25
+3        1         MaxIDF   0.536466             pre             bm25
+4        1         MaxSCQ   0.515102             pre             bm25
+5        1       SClarity   0.530042             pre             bm25
+6        2  Integrated_LR   0.569295             pre             bm25
+7        2         AvgIDF   0.540190             pre             bm25
+8        2        AvgICTF   0.532511             pre             bm25
+9        2         MaxIDF   0.526845             pre             bm25
+
+統計情報:
+                                                     mean       std  count
+retrieval_method feature_setting  system_name                             
+bm25             post             Clarity        0.495447  0.018797     40
+                                  Integrated_EN  0.517669  0.021334     10
+                                  Integrated_L1  0.517126  0.020935     10
+                                  Integrated_L2  0.518367  0.021212     10
+                                  Integrated_LR  0.519200  0.017178     10
+                                  NQC            0.487002  0.016019     40
+                                  SMV            0.498889  0.019878     40
+                                  WIG            0.500117  0.020134     40
+                                  nSigma         0.505915  0.019275     40
+                 pre              AvgICTF        0.550263  0.014766     40
+                                  AvgIDF         0.557973  0.015107     40
+                                  Integrated_EN  0.583505  0.019201     10
+                                  Integrated_L1  0.588631  0.020772     10
+                                  Integrated_L2  0.579770  0.018574     10
+                                  Integrated_LR  0.588497  0.021513     10
+                                  MaxIDF         0.539525  0.009514     40
+                                  MaxSCQ         0.537207  0.015982     40
+                                  SClarity       0.547262  0.014613     40
+                 pre_post         AvgICTF        0.550263  0.014766     40
+                                  AvgIDF         0.557973  0.015107     40
+                                  Clarity        0.495447  0.018797     40
+                                  Integrated_EN  0.582914  0.018196     10
+                                  Integrated_L1  0.588021  0.020753     10
+                                  Integrated_L2  0.579009  0.017575     10
+                                  Integrated_LR  0.587800  0.021423     10
+                                  MaxIDF         0.539525  0.009514     40
+                                  MaxSCQ         0.537207  0.015982     40
+                                  NQC            0.487002  0.016019     40
+                                  SClarity       0.547262  0.014613     40
+                                  SMV            0.498889  0.019878     40
+                                  WIG            0.500117  0.020134     40
+                                  nSigma         0.505915  0.019275     40
+                 pre_post_bert    AvgICTF        0.550263  0.014766     40
+                                  AvgIDF         0.557973  0.015107     40
+                                  Clarity        0.495447  0.018797     40
+                                  Integrated_EN  0.582914  0.018196     10
+                                  Integrated_L1  0.588021  0.020753     10
+                                  Integrated_L2  0.579009  0.017575     10
+                                  Integrated_LR  0.587800  0.021423     10
+                                  MaxIDF         0.539525  0.009514     40
+                                  MaxSCQ         0.537207  0.015982     40
+                                  NQC            0.487002  0.016019     40
+                                  SClarity       0.547262  0.014613     40
+                                  SMV            0.498889  0.019878     40
+                                  WIG            0.500117  0.020134     40
+                                  nSigma         0.505915  0.019275     40
+                 pre_post_roberta AvgICTF        0.550263  0.014766     40
+                                  AvgIDF         0.557973  0.015107     40
+                                  Clarity        0.495447  0.018797     40
+                                  Integrated_EN  0.582914  0.018196     10
+                                  Integrated_L1  0.588021  0.020753     10
+                                  Integrated_L2  0.579009  0.017575     10
+                                  Integrated_LR  0.587800  0.021423     10
+                                  MaxIDF         0.539525  0.009514     40
+                                  MaxSCQ         0.537207  0.015982     40
+                                  NQC            0.487002  0.016019     40
+                                  SClarity       0.547262  0.014613     40
+                                  SMV            0.498889  0.019878     40
+                                  WIG            0.500117  0.020134     40
+                                  nSigma         0.505915  0.019275     40

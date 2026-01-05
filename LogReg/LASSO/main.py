@@ -613,7 +613,7 @@ def main():
         
         # 特徴量名に基づいて出力ディレクトリとファイルパスを設定
         feature_names = list(X_combined.columns)
-        feature_dir_name = get_feature_dir_name(feature_names)
+        feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
         feature_output_dir = output_dir / feature_dir_name
         feature_output_dir.mkdir(parents=True, exist_ok=True)
         # サブフォルダを作成
@@ -1084,7 +1084,7 @@ def main():
         # 予測結果を保存（DeLongの検定用、CV統合データ）
         if args.delong_test:
             feature_names = list(X_combined.columns)
-            feature_dir_name = get_feature_dir_name(feature_names)
+            feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
             feature_output_dir = output_dir / feature_dir_name
             feature_output_dir.mkdir(parents=True, exist_ok=True)
             # サブフォルダを作成
@@ -1099,7 +1099,7 @@ def main():
         
         # 特徴量名に基づいて出力ディレクトリとファイルパスを設定
         feature_names = list(X_train_norm.columns)
-        feature_dir_name = get_feature_dir_name(feature_names)
+        feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
         feature_output_dir = output_dir / feature_dir_name
         feature_output_dir.mkdir(parents=True, exist_ok=True)
         # サブフォルダを作成
@@ -1257,7 +1257,7 @@ def main():
         
         # 係数をCSVファイルとして保存
         feature_names = list(X_train_norm.columns)
-        feature_dir_name = get_feature_dir_name(feature_names)
+        feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
         feature_output_dir = output_dir / feature_dir_name
         feature_output_dir.mkdir(parents=True, exist_ok=True)
         # サブフォルダを作成
@@ -1588,7 +1588,7 @@ def main():
     feature_names = list(X_train_norm.columns)
     
     # 特徴量名に基づいて出力ディレクトリとファイルパスを設定
-    feature_dir_name = get_feature_dir_name(feature_names)
+    feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
     feature_output_dir = output_dir / feature_dir_name
     feature_output_dir.mkdir(parents=True, exist_ok=True)
     # サブフォルダを作成
@@ -2523,7 +2523,7 @@ def main():
                         print_and_save("\n" + comparison_df.to_csv(sep='\t', index=False))
                         
                         # 結果を保存（delongディレクトリに）
-                        feature_dir_name = get_feature_dir_name(feature_names)
+                        feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
                         delong_dir = output_dir / feature_dir_name / "delong"
                         delong_dir.mkdir(parents=True, exist_ok=True)
                         delong_result_path = delong_dir / f"delong_test_{model_type}.csv"
@@ -2545,7 +2545,7 @@ def main():
             
             # results.csvを生成（統合指標としてLogReg, L1, L2, ENetのみ）
             print_and_save("\n=== results.csvを生成中 ===")
-            feature_dir_name = get_feature_dir_name(feature_names)
+            feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
             feature_output_dir = output_dir / feature_dir_name
             csv_dir = feature_output_dir / "csv"
             csv_dir.mkdir(parents=True, exist_ok=True)
@@ -2787,7 +2787,7 @@ def main():
                         print_and_save("\n" + comparison_df.to_csv(sep='\t', index=False))
                         
                         # 結果を保存（delongディレクトリに）
-                        feature_dir_name = get_feature_dir_name(feature_names)
+                        feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
                         delong_dir = output_dir / feature_dir_name / "delong"
                         delong_dir.mkdir(parents=True, exist_ok=True)
                         delong_result_path = delong_dir / f"delong_test_{model_type}.csv"
@@ -3113,7 +3113,7 @@ def main():
             print_and_save(comparison_df_all.to_csv(sep='\t', index=False))
             
             # 表を保存
-            feature_dir_name = get_feature_dir_name(feature_names)
+            feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
             delong_dir = output_dir / feature_dir_name / "delong"
             delong_dir.mkdir(parents=True, exist_ok=True)
             comparison_csv_path = delong_dir / "comprehensive_comparison_table.csv"
@@ -3227,7 +3227,7 @@ def main():
             
             y_test_for_comparison = y_test if not args.use_cv else pd.Series(all_test_labels_all_models)
             # 全モデル実行時のグラフ保存先を設定
-            feature_dir_name = get_feature_dir_name(feature_names)
+            feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
             feature_output_dir = output_dir / feature_dir_name
             graphs_dir = feature_output_dir / "graphs"
             graphs_dir.mkdir(parents=True, exist_ok=True)
@@ -3248,7 +3248,7 @@ def main():
         # results.csvを生成（統合指標としてLogReg, L1, L2, ENetのみ）
         if not args.use_cv and len(models_results) > 0:
             print_and_save("\n=== results.csvを生成中 ===")
-            feature_dir_name = get_feature_dir_name(feature_names)
+            feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
             feature_output_dir = output_dir / feature_dir_name
             csv_dir = feature_output_dir / "csv"
             csv_dir.mkdir(parents=True, exist_ok=True)

@@ -498,8 +498,10 @@ def transfer_evaluate(args):
     
     # 出力ディレクトリの作成（評価データセット用）
     # LASSO側との互換性のため、SIP/FT-PLM/output/{eval_dataset}/{experiment_name}の形式で保存
-    # experiment_nameは {eval_dataset}_transfer_from_{train_dataset} の形式
-    experiment_name = f"{eval_dataset}_transfer_from_{train_dataset}"
+    # experiment_nameは {eval_dataset}_transfer_from_{train_dataset}_{model_name} の形式
+    # args.experiment_nameからモデル名を抽出（例: "ClariQ_bert-base_lr2e-05_bs16_kfold5" -> "bert-base"）
+    model_name_in_exp = args.experiment_name.split('_')[1] if '_' in args.experiment_name else 'unknown'
+    experiment_name = f"{eval_dataset}_transfer_from_{train_dataset}_{model_name_in_exp}"
     output_dir = os.path.join(args.output_dir, experiment_name)
     os.makedirs(output_dir, exist_ok=True)
     
@@ -1058,8 +1060,8 @@ def main():
     
     # データセット名（必須）
     parser.add_argument('--dataset', type=str, required=True,
-                       choices=['INSCIT', 'AmbigNQ'],
-                       help='データセット名（INSCIT または AmbigNQ）')
+                       choices=['INSCIT', 'AmbigNQ', 'ClariQ'],
+                       help='データセット名（INSCIT、AmbigNQ、またはClariQ）')
     
     # データパス
     parser.add_argument('--train_path', type=str, default=None,
@@ -1113,7 +1115,7 @@ def main():
     
     # 転移学習用の設定
     parser.add_argument('--train_dataset', type=str, default=None,
-                       choices=['INSCIT', 'AmbigNQ'],
+                       choices=['INSCIT', 'AmbigNQ', 'ClariQ'],
                        help='転移学習評価時に使用する訓練データセット名')
     parser.add_argument('--experiment_name', type=str, default=None,
                        help='転移学習評価時に使用する実験名（訓練時の実験名と一致させる）')

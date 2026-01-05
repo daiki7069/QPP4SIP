@@ -378,9 +378,9 @@ No Penalty	0.5150	0.5404	0.0151
     - 選択頻度:
       ✓ clarity: 100.00% (100/100)
       ✓ n_sigma_50: 100.00% (100/100)
-      ✓ wig: 98.00% (98/100)
-      ✓ nqc: 90.00% (90/100)
-      ✓ smv: 75.00% (75/100)
+      ✓ wig: 97.00% (97/100)
+      ✓ nqc: 79.00% (79/100)
+      ✓ smv: 74.00% (74/100)
   Accuracy: 0.5445
   F1 Score: 0.6976
   AUC-ROC: 0.5113
@@ -485,21 +485,21 @@ LARS-CV	0.5102	0.5378	0.0059
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig/delong/comparison_table_lars_cv.csv
 
 --- randomforest モデルを実行中 ---
-  Accuracy: 0.5230
-  F1 Score: 0.5750
-  AUC-ROC: 0.5100
-  Average Precision: 0.5423
+  Accuracy: 0.5020
+  F1 Score: 0.5535
+  AUC-ROC: 0.4976
+  Average Precision: 0.5354
 
   --- RandomForest モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: wig (AUC = 0.5535)
-  回帰モデルのROC: AUC = 0.5100
+  回帰モデルのROC: AUC = 0.4976
 
   DeLongの検定結果:
-    モデルA (RandomForest): AUC = 0.5100
+    モデルA (RandomForest): AUC = 0.4976
     モデルB (単体指標 wig): AUC = 0.5535
-    AUC差: -0.0435
-    Z統計量: -2.6201
-    p値: 0.0088
+    AUC差: -0.0558
+    Z統計量: -3.2306
+    p値: 0.0012
     有意差: あり (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -510,7 +510,7 @@ Clarity	0.5007	0.5332	-
 WIG	0.5535	0.5766	-
 SMV	0.5368	0.5570	-
 n(σ%)	0.5454	0.5643	-
-RandomForest	0.5100	0.5423	0.0088
+RandomForest	0.4976	0.5354	0.0012
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig/delong/delong_test_randomforest.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig/delong/comparison_table_randomforest.csv
@@ -533,7 +533,7 @@ No Penalty Logistic Regression	0.5150	0.5404	0.0151
 BOLASSO	0.5113	0.5381	0.0075
 LARS-Traps	0.5102	0.5378	0.0059
 LARS-CV	0.5102	0.5378	0.0059
-Random Forest	0.5100	0.5423	0.0088
+Random Forest	0.4976	0.5354	0.0012
 
   - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig/delong/comprehensive_comparison_table.csv
 

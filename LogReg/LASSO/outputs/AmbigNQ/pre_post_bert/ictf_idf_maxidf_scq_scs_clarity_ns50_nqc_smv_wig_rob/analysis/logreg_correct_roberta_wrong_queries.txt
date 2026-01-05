@@ -1,0 +1,258 @@
+Label: 0, LogReg: 0.4931, RoBERTa: 0.0847
+Query: How often do we have a census in the uk?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5199, RoBERTa: -0.1936
+Query: Who sang the song coat of many colors?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5502, RoBERTa: -0.0149
+Query: When did the federal student loan program start?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4922, RoBERTa: 0.0421
+Query: Who dies in how to train your dragon 2?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4929, RoBERTa: 0.1391
+Query: Who gave the concept of ingroup and outgroup?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5247, RoBERTa: -0.0507
+Query: Percentage of babies born at 24 weeks that survive?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5143, RoBERTa: -0.1183
+Query: What type of writing is most similar to an autobiography a. poetry b. short story c. novel d. memoir?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5210, RoBERTa: -0.1644
+Query: Who made the song my achy breaky heart?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5232, RoBERTa: -0.0733
+Query: Hertfordshire fire and rescue service chief fire officer?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5409, RoBERTa: -0.1511
+Query: Who was england's prime minister during ww1?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5554, RoBERTa: -0.0132
+Query: What county is old forge new york in?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4851, RoBERTa: 0.0449
+Query: When did the haves and have nots start?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5322, RoBERTa: -0.0316
+Query: Delhi is situated on the bank of the river?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5090, RoBERTa: -0.1385
+Query: Who said democracy is the rule of fools?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5213, RoBERTa: -0.0779
+Query: Who is the speaker of the house in california?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5089, RoBERTa: -0.2100
+Query: What year did star wars come out in theaters?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5706, RoBERTa: -0.0025
+Query: Where did italy win the world cup in 2006?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5163, RoBERTa: -0.0977
+Query: Who is the mayor of warner robins ga?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5133, RoBERTa: -0.1534
+Query: A false correlation between two variables caused by a third variable?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5187, RoBERTa: -0.0761
+Query: Who played igor in the movie van helsing?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5321, RoBERTa: -0.1327
+Query: When will the next fifty shades of grey movie be released?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5149, RoBERTa: -0.0559
+Query: When did the soviet union explode its first atomic bomb?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5697, RoBERTa: -0.1062
+Query: Who was crucified on an x shaped cross?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5857, RoBERTa: -0.0704
+Query: Who was the 31st president of the united states of america?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4766, RoBERTa: 0.0264
+Query: Who sang the song she's got betty davis eyes?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5554, RoBERTa: -0.1719
+Query: Who played smith jared in sex and the city?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5158, RoBERTa: -0.1364
+Query: What is the main train station in munich?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5148, RoBERTa: -0.1128
+Query: Who won s5 of rupaul's drag race?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5529, RoBERTa: -0.0046
+Query: Who wrote the hit three dog night song joy to the world?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5774, RoBERTa: -0.0690
+Query: As blues moved into chicago's south side what style of blues developed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5038, RoBERTa: -0.2158
+Query: Who holds the record for the longest field goal?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5620, RoBERTa: -0.1515
+Query: Ratio of length and width of indian flag?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5385, RoBERTa: -0.1515
+Query: What direction does the earth orbit around the sun?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5382, RoBERTa: -0.1380
+Query: Where do tornadoes most commonly occur in the us?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5326, RoBERTa: -0.0874
+Query: When does thrill of it all come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5215, RoBERTa: -0.0533
+Query: Who sings the new girl in town hairspray?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5010, RoBERTa: -0.0546
+Query: Who played kris kringle in miracle on 34th street?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5052, RoBERTa: -0.1353
+Query: Who has won the world cup back to back?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5049, RoBERTa: -0.2058
+Query: Who wrote your man song by josh turner?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4726, RoBERTa: 0.1161
+Query: What is the fourth letter of the greek alphabet?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5744, RoBERTa: -0.0599
+Query: Who plays avery in when we first met?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4820, RoBERTa: 0.1736
+Query: Who plays light in death note live action netflix?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5229, RoBERTa: -0.0700
+Query: Who sang it's too late to turn back now?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5301, RoBERTa: -0.1059
+Query: How many floors does paris las vegas have?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5174, RoBERTa: -0.2311
+Query: Which is the microsoft hypervisor integrated in windows server 2008?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5091, RoBERTa: -0.0916
+Query: Who plays victor on fear the walking dead?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5450, RoBERTa: -0.0046
+Query: Who is the girl from brenda's got a baby video?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5185, RoBERTa: -0.0626
+Query: Earth's interior heat is the engine that powers?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5192, RoBERTa: -0.0317
+Query: When did starcraft 2 become free to play?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5130, RoBERTa: -0.0082
+Query: Where is the umbilical cord attached to the mom?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5100, RoBERTa: -0.4408
+Query: When was the clock tower in london built?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5191, RoBERTa: -0.0113
+Query: Who sang when a man loves a woman first?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5082, RoBERTa: -0.0947
+Query: When was the last time wales won the rugby world cup sevens?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5021, RoBERTa: -0.1354
+Query: Who claimed victory at the first battle of bull run?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4849, RoBERTa: 0.0721
+Query: Where does the flat iron cut of meat come from?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5418, RoBERTa: -0.0346
+Query: Longest word in the english language with one vowel?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5324, RoBERTa: -0.0435
+Query: Who is fruma sarah in fiddler on the roof?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5306, RoBERTa: -0.1660
+Query: What does the eagle in the nigerian coat of arm represents?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4777, RoBERTa: 0.0384
+Query: What is charlie's medication for in gossip girl?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5386, RoBERTa: -0.0515
+Query: When did season 5 of prison break come out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5255, RoBERTa: -0.0641
+Query: How many triple doubles did kobe bryant have in his career?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5421, RoBERTa: -0.0463
+Query: What is l's real name from death note?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5450, RoBERTa: -0.1541
+Query: Who sang i can't let maggie go?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5864, RoBERTa: -0.0786
+Query: For whom was the battle of king's mountain a victory?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5057, RoBERTa: -0.0162
+Query: Where did the name kellogg's come from?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5521, RoBERTa: -0.1101
+Query: What season of greys anatomy was the plane crash?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5110, RoBERTa: -0.1545
+Query: Where was the opening of three's company filmed?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5010, RoBERTa: -0.1757
+Query: Who was the ruler of france in 1830?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5115, RoBERTa: -0.0724
+Query: Who came up with a cure for tuberculosis?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5733, RoBERTa: -0.0861
+Query: Who voices lindas mom in bob's burgers?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5387, RoBERTa: -0.0601
+Query: Meaning of idiom make a mountain out of a molehill?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4953, RoBERTa: 0.0465
+Query: Which came first huck finn or tom sawyer?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5627, RoBERTa: -0.0525
+Query: When is season 3 of 800 words coming out?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5383, RoBERTa: -0.0189
+Query: Who ascended the throne of delhi sultante after the death of qutub ud din aibak?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4942, RoBERTa: 0.0805
+Query: Which monarch separated england from the catholic church?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5217, RoBERTa: -0.0538
+Query: Where did most of the fighting take place in ww1?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5155, RoBERTa: -0.1144
+Query: Who directed taylor swift out of the woods?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5082, RoBERTa: -0.2441
+Query: Who wrote ill never love again a star is born?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5027, RoBERTa: -0.1305
+Query: Who ensures that the states abide by constitutional and federal law?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5243, RoBERTa: -0.1840
+Query: When did ernie first appear on my three sons?
+--------------------------------------------------------------------------------
+Label: 0, LogReg: 0.4910, RoBERTa: 0.1711
+Query: How many steps in world health organization pain ladder?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5507, RoBERTa: -0.0129
+Query: Next in line to be king of britain?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5553, RoBERTa: -0.0492
+Query: When was the clear and present danger test replaced?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5250, RoBERTa: -0.0287
+Query: Who played the mother in the wonder years?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5224, RoBERTa: -0.0061
+Query: Who dies in season 2 of orange is the new black?
+--------------------------------------------------------------------------------
+Label: 1, LogReg: 0.5259, RoBERTa: -0.1560
+Query: The most common type of rock in earth's crust is?
+--------------------------------------------------------------------------------

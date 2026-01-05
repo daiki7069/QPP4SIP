@@ -77,7 +77,7 @@ def format_feature_name(feature_name: str) -> str:
     return feature_name.replace('_', ' ').title()
 
 
-def get_feature_dir_name(feature_names: Optional[List[str]]) -> str:
+def get_feature_dir_name(feature_names: Optional[List[str]], retrieval_method: str = "dpr") -> str:
     """
     特徴量名のリストからディレクトリ名を生成（階層構造）
     1階層目: カテゴリの組み合わせ（pre, post, pre_post, pre_bert, post_bert, pre_post_bertなど）
@@ -85,9 +85,11 @@ def get_feature_dir_name(feature_names: Optional[List[str]]) -> str:
     
     Args:
         feature_names: 特徴量名のリスト（Noneの場合は'all'を返す）
+        retrieval_method: 検索手法（dpr または bm25、デフォルト: dpr）
     
     Returns:
         ディレクトリ名（例: 'pre/idf_ictf', 'pre_post/idf_ictf/nqc_wig', 'pre_post_bert/idf_ictf/nqc_wig/rob'）
+        検索手法がdprでない場合は、ディレクトリ名に検索手法を含める
     """
     if feature_names is None or len(feature_names) == 0:
         return 'all'
@@ -193,9 +195,21 @@ def get_feature_dir_name(feature_names: Optional[List[str]]) -> str:
     # ディレクトリ名を構築: 1階層目/2階層目（全指標を_で連結）
     if all_metrics:
         second_level = '_'.join(all_metrics)
-        return f"{first_level}/{second_level}"
+        dir_name = f"{first_level}/{second_level}"
     else:
-        return first_level
+        dir_name = first_level
+    
+    # 検索手法がdprでない場合は、ディレクトリ名に検索手法を含める
+    if retrieval_method != "dpr":
+        # ディレクトリ名の最後に検索手法を追加
+        if '/' in dir_name:
+            # 階層構造がある場合: pre_post/ictf_idf_nqc -> pre_post/ictf_idf_nqc_bm25
+            dir_name = f"{dir_name}_{retrieval_method}"
+        else:
+            # 階層構造がない場合: pre -> pre_bm25
+            dir_name = f"{dir_name}_{retrieval_method}"
+    
+    return dir_name
 
 
 def plot_roc_curves(

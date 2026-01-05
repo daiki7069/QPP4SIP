@@ -1,0 +1,93 @@
+================================================================================
+QPPを使うべき場面の判定ルール (FP分析)
+================================================================================
+
+ベースモデル: RoBERTa
+分析対象: FP
+有意水準: p < 0.05
+効果量閾値: |Cohen's d| > 0.2
+
+================================================================================
+
+ルール 1: WIG
+--------------------------------------------------------------------------------
+  条件: WIG が 1.0786 より 低い
+  かつ RoBERTaが clarification と予測
+  → QPPを使って answer 側に補正すべき
+
+  統計情報:
+    - Cohen's d: -0.1229
+    - p値: 0.000046
+    - 誤分類グループの中央値: 1.0786
+    - 正解グループの中央値: 1.1989
+
+ルール 2: nSigma
+--------------------------------------------------------------------------------
+  条件: nSigma が 0.2549 より 低い
+  かつ RoBERTaが clarification と予測
+  → QPPを使って answer 側に補正すべき
+
+  統計情報:
+    - Cohen's d: -0.0918
+    - p値: 0.002124
+    - 誤分類グループの中央値: 0.2549
+    - 正解グループの中央値: 0.2801
+
+ルール 3: SClarity
+--------------------------------------------------------------------------------
+  条件: SClarity が 7.7283 より 低い
+  かつ RoBERTaが clarification と予測
+  → QPPを使って answer 側に補正すべき
+
+  統計情報:
+    - Cohen's d: -0.0847
+    - p値: 0.000745
+    - 誤分類グループの中央値: 7.7283
+    - 正解グループの中央値: 8.0972
+
+ルール 4: AvgIDF
+--------------------------------------------------------------------------------
+  条件: AvgIDF が 5.3187 より 低い
+  かつ RoBERTaが clarification と予測
+  → QPPを使って answer 側に補正すべき
+
+  統計情報:
+    - Cohen's d: -0.0837
+    - p値: 0.000854
+    - 誤分類グループの中央値: 5.3187
+    - 正解グループの中央値: 5.6261
+
+
+================================================================================
+Pythonコード形式の判定関数
+================================================================================
+
+def should_use_qpp_correction(qpp_features, bert_prediction):
+    """
+    RoBERTaの予測をQPPで補正すべきかどうかを判定
+    
+    Args:
+        qpp_features: dict, QPP特徴量の辞書
+        bert_prediction: str, RoBERTaの予測 ('clarification' または 'answer')
+    
+    Returns:
+        tuple: (should_correct: bool, correction_direction: str or None)
+    """
+    
+    # ルール 1: WIG
+    if qpp_features.get('WIG', float('inf')) < 1.0786 and bert_prediction == 'clarification':
+        return True, 'answer'
+    
+    # ルール 2: nSigma
+    if qpp_features.get('nSigma', float('inf')) < 0.2549 and bert_prediction == 'clarification':
+        return True, 'answer'
+    
+    # ルール 3: SClarity
+    if qpp_features.get('SClarity', float('inf')) < 7.7283 and bert_prediction == 'clarification':
+        return True, 'answer'
+    
+    # ルール 4: AvgIDF
+    if qpp_features.get('AvgIDF', float('inf')) < 5.3187 and bert_prediction == 'clarification':
+        return True, 'answer'
+    
+    return False, None  # QPP補正不要
