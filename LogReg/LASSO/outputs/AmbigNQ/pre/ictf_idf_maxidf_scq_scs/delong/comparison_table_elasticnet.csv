@@ -4,4 +4,4 @@ AvgICTF,0.5433,0.5742,-
 MaxIDF,0.5374,0.5745,-
 MaxSCQ,0.5409,0.5737,-
 Simplified Clarity,0.5374,0.5703,-
-ElasticNet,0.5862,0.6010,7.00e-07
+ElasticNet,0.5964,0.6108,2.41e-05

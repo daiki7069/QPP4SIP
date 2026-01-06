@@ -297,21 +297,27 @@ L2	0.4876	0.5123	0.0062
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/comparison_table_l2.csv
 
 --- elasticnet モデルを実行中 ---
-  Accuracy: 0.4795
-  F1 Score: 0.4146
-  AUC-ROC: 0.4843
-  Average Precision: 0.5108
+  [INFO] ElasticNet-CVを有効化: CV folds=5, scoring=roc_auc
+
+  - ElasticNet-CVで最適化されたパラメータ:
+    C: 100.0000
+    l1_ratio: 0.1000
+    最適化スコア (roc_auc): 0.5267
+  Accuracy: 0.4870
+  F1 Score: 0.4366
+  AUC-ROC: 0.5018
+  Average Precision: 0.5142
 
   --- ElasticNet モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: wig (AUC = 0.4583)
-  回帰モデルのROC: AUC = 0.4843
+  回帰モデルのROC: AUC = 0.5018
 
   DeLongの検定結果:
-    モデルA (ElasticNet): AUC = 0.4843
+    モデルA (ElasticNet): AUC = 0.5018
     モデルB (単体指標 wig): AUC = 0.4583
-    AUC差: 0.0260
-    Z統計量: 2.4899
-    p値: 0.0128
+    AUC差: 0.0435
+    Z統計量: 2.5955
+    p値: 0.0094
     有意差: あり (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -322,7 +328,7 @@ Clarity	0.4380	0.4872	-
 WIG	0.4583	0.5097	-
 SMV	0.4447	0.4956	-
 n(σ%)	0.4516	0.4964	-
-ElasticNet	0.4843	0.5108	0.0128
+ElasticNet	0.5018	0.5142	0.0094
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/delong_test_elasticnet.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/comparison_table_elasticnet.csv
@@ -377,10 +383,10 @@ No Penalty	0.5019	0.5141	0.0102
     - 選択された特徴量: 4/5
     - 選択頻度:
       ✓ n_sigma_50: 100.00% (100/100)
-      ✓ clarity: 95.00% (95/100)
-      ✓ wig: 87.00% (87/100)
-      ✓ nqc: 71.00% (71/100)
-      ✗ smv: 22.00% (22/100)
+      ✓ clarity: 91.00% (91/100)
+      ✓ wig: 88.00% (88/100)
+      ✓ nqc: 76.00% (76/100)
+      ✗ smv: 29.00% (29/100)
   Accuracy: 0.4805
   F1 Score: 0.4183
   AUC-ROC: 0.4816
@@ -452,23 +458,23 @@ LARS-Traps	0.4876	0.5123	0.0062
 
 --- lars_cv モデルを実行中 ---
 
-  - LARS-CVで選択された特徴量: 5/5
-  - 選択された特徴量: ['nqc', 'clarity', 'wig', 'smv', 'n_sigma_50']
-  Accuracy: 0.4850
-  F1 Score: 0.4125
-  AUC-ROC: 0.4876
-  Average Precision: 0.5123
+  - LARS-CVで選択された特徴量: 4/5
+  - 選択された特徴量: ['nqc', 'clarity', 'wig', 'n_sigma_50']
+  Accuracy: 0.4810
+  F1 Score: 0.4146
+  AUC-ROC: 0.4871
+  Average Precision: 0.5127
 
   --- LARS-CV モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: wig (AUC = 0.4583)
-  回帰モデルのROC: AUC = 0.4876
+  回帰モデルのROC: AUC = 0.4871
 
   DeLongの検定結果:
-    モデルA (LARS-CV): AUC = 0.4876
+    モデルA (LARS-CV): AUC = 0.4871
     モデルB (単体指標 wig): AUC = 0.4583
-    AUC差: 0.0293
-    Z統計量: 2.7369
-    p値: 0.0062
+    AUC差: 0.0288
+    Z統計量: 2.7639
+    p値: 0.0057
     有意差: あり (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -479,27 +485,27 @@ Clarity	0.4380	0.4872	-
 WIG	0.4583	0.5097	-
 SMV	0.4447	0.4956	-
 n(σ%)	0.4516	0.4964	-
-LARS-CV	0.4876	0.5123	0.0062
+LARS-CV	0.4871	0.5127	0.0057
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/delong_test_lars_cv.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/comparison_table_lars_cv.csv
 
 --- randomforest モデルを実行中 ---
-  Accuracy: 0.4990
-  F1 Score: 0.4605
-  AUC-ROC: 0.5167
-  Average Precision: 0.5449
+  Accuracy: 0.4985
+  F1 Score: 0.4654
+  AUC-ROC: 0.5181
+  Average Precision: 0.5538
 
   --- RandomForest モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: wig (AUC = 0.4583)
-  回帰モデルのROC: AUC = 0.5167
+  回帰モデルのROC: AUC = 0.5181
 
   DeLongの検定結果:
-    モデルA (RandomForest): AUC = 0.5167
+    モデルA (RandomForest): AUC = 0.5181
     モデルB (単体指標 wig): AUC = 0.4583
-    AUC差: 0.0583
-    Z統計量: 3.2574
-    p値: 0.0011
+    AUC差: 0.0598
+    Z統計量: 3.3189
+    p値: 0.0009
     有意差: あり (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -510,7 +516,7 @@ Clarity	0.4380	0.4872	-
 WIG	0.4583	0.5097	-
 SMV	0.4447	0.4956	-
 n(σ%)	0.4516	0.4964	-
-RandomForest	0.5167	0.5449	0.0011
+RandomForest	0.5181	0.5538	0.0009
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/delong_test_randomforest.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/comparison_table_randomforest.csv
@@ -528,12 +534,12 @@ SMV	0.4447	0.4956	-
 WIG	0.4583	0.5097	-
 L1 Logistic Regression	0.4816	0.5090	0.0285
 L2 Logistic Regression	0.4876	0.5123	0.0062
-E-Net	0.4843	0.5108	0.0128
+E-Net	0.5018	0.5142	0.0094
 No Penalty Logistic Regression	0.5019	0.5141	0.0102
 BOLASSO	0.4816	0.5090	0.0285
 LARS-Traps	0.4876	0.5123	0.0062
-LARS-CV	0.4876	0.5123	0.0062
-Random Forest	0.5167	0.5449	0.0011
+LARS-CV	0.4871	0.5127	0.0057
+Random Forest	0.5181	0.5538	0.0009
 
   - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/post/clarity_ns50_nqc_smv_wig_bm25/delong/comprehensive_comparison_table.csv
 

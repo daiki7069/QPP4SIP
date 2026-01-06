@@ -12,9 +12,9 @@ SMV,0.4447,0.4956,-
 WIG,0.4583,0.5097,-
 L1 Logistic Regression,0.7180,0.7310,0.9603
 L2 Logistic Regression,0.7165,0.7295,0.5040
-E-Net,0.7171,0.7301,0.7045
-No Penalty Logistic Regression,0.7138,0.7288,0.1509
+E-Net,0.7156,0.7300,0.3212
+No Penalty Logistic Regression,0.7138,0.7288,0.1507
 BOLASSO,0.7180,0.7310,0.9603
 LARS-Traps,0.7165,0.7295,0.5040
 LARS-CV,0.7165,0.7295,0.5040
-Random Forest,0.6775,0.6844,5.05e-07
+Random Forest,0.6740,0.6880,8.55e-08

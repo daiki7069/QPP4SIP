@@ -1,0 +1,2 @@
+error_type,mean_regression,mean_single,std_regression,std_single,improvement,n_samples
+False Negative,0.5097888782396992,0.5040975358554952,0.06525899738054826,0.04916726831090175,0.00569134238420399,449

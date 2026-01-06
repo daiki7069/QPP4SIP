@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression, LassoLarsCV
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from scipy.optimize import minimize
 from scipy.special import expit
 import warnings
@@ -201,6 +202,236 @@ class LARSTrapsModel:
             return X[:, [list(X.columns).index(f) if isinstance(X, pd.DataFrame) else f for f in self.selected_features_]]
 
 
+class L1CVModel:
+    """L1-CVモデル（クロスバリデーションでCを最適化）"""
+    def __init__(self, cv=5, random_state=42, max_iter=1000, class_weight='balanced', tol=1e-8,
+                 C_range=None, scoring='roc_auc', n_jobs=-1):
+        self.cv = cv
+        self.random_state = random_state
+        self.max_iter = max_iter
+        self.class_weight = class_weight
+        self.tol = tol
+        self.scoring = scoring
+        self.n_jobs = n_jobs
+        self.model_ = None
+        self.best_params_ = None
+        self.best_score_ = None
+        
+        # デフォルトのパラメータ範囲
+        if C_range is None:
+            # Cの範囲: 0.01から100まで対数スケールで10個
+            self.C_range = np.logspace(-2, 2, 10)
+        else:
+            self.C_range = C_range
+    
+    def fit(self, X, y, print_and_save_func=None):
+        """GridSearchCVでCを最適化してモデルを学習"""
+        # パラメータグリッド
+        param_grid = {
+            'C': self.C_range
+        }
+        
+        # ベースモデル
+        base_model = LogisticRegression(
+            penalty='l1',
+            solver='liblinear',
+            max_iter=self.max_iter,
+            random_state=self.random_state,
+            class_weight=self.class_weight,
+            tol=self.tol
+        )
+        
+        # StratifiedKFoldでCV
+        cv_fold = StratifiedKFold(n_splits=self.cv, shuffle=True, random_state=self.random_state)
+        
+        # GridSearchCV
+        grid_search = GridSearchCV(
+            base_model,
+            param_grid,
+            cv=cv_fold,
+            scoring=self.scoring,
+            n_jobs=self.n_jobs,
+            verbose=0
+        )
+        
+        # 学習
+        grid_search.fit(X, y)
+        
+        # 最適なパラメータを保存
+        self.best_params_ = grid_search.best_params_
+        self.best_score_ = grid_search.best_score_
+        self.model_ = grid_search.best_estimator_
+        
+        if print_and_save_func:
+            print_and_save_func(f"\n  - L1-CVで最適化されたパラメータ:")
+            print_and_save_func(f"    C: {self.best_params_['C']:.4f}")
+            print_and_save_func(f"    最適化スコア ({self.scoring}): {self.best_score_:.4f}")
+        
+        return self
+    
+    def predict_proba(self, X):
+        return self.model_.predict_proba(X)
+    
+    def predict(self, X):
+        return self.model_.predict(X)
+
+
+class L2CVModel:
+    """L2-CVモデル（クロスバリデーションでCを最適化）"""
+    def __init__(self, cv=5, random_state=42, max_iter=1000, class_weight='balanced', tol=1e-8,
+                 C_range=None, scoring='roc_auc', n_jobs=-1):
+        self.cv = cv
+        self.random_state = random_state
+        self.max_iter = max_iter
+        self.class_weight = class_weight
+        self.tol = tol
+        self.scoring = scoring
+        self.n_jobs = n_jobs
+        self.model_ = None
+        self.best_params_ = None
+        self.best_score_ = None
+        
+        # デフォルトのパラメータ範囲
+        if C_range is None:
+            # Cの範囲: 0.01から100まで対数スケールで10個
+            self.C_range = np.logspace(-2, 2, 10)
+        else:
+            self.C_range = C_range
+    
+    def fit(self, X, y, print_and_save_func=None):
+        """GridSearchCVでCを最適化してモデルを学習"""
+        # パラメータグリッド
+        param_grid = {
+            'C': self.C_range
+        }
+        
+        # ベースモデル
+        base_model = LogisticRegression(
+            penalty='l2',
+            solver='lbfgs',
+            max_iter=self.max_iter,
+            random_state=self.random_state,
+            class_weight=self.class_weight,
+            tol=self.tol
+        )
+        
+        # StratifiedKFoldでCV
+        cv_fold = StratifiedKFold(n_splits=self.cv, shuffle=True, random_state=self.random_state)
+        
+        # GridSearchCV
+        grid_search = GridSearchCV(
+            base_model,
+            param_grid,
+            cv=cv_fold,
+            scoring=self.scoring,
+            n_jobs=self.n_jobs,
+            verbose=0
+        )
+        
+        # 学習
+        grid_search.fit(X, y)
+        
+        # 最適なパラメータを保存
+        self.best_params_ = grid_search.best_params_
+        self.best_score_ = grid_search.best_score_
+        self.model_ = grid_search.best_estimator_
+        
+        if print_and_save_func:
+            print_and_save_func(f"\n  - L2-CVで最適化されたパラメータ:")
+            print_and_save_func(f"    C: {self.best_params_['C']:.4f}")
+            print_and_save_func(f"    最適化スコア ({self.scoring}): {self.best_score_:.4f}")
+        
+        return self
+    
+    def predict_proba(self, X):
+        return self.model_.predict_proba(X)
+    
+    def predict(self, X):
+        return self.model_.predict(X)
+
+
+class ElasticNetCVModel:
+    """ElasticNet-CVモデル（クロスバリデーションでCとl1_ratioを最適化）"""
+    def __init__(self, cv=5, random_state=42, max_iter=1000, class_weight='balanced', tol=1e-8,
+                 C_range=None, l1_ratio_range=None, scoring='roc_auc', n_jobs=-1):
+        self.cv = cv
+        self.random_state = random_state
+        self.max_iter = max_iter
+        self.class_weight = class_weight
+        self.tol = tol
+        self.scoring = scoring
+        self.n_jobs = n_jobs
+        self.model_ = None
+        self.best_params_ = None
+        self.best_score_ = None
+        
+        # デフォルトのパラメータ範囲
+        if C_range is None:
+            # Cの範囲: 0.01から100まで対数スケールで10個
+            self.C_range = np.logspace(-2, 2, 10)
+        else:
+            self.C_range = C_range
+            
+        if l1_ratio_range is None:
+            # l1_ratioの範囲: 0.1から0.9まで0.1刻み
+            self.l1_ratio_range = np.arange(0.1, 1.0, 0.1)
+        else:
+            self.l1_ratio_range = l1_ratio_range
+    
+    def fit(self, X, y, print_and_save_func=None):
+        """GridSearchCVでCとl1_ratioを最適化してモデルを学習"""
+        # パラメータグリッド
+        param_grid = {
+            'C': self.C_range,
+            'l1_ratio': self.l1_ratio_range
+        }
+        
+        # ベースモデル
+        base_model = LogisticRegression(
+            penalty='elasticnet',
+            solver='saga',
+            max_iter=self.max_iter,
+            random_state=self.random_state,
+            class_weight=self.class_weight,
+            tol=self.tol
+        )
+        
+        # StratifiedKFoldでCV
+        cv_fold = StratifiedKFold(n_splits=self.cv, shuffle=True, random_state=self.random_state)
+        
+        # GridSearchCV
+        grid_search = GridSearchCV(
+            base_model,
+            param_grid,
+            cv=cv_fold,
+            scoring=self.scoring,
+            n_jobs=self.n_jobs,
+            verbose=0
+        )
+        
+        # 学習
+        grid_search.fit(X, y)
+        
+        # 最適なパラメータを保存
+        self.best_params_ = grid_search.best_params_
+        self.best_score_ = grid_search.best_score_
+        self.model_ = grid_search.best_estimator_
+        
+        if print_and_save_func:
+            print_and_save_func(f"\n  - ElasticNet-CVで最適化されたパラメータ:")
+            print_and_save_func(f"    C: {self.best_params_['C']:.4f}")
+            print_and_save_func(f"    l1_ratio: {self.best_params_['l1_ratio']:.4f}")
+            print_and_save_func(f"    最適化スコア ({self.scoring}): {self.best_score_:.4f}")
+        
+        return self
+    
+    def predict_proba(self, X):
+        return self.model_.predict_proba(X)
+    
+    def predict(self, X):
+        return self.model_.predict(X)
+
+
 class LARSCVModel:
     """LARS-CVモデル（クロスバリデーションで正則化パラメータを選択）"""
     def __init__(self, cv=5, random_state=42, max_iter=1000, class_weight='balanced', tol=1e-8):
@@ -278,10 +509,32 @@ class LARSCVModel:
 
 
 def create_model(model_type, max_iter=1000, random_state=42, class_weight='balanced', tol=1e-8, 
-                 non_negative=False, n_bootstrap=100, selection_threshold=0.5, n_random_traps=10, cv=5):
-    """モデルを作成する関数"""
+                 non_negative=False, n_bootstrap=100, selection_threshold=0.5, n_random_traps=10, cv=5,
+                 use_l1_cv=False, use_l2_cv=False, use_elasticnet_cv=False, C_range=None, l1_ratio_range=None, scoring='roc_auc', n_jobs=-1):
+    """モデルを作成する関数
+    
+    Args:
+        use_l1_cv: L1の場合にCVで最適化するかどうか
+        use_l2_cv: L2の場合にCVで最適化するかどうか
+        use_elasticnet_cv: ElasticNetの場合にCVで最適化するかどうか
+        C_range: CVで使用するCの範囲（Noneの場合はデフォルト）
+        l1_ratio_range: ElasticNet-CVで使用するl1_ratioの範囲（Noneの場合はデフォルト）
+        scoring: GridSearchCVで使用する評価指標
+        n_jobs: GridSearchCVで使用する並列ジョブ数
+    """
     if model_type == 'l1':
-        if non_negative:
+        if use_l1_cv:
+            return L1CVModel(
+                cv=cv,
+                random_state=random_state,
+                max_iter=max_iter,
+                class_weight=class_weight,
+                tol=tol,
+                C_range=C_range,
+                scoring=scoring,
+                n_jobs=n_jobs
+            )
+        elif non_negative:
             return NonNegativeLogisticRegression(
                 C=1.0,
                 max_iter=max_iter,
@@ -300,26 +553,51 @@ def create_model(model_type, max_iter=1000, random_state=42, class_weight='balan
                 tol=tol
             )
     elif model_type == 'l2':
-        return LogisticRegression(
-            penalty='l2',
-            solver='lbfgs',
-            C=1.0,
-            max_iter=max_iter,
-            random_state=random_state,
-            class_weight=class_weight,
-            tol=tol
-        )
+        if use_l2_cv:
+            return L2CVModel(
+                cv=cv,
+                random_state=random_state,
+                max_iter=max_iter,
+                class_weight=class_weight,
+                tol=tol,
+                C_range=C_range,
+                scoring=scoring,
+                n_jobs=n_jobs
+            )
+        else:
+            return LogisticRegression(
+                penalty='l2',
+                solver='lbfgs',
+                C=1.0,
+                max_iter=max_iter,
+                random_state=random_state,
+                class_weight=class_weight,
+                tol=tol
+            )
     elif model_type == 'elasticnet':
-        return LogisticRegression(
-            penalty='elasticnet',
-            solver='saga',
-            C=1.0,
-            l1_ratio=0.5,
-            max_iter=max_iter,
-            random_state=random_state,
-            class_weight=class_weight,
-            tol=tol
-        )
+        if use_elasticnet_cv:
+            return ElasticNetCVModel(
+                cv=cv,
+                random_state=random_state,
+                max_iter=max_iter,
+                class_weight=class_weight,
+                tol=tol,
+                C_range=C_range,
+                l1_ratio_range=l1_ratio_range,
+                scoring=scoring,
+                n_jobs=n_jobs
+            )
+        else:
+            return LogisticRegression(
+                penalty='elasticnet',
+                solver='saga',
+                C=1.0,
+                l1_ratio=0.5,
+                max_iter=max_iter,
+                random_state=random_state,
+                class_weight=class_weight,
+                tol=tol
+            )
     elif model_type == 'randomforest':
         return RandomForestClassifier(
             n_estimators=100,
@@ -390,6 +668,12 @@ def get_coefficients(model, feature_names, model_type):
                         idx = feature_names.index(feature)
                         full_coefs[idx] = coefs[i] if i < len(coefs) else 0.0
             return full_coefs
+        else:
+            return np.zeros(len(feature_names))
+    elif (model_type in ['l1', 'l2', 'elasticnet']) and hasattr(model, 'model_') and model.model_ is not None:
+        # L1-CV、L2-CV、ElasticNet-CVの場合は、内部モデルの係数を使用
+        if hasattr(model.model_, 'coef_') and model.model_.coef_ is not None:
+            return model.model_.coef_[0] if len(model.model_.coef_.shape) > 1 else model.model_.coef_
         else:
             return np.zeros(len(feature_names))
     else:

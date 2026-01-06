@@ -301,26 +301,26 @@ Average Precision差: +0.0764 (テスト 高)
   - 抽出率: 20.83%
 
   回帰モデル（QPP統合）の評価:
-    Accuracy: 0.5755
-    F1 Score: 0.4120
-    AUC-ROC: 0.7127
-    Average Precision: 0.7206
+    Accuracy: 0.5995
+    F1 Score: 0.4595
+    AUC-ROC: 0.7521
+    Average Precision: 0.7829
 
   単体指標（BERT）の評価:
-    Accuracy: 0.6499
-    F1 Score: 0.6507
-    AUC-ROC: 0.7236
-    Average Precision: 0.7376
+    Accuracy: 0.6954
+    F1 Score: 0.7040
+    AUC-ROC: 0.7610
+    Average Precision: 0.8059
 
   QPP統合による改善度:
-    AUC-ROC改善: -0.0109
-    Average Precision改善: -0.0169
-    F1 Score改善: -0.2388
+    AUC-ROC改善: -0.0089
+    Average Precision改善: -0.0230
+    F1 Score改善: -0.2444
 
   全体データでの改善度との比較:
     全体データ - AUC改善: -0.0167
-    Confidence範囲 - AUC改善: -0.0109
-    改善度の差: +0.0058
+    Confidence範囲 - AUC改善: -0.0089
+    改善度の差: +0.0078
 
   ✓ QPP統合の効果は、BERTが迷った時（確率0.5付近）により大きくなっています！
   → 「BERTが迷った時の最後の一押し（Tie-breaker）」としてQPPが有効であると主張できます。
@@ -329,17 +329,17 @@ Average Precision差: +0.0764 (テスト 高)
 12. Overconfidence Analysis（過信分析）を実行中...
 
   False Positive (高確信度で誤分類):
-    - サンプル数: 231
-    - 回帰モデル 平均予測確率: 0.4047 (std: 0.0741)
-    - 単体指標 平均予測確率: 0.4496 (std: 0.1325)
-    - 改善度（0からの距離の減少）: +0.0449
+    - サンプル数: 198
+    - 回帰モデル 平均予測確率: 0.3938 (std: 0.0716)
+    - 単体指標 平均予測確率: 0.4258 (std: 0.1265)
+    - 改善度（0からの距離の減少）: +0.0320
     → QPP統合により、誤分類の予測確率が0に近づいています（改善）
 
   False Negative (高確信度で誤分類):
-    - サンプル数: 149
-    - 回帰モデル 平均予測確率: 0.4529 (std: 0.0692)
-    - 単体指標 平均予測確率: 0.5413 (std: 0.1271)
-    - 改善度（1からの距離の減少）: -0.0884
+    - サンプル数: 145
+    - 回帰モデル 平均予測確率: 0.4552 (std: 0.0669)
+    - 単体指標 平均予測確率: 0.5575 (std: 0.1307)
+    - 改善度（1からの距離の減少）: -0.1023
     → QPP統合による改善は見られませんでした
   - Overconfidence Analysis可視化を保存しました
   - Overconfidence Analysis結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/csv/overconfidence_analysis.csv
@@ -402,8 +402,8 @@ L1	0.6981	0.7131	0.9018
     モデルA (L2): AUC = 0.6928
     モデルB (単体指標 bert_logit_clarification): AUC = 0.6987
     AUC差: -0.0058
-    Z統計量: -1.2277
-    p値: 0.2196
+    Z統計量: -1.2279
+    p値: 0.2195
     有意差: なし (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -420,27 +420,33 @@ MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
 BERT	0.6987	0.7145	-
-L2	0.6928	0.7063	0.2196
+L2	0.6928	0.7063	0.2195
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/delong_test_l2.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/comparison_table_l2.csv
 
 --- elasticnet モデルを実行中 ---
-  Accuracy: 0.5624
-  F1 Score: 0.3761
-  AUC-ROC: 0.6949
-  Average Precision: 0.7086
+  [INFO] ElasticNet-CVを有効化: CV folds=5, scoring=roc_auc
+
+  - ElasticNet-CVで最適化されたパラメータ:
+    C: 12.9155
+    l1_ratio: 0.6000
+    最適化スコア (roc_auc): 0.6828
+  Accuracy: 0.5744
+  F1 Score: 0.4172
+  AUC-ROC: 0.6916
+  Average Precision: 0.7081
 
   --- ElasticNet モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: bert_logit_clarification (AUC = 0.6987)
-  回帰モデルのROC: AUC = 0.6949
+  回帰モデルのROC: AUC = 0.6916
 
   DeLongの検定結果:
-    モデルA (ElasticNet): AUC = 0.6949
+    モデルA (ElasticNet): AUC = 0.6916
     モデルB (単体指標 bert_logit_clarification): AUC = 0.6987
-    AUC差: -0.0038
-    Z統計量: -0.8030
-    p値: 0.4220
+    AUC差: -0.0071
+    Z統計量: -1.2353
+    p値: 0.2167
     有意差: なし (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -457,7 +463,7 @@ MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
 BERT	0.6987	0.7145	-
-ElasticNet	0.6949	0.7086	0.4220
+ElasticNet	0.6916	0.7081	0.2167
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/delong_test_elasticnet.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/comparison_table_elasticnet.csv
@@ -476,7 +482,7 @@ ElasticNet	0.6949	0.7086	0.4220
     モデルA (No Penalty): AUC = 0.6900
     モデルB (単体指標 bert_logit_clarification): AUC = 0.6987
     AUC差: -0.0086
-    Z統計量: -1.4465
+    Z統計量: -1.4466
     p値: 0.1480
     有意差: なし (α=0.05)
 
@@ -519,15 +525,15 @@ No Penalty	0.6900	0.7068	0.1480
     - 選択頻度:
       ✓ pre_avgidf: 100.00% (100/100)
       ✓ bert_logit_clarification: 100.00% (100/100)
-      ✓ pre_simplified_clarity: 98.00% (98/100)
-      ✓ pre_maxscq: 94.00% (94/100)
+      ✓ pre_simplified_clarity: 99.00% (99/100)
+      ✓ pre_maxscq: 98.00% (98/100)
+      ✓ n_sigma_50: 95.00% (95/100)
       ✓ pre_maxidf: 93.00% (93/100)
-      ✓ n_sigma_50: 90.00% (90/100)
-      ✓ clarity: 77.00% (77/100)
-      ✓ nqc: 53.00% (53/100)
-      ✗ wig: 45.00% (45/100)
-      ✗ smv: 35.00% (35/100)
-      ✗ pre_avgictf: 24.00% (24/100)
+      ✓ clarity: 80.00% (80/100)
+      ✓ wig: 57.00% (57/100)
+      ✗ nqc: 48.00% (48/100)
+      ✗ smv: 22.00% (22/100)
+      ✗ pre_avgictf: 20.00% (20/100)
   Accuracy: 0.5669
   F1 Score: 0.3916
   AUC-ROC: 0.6981
@@ -586,8 +592,8 @@ BOLASSO	0.6981	0.7131	0.9018
     モデルA (LARS-Traps): AUC = 0.6928
     モデルB (単体指標 bert_logit_clarification): AUC = 0.6987
     AUC差: -0.0058
-    Z統計量: -1.2277
-    p値: 0.2196
+    Z統計量: -1.2279
+    p値: 0.2195
     有意差: なし (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -604,30 +610,30 @@ MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
 BERT	0.6987	0.7145	-
-LARS-Traps	0.6928	0.7063	0.2196
+LARS-Traps	0.6928	0.7063	0.2195
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/delong_test_lars_traps.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/comparison_table_lars_traps.csv
 
 --- lars_cv モデルを実行中 ---
 
-  - LARS-CVで選択された特徴量: 10/11
-  - 選択された特徴量: ['clarity', 'wig', 'smv', 'n_sigma_50', 'pre_avgidf', 'pre_avgictf', 'pre_maxidf', 'pre_maxscq', 'pre_simplified_clarity', 'bert_logit_clarification']
-  Accuracy: 0.5599
-  F1 Score: 0.3703
-  AUC-ROC: 0.6931
-  Average Precision: 0.7065
+  - LARS-CVで選択された特徴量: 8/11
+  - 選択された特徴量: ['clarity', 'wig', 'n_sigma_50', 'pre_avgidf', 'pre_maxidf', 'pre_maxscq', 'pre_simplified_clarity', 'bert_logit_clarification']
+  Accuracy: 0.5604
+  F1 Score: 0.3723
+  AUC-ROC: 0.6936
+  Average Precision: 0.7070
 
   --- LARS-CV モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: bert_logit_clarification (AUC = 0.6987)
-  回帰モデルのROC: AUC = 0.6931
+  回帰モデルのROC: AUC = 0.6936
 
   DeLongの検定結果:
-    モデルA (LARS-CV): AUC = 0.6931
+    モデルA (LARS-CV): AUC = 0.6936
     モデルB (単体指標 bert_logit_clarification): AUC = 0.6987
-    AUC差: -0.0056
-    Z統計量: -1.1861
-    p値: 0.2356
+    AUC差: -0.0050
+    Z統計量: -1.0692
+    p値: 0.2850
     有意差: なし (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -644,26 +650,26 @@ MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
 BERT	0.6987	0.7145	-
-LARS-CV	0.6931	0.7065	0.2356
+LARS-CV	0.6936	0.7070	0.2850
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/delong_test_lars_cv.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/comparison_table_lars_cv.csv
 
 --- randomforest モデルを実行中 ---
-  Accuracy: 0.5509
-  F1 Score: 0.4120
-  AUC-ROC: 0.6237
-  Average Precision: 0.6441
+  Accuracy: 0.5465
+  F1 Score: 0.3865
+  AUC-ROC: 0.6214
+  Average Precision: 0.6370
 
   --- RandomForest モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: bert_logit_clarification (AUC = 0.6987)
-  回帰モデルのROC: AUC = 0.6237
+  回帰モデルのROC: AUC = 0.6214
 
   DeLongの検定結果:
-    モデルA (RandomForest): AUC = 0.6237
+    モデルA (RandomForest): AUC = 0.6214
     モデルB (単体指標 bert_logit_clarification): AUC = 0.6987
-    AUC差: -0.0749
-    Z統計量: -6.0774
+    AUC差: -0.0773
+    Z統計量: -6.1494
     p値: 0.0000
     有意差: あり (α=0.05)
 
@@ -681,7 +687,7 @@ MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
 BERT	0.6987	0.7145	-
-RandomForest	0.6237	0.6441	1.22e-09
+RandomForest	0.6214	0.6370	7.78e-10
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/delong_test_randomforest.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/comparison_table_randomforest.csv
@@ -704,13 +710,13 @@ Simplified Clarity	0.5374	0.5703	-
 SMV	0.4447	0.4956	-
 WIG	0.4583	0.5097	-
 L1 Logistic Regression	0.6981	0.7131	0.9018
-L2 Logistic Regression	0.6928	0.7063	0.2196
-E-Net	0.6949	0.7086	0.4220
+L2 Logistic Regression	0.6928	0.7063	0.2195
+E-Net	0.6916	0.7081	0.2167
 No Penalty Logistic Regression	0.6900	0.7068	0.1480
 BOLASSO	0.6981	0.7131	0.9018
-LARS-Traps	0.6928	0.7063	0.2196
-LARS-CV	0.6931	0.7065	0.2356
-Random Forest	0.6237	0.6441	1.22e-09
+LARS-Traps	0.6928	0.7063	0.2195
+LARS-CV	0.6936	0.7070	0.2850
+Random Forest	0.6214	0.6370	7.78e-10
 
   - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre_post_bert/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_bert_bm25/delong/comprehensive_comparison_table.csv
 

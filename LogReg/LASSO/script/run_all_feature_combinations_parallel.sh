@@ -1,6 +1,15 @@
 #!/bin/bash
 # 複数の特徴量タイプの組み合わせを並列実行するスクリプト（GNU parallel使用版）
 
+# ElasticNet-CVを使用するかどうか（デフォルト: false）
+USE_ELASTICNET_CV="${USE_ELASTICNET_CV:-false}"
+
+# ElasticNet-CVのfold数（デフォルト: 5）
+ELASTICNET_CV_FOLDS="${ELASTICNET_CV_FOLDS:-5}"
+
+# ElasticNet-CVの評価指標（デフォルト: roc_auc）
+ELASTICNET_C_SCORING="${ELASTICNET_C_SCORING:-roc_auc}"
+
 cd "$(dirname "$0")/.." || exit
 
 DATASET="AmbigNQ"
@@ -51,6 +60,9 @@ if command -v parallel &> /dev/null; then
             --bootstrap-test \
             --bootstrap-samples-path outputs/${DATASET}/bootstrap_samples.pkl \
             --feature-types $combo \
+            ${USE_ELASTICNET_CV:+--use-elasticnet-cv} \
+            ${ELASTICNET_CV_FOLDS:+--elasticnet-cv-folds "$ELASTICNET_CV_FOLDS"} \
+            ${ELASTICNET_C_SCORING:+--elasticnet-c-scoring "$ELASTICNET_C_SCORING"} \
             > "$log_file" 2>&1; \
         if [ $? -eq 0 ]; then \
             echo "[完了] $combo" | tee -a "'"$LOG_DIR"'/summary.log; \

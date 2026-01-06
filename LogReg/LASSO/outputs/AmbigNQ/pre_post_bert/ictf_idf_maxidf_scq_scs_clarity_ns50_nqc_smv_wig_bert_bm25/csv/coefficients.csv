@@ -1,9 +1,9 @@
 feature,coefficient
-pre_avgidf,-3.3744332432705977
-bert_logit_clarification,3.066759328580819
-pre_simplified_clarity,2.9873364087514465
-n_sigma_50,0.4930557599688772
-pre_maxscq,-0.29126707199815105
+pre_avgidf,-3.374433243247668
+bert_logit_clarification,3.0667593285812598
+pre_simplified_clarity,2.9873364087263776
+n_sigma_50,0.4930557599691388
+pre_maxscq,-0.29126707199901886
 nqc,0.0
 clarity,0.0
 wig,0.0

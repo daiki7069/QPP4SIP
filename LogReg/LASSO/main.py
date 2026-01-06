@@ -126,6 +126,65 @@ def main():
         help="LARS-CVのクロスバリデーションフォールド数（デフォルト: 5、--model-type lars_cvの場合のみ有効）"
     )
     
+    # L1-CV用のパラメータ
+    parser.add_argument(
+        "--use-l1-cv",
+        action='store_true',
+        help="L1の場合にCVでCを最適化する（デフォルト: False）"
+    )
+    parser.add_argument(
+        "--l1-cv-folds",
+        type=int,
+        default=5,
+        help="L1-CVのクロスバリデーションフォールド数（デフォルト: 5、--use-l1-cvの場合のみ有効）"
+    )
+    parser.add_argument(
+        "--l1-c-scoring",
+        type=str,
+        default='roc_auc',
+        choices=['roc_auc', 'average_precision', 'f1', 'accuracy'],
+        help="L1-CVで使用する評価指標（デフォルト: roc_auc）"
+    )
+    
+    # L2-CV用のパラメータ
+    parser.add_argument(
+        "--use-l2-cv",
+        action='store_true',
+        help="L2の場合にCVでCを最適化する（デフォルト: False）"
+    )
+    parser.add_argument(
+        "--l2-cv-folds",
+        type=int,
+        default=5,
+        help="L2-CVのクロスバリデーションフォールド数（デフォルト: 5、--use-l2-cvの場合のみ有効）"
+    )
+    parser.add_argument(
+        "--l2-c-scoring",
+        type=str,
+        default='roc_auc',
+        choices=['roc_auc', 'average_precision', 'f1', 'accuracy'],
+        help="L2-CVで使用する評価指標（デフォルト: roc_auc）"
+    )
+    
+    # ElasticNet-CV用のパラメータ
+    parser.add_argument(
+        "--use-elasticnet-cv",
+        action='store_true',
+        help="ElasticNetの場合にCVでCとl1_ratioを最適化する（デフォルト: False）"
+    )
+    parser.add_argument(
+        "--elasticnet-cv-folds",
+        type=int,
+        default=5,
+        help="ElasticNet-CVのクロスバリデーションフォールド数（デフォルト: 5、--use-elasticnet-cvの場合のみ有効）"
+    )
+    parser.add_argument(
+        "--elasticnet-c-scoring",
+        type=str,
+        default='roc_auc',
+        choices=['roc_auc', 'average_precision', 'f1', 'accuracy'],
+        help="ElasticNet-CVで使用する評価指標（デフォルト: roc_auc）"
+    )
     
     parser.add_argument(
         "--balance-label-distribution",
@@ -524,20 +583,50 @@ def main():
             
             # モデル学習（全てのモデルを実行する場合は、最初のモデルタイプのみ実行）
             current_model_type = model_types_to_run[0] if run_all_models else args.model_type
+            # CVフォールド数の決定
+            if current_model_type == 'lars_cv':
+                cv_folds = args.lars_cv_folds
+            elif current_model_type == 'l1' and args.use_l1_cv:
+                cv_folds = args.l1_cv_folds
+            elif current_model_type == 'l2' and args.use_l2_cv:
+                cv_folds = args.l2_cv_folds
+            elif current_model_type == 'elasticnet' and args.use_elasticnet_cv:
+                cv_folds = args.elasticnet_cv_folds
+            else:
+                cv_folds = args.elasticnet_cv_folds  # デフォルト
+            
+            # スコアリング指標の決定
+            if current_model_type == 'l1' and args.use_l1_cv:
+                scoring = args.l1_c_scoring
+            elif current_model_type == 'l2' and args.use_l2_cv:
+                scoring = args.l2_c_scoring
+            elif current_model_type == 'elasticnet' and args.use_elasticnet_cv:
+                scoring = args.elasticnet_c_scoring
+            else:
+                scoring = args.elasticnet_c_scoring  # デフォルト
+            
             fold_model = create_model(
                 model_type=current_model_type,
-                    max_iter=args.max_iter,
-                    random_state=42,
-                    class_weight='balanced',
+                max_iter=args.max_iter,
+                random_state=42,
+                class_weight='balanced',
                 tol=args.tol,
                 non_negative=args.non_negative_coefficients,
                 n_bootstrap=args.n_bootstrap,
                 selection_threshold=args.selection_threshold,
                 n_random_traps=args.n_random_traps,
-                cv=args.lars_cv_folds
+                cv=cv_folds,
+                use_l1_cv=args.use_l1_cv if current_model_type == 'l1' else False,
+                use_l2_cv=args.use_l2_cv if current_model_type == 'l2' else False,
+                use_elasticnet_cv=args.use_elasticnet_cv if current_model_type == 'elasticnet' else False,
+                scoring=scoring,
+                n_jobs=-1
             )
-            # 特徴量選択モデルの場合はprint_and_save_funcを渡す
-            if current_model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+            # 特徴量選択モデルまたはCVモデルの場合はprint_and_save_funcを渡す
+            if current_model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+               (current_model_type == 'l1' and args.use_l1_cv) or \
+               (current_model_type == 'l2' and args.use_l2_cv) or \
+               (current_model_type == 'elasticnet' and args.use_elasticnet_cv):
                 fold_model.fit(X_fold_train_norm, y_fold_train, print_and_save_func=print_and_save)
             else:
                 fold_model.fit(X_fold_train_norm, y_fold_train)
@@ -756,6 +845,28 @@ def main():
                 
                 # 回帰モデルを学習
                 current_model_type = model_types_to_run[0] if run_all_models else args.model_type
+                # CVフォールド数の決定
+                if current_model_type == 'lars_cv':
+                    cv_folds = args.lars_cv_folds
+                elif current_model_type == 'l1' and args.use_l1_cv:
+                    cv_folds = args.l1_cv_folds
+                elif current_model_type == 'l2' and args.use_l2_cv:
+                    cv_folds = args.l2_cv_folds
+                elif current_model_type == 'elasticnet' and args.use_elasticnet_cv:
+                    cv_folds = args.elasticnet_cv_folds
+                else:
+                    cv_folds = args.elasticnet_cv_folds  # デフォルト
+                
+                # スコアリング指標の決定
+                if current_model_type == 'l1' and args.use_l1_cv:
+                    scoring = args.l1_c_scoring
+                elif current_model_type == 'l2' and args.use_l2_cv:
+                    scoring = args.l2_c_scoring
+                elif current_model_type == 'elasticnet' and args.use_elasticnet_cv:
+                    scoring = args.elasticnet_c_scoring
+                else:
+                    scoring = args.elasticnet_c_scoring  # デフォルト
+                
                 regression_model = create_model(
                     model_type=current_model_type,
                     max_iter=args.max_iter,
@@ -766,9 +877,17 @@ def main():
                     n_bootstrap=args.n_bootstrap,
                     selection_threshold=args.selection_threshold,
                     n_random_traps=args.n_random_traps,
-                    cv=args.lars_cv_folds
+                    cv=cv_folds,
+                    use_l1_cv=args.use_l1_cv if current_model_type == 'l1' else False,
+                    use_l2_cv=args.use_l2_cv if current_model_type == 'l2' else False,
+                    use_elasticnet_cv=args.use_elasticnet_cv if current_model_type == 'elasticnet' else False,
+                    scoring=scoring,
+                    n_jobs=-1
                 )
-                if current_model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+                if current_model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+                   (current_model_type == 'l1' and args.use_l1_cv) or \
+                   (current_model_type == 'l2' and args.use_l2_cv) or \
+                   (current_model_type == 'elasticnet' and args.use_elasticnet_cv):
                     regression_model.fit(X_train_norm_full, y_train, print_and_save_func=print_and_save)
                 else:
                     regression_model.fit(X_train_norm_full, y_train)
@@ -1208,20 +1327,50 @@ def main():
             print_and_save(f"  - 最大反復回数: {args.max_iter}")
         # model_typeが"all"の場合は最初のモデルタイプを使用
         current_model_type = model_types_to_run[0] if run_all_models else args.model_type
+        # CVフォールド数の決定
+        if current_model_type == 'lars_cv':
+            cv_folds = args.lars_cv_folds
+        elif current_model_type == 'l1' and args.use_l1_cv:
+            cv_folds = args.l1_cv_folds
+        elif current_model_type == 'l2' and args.use_l2_cv:
+            cv_folds = args.l2_cv_folds
+        elif current_model_type == 'elasticnet' and args.use_elasticnet_cv:
+            cv_folds = args.elasticnet_cv_folds
+        else:
+            cv_folds = args.elasticnet_cv_folds  # デフォルト
+        
+        # スコアリング指標の決定
+        if current_model_type == 'l1' and args.use_l1_cv:
+            scoring = args.l1_c_scoring
+        elif current_model_type == 'l2' and args.use_l2_cv:
+            scoring = args.l2_c_scoring
+        elif current_model_type == 'elasticnet' and args.use_elasticnet_cv:
+            scoring = args.elasticnet_c_scoring
+        else:
+            scoring = args.elasticnet_c_scoring  # デフォルト
+        
         model = create_model(
             model_type=current_model_type,
-                max_iter=args.max_iter,
-                random_state=42,
-                class_weight='balanced',
+            max_iter=args.max_iter,
+            random_state=42,
+            class_weight='balanced',
             tol=args.tol,
             non_negative=args.non_negative_coefficients,
             n_bootstrap=args.n_bootstrap,
             selection_threshold=args.selection_threshold,
             n_random_traps=args.n_random_traps,
-            cv=args.lars_cv_folds
+            cv=cv_folds,
+            use_l1_cv=args.use_l1_cv if current_model_type == 'l1' else False,
+            use_l2_cv=args.use_l2_cv if current_model_type == 'l2' else False,
+            use_elasticnet_cv=args.use_elasticnet_cv if current_model_type == 'elasticnet' else False,
+            scoring=scoring,
+            n_jobs=-1
         )
-        # 特徴量選択モデルの場合はprint_and_save_funcを渡す
-        if args.model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+        # 特徴量選択モデルまたはCVモデルの場合はprint_and_save_funcを渡す
+        if current_model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+           (current_model_type == 'l1' and args.use_l1_cv) or \
+           (current_model_type == 'l2' and args.use_l2_cv) or \
+           (current_model_type == 'elasticnet' and args.use_elasticnet_cv):
             model.fit(X_train_norm, y_train, print_and_save_func=print_and_save)
         else:
             model.fit(X_train_norm, y_train)
@@ -2343,6 +2492,27 @@ def main():
                 all_test_indices.extend(test_idx.tolist())
                 
                 for model_type in model_types_to_run:
+                    # CVフォールド数とスコアリング指標の決定
+                    if model_type == 'lars_cv':
+                        cv_folds = args.lars_cv_folds
+                    elif model_type == 'l1' and args.use_l1_cv:
+                        cv_folds = args.l1_cv_folds
+                    elif model_type == 'l2' and args.use_l2_cv:
+                        cv_folds = args.l2_cv_folds
+                    elif model_type == 'elasticnet' and args.use_elasticnet_cv:
+                        cv_folds = args.elasticnet_cv_folds
+                    else:
+                        cv_folds = args.lars_cv_folds
+                    
+                    if model_type == 'l1' and args.use_l1_cv:
+                        scoring = args.l1_c_scoring
+                    elif model_type == 'l2' and args.use_l2_cv:
+                        scoring = args.l2_c_scoring
+                    elif model_type == 'elasticnet' and args.use_elasticnet_cv:
+                        scoring = args.elasticnet_c_scoring
+                    else:
+                        scoring = 'roc_auc'
+                    
                     model = create_model(
                         model_type=model_type,
                         max_iter=args.max_iter,
@@ -2353,10 +2523,18 @@ def main():
                         n_bootstrap=args.n_bootstrap,
                         selection_threshold=args.selection_threshold,
                         n_random_traps=args.n_random_traps,
-                        cv=args.lars_cv_folds
+                        cv=cv_folds,
+                        use_l1_cv=args.use_l1_cv if model_type == 'l1' else False,
+                        use_l2_cv=args.use_l2_cv if model_type == 'l2' else False,
+                        use_elasticnet_cv=args.use_elasticnet_cv if model_type == 'elasticnet' else False,
+                        scoring=scoring,
+                        n_jobs=-1
                     )
                     
-                    if model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+                    if model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+                       (model_type == 'l1' and args.use_l1_cv) or \
+                       (model_type == 'l2' and args.use_l2_cv) or \
+                       (model_type == 'elasticnet' and args.use_elasticnet_cv):
                         model.fit(X_fold_train, y_fold_train, print_and_save_func=lambda x: None)
                     else:
                         model.fit(X_fold_train, y_fold_train)
@@ -2635,6 +2813,31 @@ def main():
             
             for model_type in model_types_to_run:
                 print_and_save(f"\n--- {model_type} モデルを実行中 ---")
+                # CV設定を確認して表示
+                if model_type == 'l1' and args.use_l1_cv:
+                    print_and_save(f"  [INFO] L1-CVを有効化: CV folds={args.l1_cv_folds}, scoring={args.l1_c_scoring}")
+                elif model_type == 'l2' and args.use_l2_cv:
+                    print_and_save(f"  [INFO] L2-CVを有効化: CV folds={args.l2_cv_folds}, scoring={args.l2_c_scoring}")
+                elif model_type == 'elasticnet' and args.use_elasticnet_cv:
+                    print_and_save(f"  [INFO] ElasticNet-CVを有効化: CV folds={args.elasticnet_cv_folds}, scoring={args.elasticnet_c_scoring}")
+                
+                # CVフォールド数とスコアリング指標の決定
+                if model_type == 'lars_cv':
+                    cv_folds = args.lars_cv_folds
+                    scoring = 'roc_auc'
+                elif model_type == 'l1' and args.use_l1_cv:
+                    cv_folds = args.l1_cv_folds
+                    scoring = args.l1_c_scoring
+                elif model_type == 'l2' and args.use_l2_cv:
+                    cv_folds = args.l2_cv_folds
+                    scoring = args.l2_c_scoring
+                elif model_type == 'elasticnet' and args.use_elasticnet_cv:
+                    cv_folds = args.elasticnet_cv_folds
+                    scoring = args.elasticnet_c_scoring
+                else:
+                    cv_folds = args.elasticnet_cv_folds
+                    scoring = args.elasticnet_c_scoring
+                
                 model = create_model(
                     model_type=model_type,
                     max_iter=args.max_iter,
@@ -2645,10 +2848,18 @@ def main():
                     n_bootstrap=args.n_bootstrap,
                     selection_threshold=args.selection_threshold,
                     n_random_traps=args.n_random_traps,
-                    cv=args.lars_cv_folds
+                    cv=cv_folds,
+                    use_l1_cv=args.use_l1_cv if model_type == 'l1' else False,
+                    use_l2_cv=args.use_l2_cv if model_type == 'l2' else False,
+                    use_elasticnet_cv=args.use_elasticnet_cv if model_type == 'elasticnet' else False,
+                    scoring=scoring,
+                    n_jobs=-1
                 )
                 
-                if model_type in ['bolasso', 'lars_traps', 'lars_cv']:
+                if model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+                   (model_type == 'l1' and args.use_l1_cv) or \
+                   (model_type == 'l2' and args.use_l2_cv) or \
+                   (model_type == 'elasticnet' and args.use_elasticnet_cv):
                     model.fit(X_train_norm, y_train, print_and_save_func=print_and_save)
                 else:
                     model.fit(X_train_norm, y_train)

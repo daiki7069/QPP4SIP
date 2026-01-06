@@ -7,9 +7,9 @@ MaxSCQ,0.5409,0.5737,-
 Simplified Clarity,0.5374,0.5703,-
 L1 Logistic Regression,0.6972,0.7123,0.7680
 L2 Logistic Regression,0.6951,0.7091,0.4593
-E-Net,0.6959,0.7101,0.5677
+E-Net,0.6975,0.7137,0.8432
 No Penalty Logistic Regression,0.6974,0.7137,0.8318
 BOLASSO,0.6972,0.7123,0.7680
 LARS-Traps,0.6951,0.7091,0.4593
 LARS-CV,0.6952,0.7090,0.4648
-Random Forest,0.6175,0.6354,3.71e-10
+Random Forest,0.6133,0.6271,4.89e-11
