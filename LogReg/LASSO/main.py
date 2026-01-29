@@ -295,6 +295,12 @@ def main():
         help="使用する特徴量タイプを指定（複数指定可能: post, pre, bert, roberta, nsp, transfer）。デフォルト: post, pre, nsp"
     )
     
+    parser.add_argument(
+        "--save-model",
+        action="store_true",
+        help="モデルとscalerを保存する（デフォルト: False、汎化性能評価用）"
+    )
+    
     args = parser.parse_args()
     
     # 全てのモデルタイプを定義
@@ -1249,12 +1255,24 @@ def main():
         print_and_save("  ⚠️  警告: データリークが発生しています！実際の予測タスクでは使用しないでください。")
     else:
         print_and_save("  - 方法: 訓練データの統計量でテストデータも正規化（通常）")
-    X_train_norm, X_test_norm = normalize_features(
-        X_train, X_test, 
-        use_combined_normalization=args.use_combined_normalization,
-        use_separate_normalization=args.use_separate_normalization,
-        use_minmax_normalization=args.use_minmax_normalization
-    )
+    # scalersを初期化
+    scalers = None
+    if args.save_model and not args.use_cv:
+        # モデル保存が必要な場合、scalerも取得
+        X_train_norm, X_test_norm, scalers = normalize_features(
+            X_train, X_test, 
+            use_combined_normalization=args.use_combined_normalization,
+            use_separate_normalization=args.use_separate_normalization,
+            use_minmax_normalization=args.use_minmax_normalization,
+            return_scalers=True
+        )
+    else:
+        X_train_norm, X_test_norm = normalize_features(
+            X_train, X_test, 
+            use_combined_normalization=args.use_combined_normalization,
+            use_separate_normalization=args.use_separate_normalization,
+            use_minmax_normalization=args.use_minmax_normalization
+        )
     print_and_save("  - 正規化完了")
     
     # データ分布の確認（正規化後）
@@ -1663,6 +1681,33 @@ def main():
         print_and_save(f"Average Precision: {test_ap:.4f}")
         print_and_save("\n分類レポート:")
         print_and_save(classification_report(y_test, y_test_pred, target_names=['not_clarification', 'clarification']))
+        
+        # モデルとscalerを保存（--save-modelが指定されている場合）
+        if args.save_model:
+            if scalers is None:
+                print_and_save(f"  ⚠️  警告: scalersがNoneです。モデルを保存できません。")
+            else:
+                import pickle
+                model_dir = feature_output_dir / "models"
+                model_dir.mkdir(parents=True, exist_ok=True)
+                
+                # モデルを保存
+                model_path = model_dir / f"{current_model_type}_model.pkl"
+                with open(model_path, 'wb') as f:
+                    pickle.dump(model, f)
+                print_and_save(f"  - モデルを保存しました: {model_path}")
+                
+                # scalerを保存
+                scaler_path = model_dir / f"{current_model_type}_scalers.pkl"
+                with open(scaler_path, 'wb') as f:
+                    pickle.dump(scalers, f)
+                print_and_save(f"  - Scalerを保存しました: {scaler_path}")
+                
+                # 特徴量名を保存
+                feature_names_path = model_dir / f"{current_model_type}_feature_names.pkl"
+                with open(feature_names_path, 'wb') as f:
+                    pickle.dump(list(X_train.columns), f)
+                print_and_save(f"  - 特徴量名を保存しました: {feature_names_path}")
     else:
         # クロスバリデーションの場合は、CV結果を表示（既に表示済みなのでスキップ）
         print_and_save("\n=== 評価結果 ===")
@@ -2401,6 +2446,292 @@ def main():
     else:
         print_and_save(f"  ⚠️  警告: BERTの予測確率を読み込めませんでした（BASE_EXPERIMENT_NAMESが設定されていない可能性があります）")
     
+    # 13. Success and Failure Analysis（成功分析と失敗分析）
+    print_and_save("\n13. Success and Failure Analysis（成功分析と失敗分析）を実行中...")
+    
+    # 予測結果とラベルを取得
+    if args.use_cv:
+        # CV使用時はall_test_probaとall_test_labelsを使用
+        if 'all_test_proba' in locals() and 'all_test_labels' in locals() and len(all_test_proba) > 0:
+            y_pred_proba = np.array(all_test_proba)
+            y_true = np.array(all_test_labels)
+            y_pred = (y_pred_proba >= 0.5).astype(int)
+        else:
+            print_and_save(f"  ⚠️  警告: CV結果が見つかりませんでした")
+            y_pred_proba = None
+            y_true = None
+            y_pred = None
+    else:
+        # CV未使用時はy_test_probaとy_testを使用
+        if 'y_test_proba' in locals() and 'y_test' in locals():
+            y_pred_proba = y_test_proba
+            y_true = y_test.values if hasattr(y_test, 'values') else np.array(y_test)
+            y_pred = (y_pred_proba >= 0.5).astype(int)
+        else:
+            print_and_save(f"  ⚠️  警告: テスト結果が見つかりませんでした")
+            y_pred_proba = None
+            y_true = None
+            y_pred = None
+    
+    if y_pred_proba is not None and y_true is not None and y_pred is not None:
+        # 4つのカテゴリに分類
+        tp_indices = []  # True Positive: 正しく1と予測 (ラベル=1, 予測=1)
+        tn_indices = []  # True Negative: 正しく0と予測 (ラベル=0, 予測=0)
+        fp_indices = []  # False Positive: 誤って1と予測 (ラベル=0, 予測=1)
+        fn_indices = []  # False Negative: 誤って0と予測 (ラベル=1, 予測=0)
+        
+        tp_proba = []
+        tn_proba = []
+        fp_proba = []
+        fn_proba = []
+        
+        for idx in range(len(y_true)):
+            true_label = y_true[idx]
+            pred_label = y_pred[idx]
+            proba = y_pred_proba[idx]
+            
+            if true_label == 1 and pred_label == 1:
+                tp_indices.append(idx)
+                tp_proba.append(proba)
+            elif true_label == 0 and pred_label == 0:
+                tn_indices.append(idx)
+                tn_proba.append(proba)
+            elif true_label == 0 and pred_label == 1:
+                fp_indices.append(idx)
+                fp_proba.append(proba)
+            elif true_label == 1 and pred_label == 0:
+                fn_indices.append(idx)
+                fn_proba.append(proba)
+        
+        # 統計情報の計算と表示
+        success_failure_results = {}
+        
+        print_and_save(f"\n  分類結果のサマリー:")
+        print_and_save(f"    - True Positive (TP): {len(tp_indices)} ({len(tp_indices)/len(y_true)*100:.2f}%)")
+        print_and_save(f"    - True Negative (TN): {len(tn_indices)} ({len(tn_indices)/len(y_true)*100:.2f}%)")
+        print_and_save(f"    - False Positive (FP): {len(fp_indices)} ({len(fp_indices)/len(y_true)*100:.2f}%)")
+        print_and_save(f"    - False Negative (FN): {len(fn_indices)} ({len(fn_indices)/len(y_true)*100:.2f}%)")
+        
+        # True Positiveの分析
+        if len(tp_indices) > 0:
+            tp_proba_array = np.array(tp_proba)
+            tp_mean = np.mean(tp_proba_array)
+            tp_std = np.std(tp_proba_array)
+            tp_median = np.median(tp_proba_array)
+            tp_min = np.min(tp_proba_array)
+            tp_max = np.max(tp_proba_array)
+            
+            success_failure_results['true_positive'] = {
+                'n_samples': len(tp_indices),
+                'mean_proba': tp_mean,
+                'std_proba': tp_std,
+                'median_proba': tp_median,
+                'min_proba': tp_min,
+                'max_proba': tp_max
+            }
+            
+            print_and_save(f"\n  True Positive (成功: 正しく1と予測):")
+            print_and_save(f"    - サンプル数: {len(tp_indices)}")
+            print_and_save(f"    - 予測確率 平均: {tp_mean:.4f} (std: {tp_std:.4f})")
+            print_and_save(f"    - 予測確率 中央値: {tp_median:.4f}")
+            print_and_save(f"    - 予測確率 範囲: [{tp_min:.4f}, {tp_max:.4f}]")
+        
+        # True Negativeの分析
+        if len(tn_indices) > 0:
+            tn_proba_array = np.array(tn_proba)
+            tn_mean = np.mean(tn_proba_array)
+            tn_std = np.std(tn_proba_array)
+            tn_median = np.median(tn_proba_array)
+            tn_min = np.min(tn_proba_array)
+            tn_max = np.max(tn_proba_array)
+            
+            success_failure_results['true_negative'] = {
+                'n_samples': len(tn_indices),
+                'mean_proba': tn_mean,
+                'std_proba': tn_std,
+                'median_proba': tn_median,
+                'min_proba': tn_min,
+                'max_proba': tn_max
+            }
+            
+            print_and_save(f"\n  True Negative (成功: 正しく0と予測):")
+            print_and_save(f"    - サンプル数: {len(tn_indices)}")
+            print_and_save(f"    - 予測確率 平均: {tn_mean:.4f} (std: {tn_std:.4f})")
+            print_and_save(f"    - 予測確率 中央値: {tn_median:.4f}")
+            print_and_save(f"    - 予測確率 範囲: [{tn_min:.4f}, {tn_max:.4f}]")
+        
+        # False Positiveの分析
+        if len(fp_indices) > 0:
+            fp_proba_array = np.array(fp_proba)
+            fp_mean = np.mean(fp_proba_array)
+            fp_std = np.std(fp_proba_array)
+            fp_median = np.median(fp_proba_array)
+            fp_min = np.min(fp_proba_array)
+            fp_max = np.max(fp_proba_array)
+            
+            success_failure_results['false_positive'] = {
+                'n_samples': len(fp_indices),
+                'mean_proba': fp_mean,
+                'std_proba': fp_std,
+                'median_proba': fp_median,
+                'min_proba': fp_min,
+                'max_proba': fp_max
+            }
+            
+            print_and_save(f"\n  False Positive (失敗: 誤って1と予測):")
+            print_and_save(f"    - サンプル数: {len(fp_indices)}")
+            print_and_save(f"    - 予測確率 平均: {fp_mean:.4f} (std: {fp_std:.4f})")
+            print_and_save(f"    - 予測確率 中央値: {fp_median:.4f}")
+            print_and_save(f"    - 予測確率 範囲: [{fp_min:.4f}, {fp_max:.4f}]")
+        
+        # False Negativeの分析
+        if len(fn_indices) > 0:
+            fn_proba_array = np.array(fn_proba)
+            fn_mean = np.mean(fn_proba_array)
+            fn_std = np.std(fn_proba_array)
+            fn_median = np.median(fn_proba_array)
+            fn_min = np.min(fn_proba_array)
+            fn_max = np.max(fn_proba_array)
+            
+            success_failure_results['false_negative'] = {
+                'n_samples': len(fn_indices),
+                'mean_proba': fn_mean,
+                'std_proba': fn_std,
+                'median_proba': fn_median,
+                'min_proba': fn_min,
+                'max_proba': fn_max
+            }
+            
+            print_and_save(f"\n  False Negative (失敗: 誤って0と予測):")
+            print_and_save(f"    - サンプル数: {len(fn_indices)}")
+            print_and_save(f"    - 予測確率 平均: {fn_mean:.4f} (std: {fn_std:.4f})")
+            print_and_save(f"    - 予測確率 中央値: {fn_median:.4f}")
+            print_and_save(f"    - 予測確率 範囲: [{fn_min:.4f}, {fn_max:.4f}]")
+        
+        # 成功ケースと失敗ケースの比較
+        if len(tp_indices) > 0 and len(fp_indices) > 0:
+            print_and_save(f"\n  成功ケース(TP) vs 失敗ケース(FP)の比較:")
+            print_and_save(f"    - TP平均確率: {tp_mean:.4f} vs FP平均確率: {fp_mean:.4f}")
+            print_and_save(f"    - 差: {tp_mean - fp_mean:.4f} (TPの方が高いほど良い)")
+        
+        if len(tn_indices) > 0 and len(fn_indices) > 0:
+            print_and_save(f"\n  成功ケース(TN) vs 失敗ケース(FN)の比較:")
+            print_and_save(f"    - TN平均確率: {tn_mean:.4f} vs FN平均確率: {fn_mean:.4f}")
+            print_and_save(f"    - 差: {tn_mean - fn_mean:.4f} (TNの方が低いほど良い)")
+        
+        # 結果をCSVに保存
+        if len(success_failure_results) > 0:
+            success_failure_data = []
+            for category, data in success_failure_results.items():
+                success_failure_data.append({
+                    'category': category,
+                    'n_samples': data.get('n_samples', 0),
+                    'mean_proba': data.get('mean_proba'),
+                    'std_proba': data.get('std_proba'),
+                    'median_proba': data.get('median_proba'),
+                    'min_proba': data.get('min_proba'),
+                    'max_proba': data.get('max_proba')
+                })
+            
+            success_failure_df = pd.DataFrame(success_failure_data)
+            success_failure_csv_path = csv_dir / "success_failure_analysis.csv"
+            success_failure_df.to_csv(success_failure_csv_path, index=False)
+            print_and_save(f"\n  - Success and Failure Analysis結果を保存: {success_failure_csv_path}")
+            
+            # 可視化（予測確率の分布）
+            try:
+                import matplotlib.pyplot as plt
+                import seaborn as sns
+                
+                fig, axes = plt.subplots(2, 2, figsize=(14, 10))
+                fig.suptitle('Success and Failure Analysis: Prediction Probability Distributions', fontsize=16, fontweight='bold')
+                
+                # True Positive
+                if len(tp_proba) > 0:
+                    axes[0, 0].hist(tp_proba, bins=30, alpha=0.7, color='green', edgecolor='black')
+                    axes[0, 0].axvline(tp_mean, color='red', linestyle='--', linewidth=2, label=f'Mean: {tp_mean:.3f}')
+                    axes[0, 0].set_title(f'True Positive (n={len(tp_proba)})', fontsize=12, fontweight='bold')
+                    axes[0, 0].set_xlabel('Prediction Probability', fontsize=10)
+                    axes[0, 0].set_ylabel('Frequency', fontsize=10)
+                    axes[0, 0].legend()
+                    axes[0, 0].grid(True, alpha=0.3)
+                
+                # True Negative
+                if len(tn_proba) > 0:
+                    axes[0, 1].hist(tn_proba, bins=30, alpha=0.7, color='blue', edgecolor='black')
+                    axes[0, 1].axvline(tn_mean, color='red', linestyle='--', linewidth=2, label=f'Mean: {tn_mean:.3f}')
+                    axes[0, 1].set_title(f'True Negative (n={len(tn_proba)})', fontsize=12, fontweight='bold')
+                    axes[0, 1].set_xlabel('Prediction Probability', fontsize=10)
+                    axes[0, 1].set_ylabel('Frequency', fontsize=10)
+                    axes[0, 1].legend()
+                    axes[0, 1].grid(True, alpha=0.3)
+                
+                # False Positive
+                if len(fp_proba) > 0:
+                    axes[1, 0].hist(fp_proba, bins=30, alpha=0.7, color='orange', edgecolor='black')
+                    axes[1, 0].axvline(fp_mean, color='red', linestyle='--', linewidth=2, label=f'Mean: {fp_mean:.3f}')
+                    axes[1, 0].set_title(f'False Positive (n={len(fp_proba)})', fontsize=12, fontweight='bold')
+                    axes[1, 0].set_xlabel('Prediction Probability', fontsize=10)
+                    axes[1, 0].set_ylabel('Frequency', fontsize=10)
+                    axes[1, 0].legend()
+                    axes[1, 0].grid(True, alpha=0.3)
+                
+                # False Negative
+                if len(fn_proba) > 0:
+                    axes[1, 1].hist(fn_proba, bins=30, alpha=0.7, color='red', edgecolor='black')
+                    axes[1, 1].axvline(fn_mean, color='red', linestyle='--', linewidth=2, label=f'Mean: {fn_mean:.3f}')
+                    axes[1, 1].set_title(f'False Negative (n={len(fn_proba)})', fontsize=12, fontweight='bold')
+                    axes[1, 1].set_xlabel('Prediction Probability', fontsize=10)
+                    axes[1, 1].set_ylabel('Frequency', fontsize=10)
+                    axes[1, 1].legend()
+                    axes[1, 1].grid(True, alpha=0.3)
+                
+                plt.tight_layout()
+                success_failure_graph_path = graphs_dir / "success_failure_analysis.png"
+                plt.savefig(success_failure_graph_path, dpi=150, bbox_inches='tight')
+                plt.close()
+                print_and_save(f"  - Success and Failure Analysis可視化を保存: {success_failure_graph_path}")
+                
+                # 比較用のボックスプロット
+                fig, ax = plt.subplots(figsize=(10, 6))
+                data_to_plot = []
+                labels = []
+                if len(tp_proba) > 0:
+                    data_to_plot.append(tp_proba)
+                    labels.append(f'TP (n={len(tp_proba)})')
+                if len(tn_proba) > 0:
+                    data_to_plot.append(tn_proba)
+                    labels.append(f'TN (n={len(tn_proba)})')
+                if len(fp_proba) > 0:
+                    data_to_plot.append(fp_proba)
+                    labels.append(f'FP (n={len(fp_proba)})')
+                if len(fn_proba) > 0:
+                    data_to_plot.append(fn_proba)
+                    labels.append(f'FN (n={len(fn_proba)})')
+                
+                if len(data_to_plot) > 0:
+                    bp = ax.boxplot(data_to_plot, labels=labels, patch_artist=True)
+                    colors = ['green', 'blue', 'orange', 'red']
+                    for patch, color in zip(bp['boxes'], colors[:len(bp['boxes'])]):
+                        patch.set_facecolor(color)
+                        patch.set_alpha(0.7)
+                    
+                    ax.axhline(0.5, color='gray', linestyle='--', linewidth=1, alpha=0.5, label='Threshold (0.5)')
+                    ax.set_ylabel('Prediction Probability', fontsize=12)
+                    ax.set_title('Success and Failure Analysis: Prediction Probability Comparison', fontsize=14, fontweight='bold')
+                    ax.legend()
+                    ax.grid(True, alpha=0.3)
+                    
+                    plt.tight_layout()
+                    comparison_graph_path = graphs_dir / "success_failure_comparison.png"
+                    plt.savefig(comparison_graph_path, dpi=150, bbox_inches='tight')
+                    plt.close()
+                    print_and_save(f"  - Success and Failure Comparison可視化を保存: {comparison_graph_path}")
+            except Exception as e:
+                print_and_save(f"  ⚠️  可視化中にエラーが発生しました: {str(e)}")
+    else:
+        print_and_save(f"  ⚠️  警告: 予測結果を取得できませんでした")
+    
     # 結果をファイルに保存
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(output_buffer.getvalue())
@@ -2804,12 +3135,26 @@ def main():
             print_and_save(f"  - カラム: {', '.join(results_df.columns)}")
         else:
             # 通常学習の場合
-            X_train_norm, X_test_norm = normalize_features(
-                X_train, X_test,
-                use_combined_normalization=args.use_combined_normalization,
-                use_separate_normalization=args.use_separate_normalization,
-                use_minmax_normalization=args.use_minmax_normalization
-            )
+            # feature_output_dirを定義（モデル保存に必要）
+            feature_dir_name = get_feature_dir_name(feature_names, retrieval_method=args.retrieval_method)
+            feature_output_dir = output_dir / feature_dir_name
+            
+            if args.save_model:
+                X_train_norm, X_test_norm, scalers = normalize_features(
+                    X_train, X_test,
+                    use_combined_normalization=args.use_combined_normalization,
+                    use_separate_normalization=args.use_separate_normalization,
+                    use_minmax_normalization=args.use_minmax_normalization,
+                    return_scalers=True
+                )
+            else:
+                X_train_norm, X_test_norm = normalize_features(
+                    X_train, X_test,
+                    use_combined_normalization=args.use_combined_normalization,
+                    use_separate_normalization=args.use_separate_normalization,
+                    use_minmax_normalization=args.use_minmax_normalization
+                )
+                scalers = None
             
             for model_type in model_types_to_run:
                 print_and_save(f"\n--- {model_type} モデルを実行中 ---")
@@ -2896,6 +3241,34 @@ def main():
                 print_and_save(f"  F1 Score: {test_f1:.4f}")
                 print_and_save(f"  AUC-ROC: {test_auc:.4f}")
                 print_and_save(f"  Average Precision: {test_ap:.4f}")
+                
+                # モデルとscalerを保存（--save-modelが指定されている場合）
+                print_and_save(f"  [DEBUG] args.save_model: {args.save_model}, scalers is None: {scalers is None}")
+                if args.save_model:
+                    if scalers is None:
+                        print_and_save(f"  ⚠️  警告: scalersがNoneです。モデルを保存できません。")
+                    else:
+                        import pickle
+                        model_dir = feature_output_dir / "models"
+                        model_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        # モデルを保存
+                        model_path = model_dir / f"{model_type}_model.pkl"
+                        with open(model_path, 'wb') as f:
+                            pickle.dump(model, f)
+                        print_and_save(f"  - モデルを保存しました: {model_path}")
+                        
+                        # scalerを保存
+                        scaler_path = model_dir / f"{model_type}_scalers.pkl"
+                        with open(scaler_path, 'wb') as f:
+                            pickle.dump(scalers, f)
+                        print_and_save(f"  - Scalerを保存しました: {scaler_path}")
+                        
+                        # 特徴量名を保存
+                        feature_names_path = model_dir / f"{model_type}_feature_names.pkl"
+                        with open(feature_names_path, 'wb') as f:
+                            pickle.dump(list(X_train.columns), f)
+                        print_and_save(f"  - 特徴量名を保存しました: {feature_names_path}")
                 
                 # DeLong検定を実行（--delong-testが指定されている場合）
                 if args.delong_test:

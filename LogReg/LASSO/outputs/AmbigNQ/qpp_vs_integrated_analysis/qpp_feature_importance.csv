@@ -1,0 +1,6 @@
+metric,coefficient,feature_name
+n_sigma_50,3.8064661488769382,n_sigma_50
+clarity,1.54652940654977,clarity
+nqc,-1.2593341152418804,nqc
+wig,-1.228517277176031,wig
+smv,-1.1671731832094494,smv

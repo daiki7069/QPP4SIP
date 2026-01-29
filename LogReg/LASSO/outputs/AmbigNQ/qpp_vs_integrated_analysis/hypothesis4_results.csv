@@ -1,0 +1,4 @@
+pattern,high_count_low,high_count_high,n_samples,integrated_spearman_rho,integrated_spearman_p,integrated_significant,best_qpp_metric,best_qpp_spearman_rho,best_qpp_spearman_p,best_qpp_significant,improvement,integrated_better
+Few High (0-3),0,3,321,0.09325606191527114,0.09532797904687809,False,,,,False,,False
+Mixed (3-7),3,7,479,-0.03919680382118184,0.392024587875496,False,nqc,-0.09880984576884382,0.03060257151587574,True,-0.09880984576884382,False
+Many High (7-10),7,11,372,0.014554068177270858,0.7796472039986868,False,,,,False,,False

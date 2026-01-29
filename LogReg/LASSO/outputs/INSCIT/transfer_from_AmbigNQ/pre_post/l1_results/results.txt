@@ -1,0 +1,23 @@
+================================================================================
+AmbigNQで学習したモデルをINSCITで評価
+================================================================================
+
+モデルタイプ: l1
+特徴量: ['nqc', 'clarity', 'wig', 'smv', 'n_sigma_50', 'pre_avgidf', 'pre_avgictf', 'pre_maxidf', 'pre_maxscq', 'pre_simplified_clarity']
+検索手法: dpr
+
+評価結果:
+  Accuracy: 0.1753
+  F1 Score: 0.2787
+  AUC-ROC: 0.4428
+  Average Precision: 0.1677
+
+分類レポート:
+                   precision    recall  f1-score   support
+
+Non-Clarification       0.73      0.02      0.04       419
+    Clarification       0.16      0.96      0.28        83
+
+         accuracy                           0.18       502
+        macro avg       0.45      0.49      0.16       502
+     weighted avg       0.63      0.18      0.08       502

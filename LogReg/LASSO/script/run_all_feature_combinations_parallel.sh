@@ -1,6 +1,24 @@
 #!/bin/bash
 # 複数の特徴量タイプの組み合わせを並列実行するスクリプト（GNU parallel使用版）
 
+# L1-CVを使用するかどうか（デフォルト: false）
+USE_L1_CV="${USE_L1_CV:-false}"
+
+# L1-CVのfold数（デフォルト: 5）
+L1_CV_FOLDS="${L1_CV_FOLDS:-5}"
+
+# L1-CVの評価指標（デフォルト: roc_auc）
+L1_C_SCORING="${L1_C_SCORING:-roc_auc}"
+
+# L2-CVを使用するかどうか（デフォルト: false）
+USE_L2_CV="${USE_L2_CV:-false}"
+
+# L2-CVのfold数（デフォルト: 5）
+L2_CV_FOLDS="${L2_CV_FOLDS:-5}"
+
+# L2-CVの評価指標（デフォルト: roc_auc）
+L2_C_SCORING="${L2_C_SCORING:-roc_auc}"
+
 # ElasticNet-CVを使用するかどうか（デフォルト: false）
 USE_ELASTICNET_CV="${USE_ELASTICNET_CV:-false}"
 
@@ -60,6 +78,12 @@ if command -v parallel &> /dev/null; then
             --bootstrap-test \
             --bootstrap-samples-path outputs/${DATASET}/bootstrap_samples.pkl \
             --feature-types $combo \
+            ${USE_L1_CV:+--use-l1-cv} \
+            ${L1_CV_FOLDS:+--l1-cv-folds "$L1_CV_FOLDS"} \
+            ${L1_C_SCORING:+--l1-c-scoring "$L1_C_SCORING"} \
+            ${USE_L2_CV:+--use-l2-cv} \
+            ${L2_CV_FOLDS:+--l2-cv-folds "$L2_CV_FOLDS"} \
+            ${L2_C_SCORING:+--l2-c-scoring "$L2_C_SCORING"} \
             ${USE_ELASTICNET_CV:+--use-elasticnet-cv} \
             ${ELASTICNET_CV_FOLDS:+--elasticnet-cv-folds "$ELASTICNET_CV_FOLDS"} \
             ${ELASTICNET_C_SCORING:+--elasticnet-c-scoring "$ELASTICNET_C_SCORING"} \

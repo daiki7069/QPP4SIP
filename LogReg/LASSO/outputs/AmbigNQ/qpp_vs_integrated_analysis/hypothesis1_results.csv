@@ -1,0 +1,4 @@
+inconsistency_range,n_samples,integrated_spearman_rho,integrated_spearman_p,integrated_significant,best_qpp_metric,best_qpp_spearman_rho,best_qpp_spearman_p,best_qpp_significant,improvement,integrated_better
+Low Inconsistency,439,-0.03592659149878071,0.4527477860383,False,nqc,-0.11071721592592841,0.020324274271579998,True,-0.11071721592592841,False
+Medium Inconsistency,253,-0.0021560824781706044,0.9727776288222234,False,,,,False,,False
+High Inconsistency,310,0.10935386842440228,0.05443394224177139,False,nqc,-0.15733572035041893,0.005498106751261868,True,-0.15733572035041893,False

@@ -1,0 +1,3 @@
+cluster,n_samples,mean_qa_pairs,integrated_spearman_rho,integrated_spearman_p,integrated_significant,best_qpp_metric,best_qpp_spearman_rho,best_qpp_spearman_p,best_qpp_significant,improvement_abs,improvement,integrated_better,hypothesis1_supported,hypothesis2_supported,hypothesis4_supported
+1,520,4.194230769230769,0.07842661861149765,0.07396153218353592,False,smv,-0.11632702383755036,0.007923775299713815,True,-0.11632702383755036,-0.11632702383755036,False,False,False,False
+2,530,4.050943396226415,-0.010873736820016881,0.8027818049263445,False,nqc,-0.10435087706397163,0.01625097421765604,True,-0.10435087706397163,-0.10435087706397163,False,False,False,False

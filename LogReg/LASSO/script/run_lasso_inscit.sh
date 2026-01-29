@@ -8,6 +8,24 @@
 # 指定しない場合はconfig.pyの設定を使用
 FEATURE_TYPES="${FEATURE_TYPES:-}"
 
+# L1-CVを使用するかどうか（デフォルト: false）
+USE_L1_CV="${USE_L1_CV:-false}"
+
+# L1-CVのfold数（デフォルト: 5）
+L1_CV_FOLDS="${L1_CV_FOLDS:-5}"
+
+# L1-CVの評価指標（デフォルト: roc_auc）
+L1_C_SCORING="${L1_C_SCORING:-roc_auc}"
+
+# L2-CVを使用するかどうか（デフォルト: false）
+USE_L2_CV="${USE_L2_CV:-false}"
+
+# L2-CVのfold数（デフォルト: 5）
+L2_CV_FOLDS="${L2_CV_FOLDS:-5}"
+
+# L2-CVの評価指標（デフォルト: roc_auc）
+L2_C_SCORING="${L2_C_SCORING:-roc_auc}"
+
 # ElasticNet-CVを使用するかどうか（デフォルト: false）
 USE_ELASTICNET_CV="${USE_ELASTICNET_CV:-false}"
 
@@ -25,6 +43,26 @@ if [ -n "$FEATURE_TYPES" ]; then
     FEATURE_TYPES_ARGS=(--feature-types $FEATURE_TYPES)
 fi
 
+# L1-CVオプションを追加
+L1_CV_ARGS=()
+if [ "$USE_L1_CV" = "true" ]; then
+    L1_CV_ARGS=(
+        --use-l1-cv
+        --l1-cv-folds "$L1_CV_FOLDS"
+        --l1-c-scoring "$L1_C_SCORING"
+    )
+fi
+
+# L2-CVオプションを追加
+L2_CV_ARGS=()
+if [ "$USE_L2_CV" = "true" ]; then
+    L2_CV_ARGS=(
+        --use-l2-cv
+        --l2-cv-folds "$L2_CV_FOLDS"
+        --l2-c-scoring "$L2_C_SCORING"
+    )
+fi
+
 # ElasticNet-CVオプションを追加
 ELASTICNET_CV_ARGS=()
 if [ "$USE_ELASTICNET_CV" = "true" ]; then
@@ -40,6 +78,8 @@ python main.py \
     --use-minmax-normalization \
     --delong-test \
     "${FEATURE_TYPES_ARGS[@]}" \
+    "${L1_CV_ARGS[@]}" \
+    "${L2_CV_ARGS[@]}" \
     "${ELASTICNET_CV_ARGS[@]}"
     # --bootstrap-test \
     # --bootstrap-samples-path outputs/INSCIT/bootstrap_samples.pkl

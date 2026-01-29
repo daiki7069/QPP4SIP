@@ -124,28 +124,32 @@ pre_simplified_clarity:
 
 4. モデル学習中...
   - モデルタイプ: all
+
+  - L1-CVで最適化されたパラメータ:
+    C: 4.6416
+    最適化スコア (roc_auc): 0.5869
   - 学習完了
 
 特徴量の係数:
                feature  coefficient
-            pre_avgidf   -10.182971
-pre_simplified_clarity     9.461794
-            pre_maxscq    -0.407210
-            pre_maxidf     0.218136
-           pre_avgictf     0.000000
+            pre_avgidf          0.0
+           pre_avgictf          0.0
+            pre_maxidf          0.0
+            pre_maxscq          0.0
+pre_simplified_clarity          0.0
   - 係数をCSVファイルに保存しました: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/csv/coefficients.csv
 
 5. 評価中...
 
 5.6. 単体指標の最高ROCと回帰モデルのDeLong検定を実行中...
   単体指標の最高ROC: AvgIDF (AUC = 0.5505)
-  回帰モデルのROC: AUC = 0.5956
+  回帰モデルのROC: AUC = 0.5966
 
   DeLongの検定結果:
-    モデルA (回帰): AUC = 0.5956
+    モデルA (回帰): AUC = 0.5966
     モデルB (単体指標 AvgIDF): AUC = 0.5505
-    AUC差: 0.0450
-    Z統計量: 4.6227
+    AUC差: 0.0461
+    Z統計量: 4.3283
     p値: 0.0000
     有意差: あり (α=0.05)
 
@@ -157,22 +161,22 @@ AvgICTF	0.5433	0.5742	-
 MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
-ALL Logistic Regression	0.5956	0.6088	3.79e-06
+ALL Logistic Regression	0.5966	0.6107	1.50e-05
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/delong_test_single_metric.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table.csv
   - 回帰モデル同士の比較用に予測結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/csv/predictions_for_delong.csv
 
 === 訓練データの評価 ===
-Accuracy: 0.5665
-F1 Score: 0.5616
-AUC-ROC: 0.5878
-Average Precision: 0.5431
+Accuracy: 0.5661
+F1 Score: 0.5630
+AUC-ROC: 0.5882
+Average Precision: 0.5436
 
 分類レポート:
                    precision    recall  f1-score   support
 
-not_clarification       0.60      0.55      0.57      5289
+not_clarification       0.60      0.54      0.57      5289
     clarification       0.54      0.59      0.56      4747
 
          accuracy                           0.57     10036
@@ -181,16 +185,16 @@ not_clarification       0.60      0.55      0.57      5289
 
 
 === テストデータの評価 ===
-Accuracy: 0.5739
-F1 Score: 0.5967
-AUC-ROC: 0.5956
-Average Precision: 0.6088
+Accuracy: 0.5704
+F1 Score: 0.5943
+AUC-ROC: 0.5966
+Average Precision: 0.6107
 
 分類レポート:
                    precision    recall  f1-score   support
 
-not_clarification       0.54      0.56      0.55       932
-    clarification       0.60      0.59      0.60      1070
+not_clarification       0.54      0.55      0.54       932
+    clarification       0.60      0.59      0.59      1070
 
          accuracy                           0.57      2002
         macro avg       0.57      0.57      0.57      2002
@@ -198,10 +202,10 @@ not_clarification       0.54      0.56      0.55       932
 
 
 【訓練データとテストデータの評価指標の比較】
-Accuracy差: +0.0075 (テスト 高)
-F1 Score差: +0.0351 (テスト 高)
-AUC-ROC差: +0.0078 (テスト 高)
-Average Precision差: +0.0657 (テスト 高)
+Accuracy差: +0.0044 (テスト 高)
+F1 Score差: +0.0314 (テスト 高)
+AUC-ROC差: +0.0083 (テスト 高)
+Average Precision差: +0.0672 (テスト 高)
 
 【注意】テストデータの評価指標が訓練データよりも高い場合、以下の可能性があります:
   1. 訓練データとテストデータの分布が異なる（データ分布のシフト）
@@ -232,23 +236,28 @@ Average Precision差: +0.0657 (テスト 高)
 ================================================================================
 全てのモデルタイプを実行して比較します
 ================================================================================
-  - 最初のモデル（L1）の結果を追加（置き換え前）: AUC = 0.5956, AP = 0.6088
+  - 最初のモデル（L1）の結果を追加（置き換え前）: AUC = 0.5966, AP = 0.6107
 
 --- l1 モデルを実行中 ---
-  Accuracy: 0.5739
-  F1 Score: 0.5967
-  AUC-ROC: 0.5956
-  Average Precision: 0.6088
+  [INFO] L1-CVを有効化: CV folds=5, scoring=roc_auc
+
+  - L1-CVで最適化されたパラメータ:
+    C: 4.6416
+    最適化スコア (roc_auc): 0.5869
+  Accuracy: 0.5704
+  F1 Score: 0.5943
+  AUC-ROC: 0.5966
+  Average Precision: 0.6107
 
   --- L1 モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: pre_avgidf (AUC = 0.5505)
-  回帰モデルのROC: AUC = 0.5956
+  回帰モデルのROC: AUC = 0.5966
 
   DeLongの検定結果:
-    モデルA (L1): AUC = 0.5956
+    モデルA (L1): AUC = 0.5966
     モデルB (単体指標 pre_avgidf): AUC = 0.5505
-    AUC差: 0.0450
-    Z統計量: 4.6227
+    AUC差: 0.0461
+    Z統計量: 4.3283
     p値: 0.0000
     有意差: あり (α=0.05)
 
@@ -260,26 +269,31 @@ AvgICTF	0.5433	0.5742	-
 MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
-L1	0.5956	0.6088	3.79e-06
+L1	0.5966	0.6107	1.50e-05
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/delong_test_l1.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table_l1.csv
 
 --- l2 モデルを実行中 ---
-  Accuracy: 0.5754
-  F1 Score: 0.5854
-  AUC-ROC: 0.5810
-  Average Precision: 0.5980
+  [INFO] L2-CVを有効化: CV folds=5, scoring=roc_auc
+
+  - L2-CVで最適化されたパラメータ:
+    C: 100.0000
+    最適化スコア (roc_auc): 0.5867
+  Accuracy: 0.5724
+  F1 Score: 0.5974
+  AUC-ROC: 0.5962
+  Average Precision: 0.6105
 
   --- L2 モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: pre_avgidf (AUC = 0.5505)
-  回帰モデルのROC: AUC = 0.5810
+  回帰モデルのROC: AUC = 0.5962
 
   DeLongの検定結果:
-    モデルA (L2): AUC = 0.5810
+    モデルA (L2): AUC = 0.5962
     モデルB (単体指標 pre_avgidf): AUC = 0.5505
-    AUC差: 0.0305
-    Z統計量: 4.7444
+    AUC差: 0.0457
+    Z統計量: 4.2444
     p値: 0.0000
     有意差: あり (α=0.05)
 
@@ -291,7 +305,7 @@ AvgICTF	0.5433	0.5742	-
 MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
-L2	0.5810	0.5980	2.09e-06
+L2	0.5962	0.6105	2.19e-05
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/delong_test_l2.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table_l2.csv
@@ -300,23 +314,23 @@ L2	0.5810	0.5980	2.09e-06
   [INFO] ElasticNet-CVを有効化: CV folds=5, scoring=roc_auc
 
   - ElasticNet-CVで最適化されたパラメータ:
-    C: 100.0000
+    C: 12.9155
     l1_ratio: 0.9000
-    最適化スコア (roc_auc): 0.5874
-  Accuracy: 0.5739
-  F1 Score: 0.5990
-  AUC-ROC: 0.5964
-  Average Precision: 0.6108
+    最適化スコア (roc_auc): 0.5868
+  Accuracy: 0.5699
+  F1 Score: 0.5948
+  AUC-ROC: 0.5963
+  Average Precision: 0.6106
 
   --- ElasticNet モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: pre_avgidf (AUC = 0.5505)
-  回帰モデルのROC: AUC = 0.5964
+  回帰モデルのROC: AUC = 0.5963
 
   DeLongの検定結果:
-    モデルA (ElasticNet): AUC = 0.5964
+    モデルA (ElasticNet): AUC = 0.5963
     モデルB (単体指標 pre_avgidf): AUC = 0.5505
     AUC差: 0.0458
-    Z統計量: 4.2229
+    Z統計量: 4.2731
     p値: 0.0000
     有意差: あり (α=0.05)
 
@@ -328,7 +342,7 @@ AvgICTF	0.5433	0.5742	-
 MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
-ElasticNet	0.5964	0.6108	2.41e-05
+ElasticNet	0.5963	0.6106	1.93e-05
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/delong_test_elasticnet.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table_elasticnet.csv
@@ -383,10 +397,10 @@ No Penalty	0.5964	0.6108	2.47e-05
     - 選択された特徴量: 4/5
     - 選択頻度:
       ✓ pre_avgidf: 100.00% (100/100)
-      ✓ pre_maxscq: 100.00% (100/100)
       ✓ pre_simplified_clarity: 100.00% (100/100)
-      ✓ pre_maxidf: 99.00% (99/100)
-      ✗ pre_avgictf: 36.00% (36/100)
+      ✓ pre_maxscq: 99.00% (99/100)
+      ✓ pre_maxidf: 98.00% (98/100)
+      ✗ pre_avgictf: 27.00% (27/100)
   Accuracy: 0.5739
   F1 Score: 0.5967
   AUC-ROC: 0.5956
@@ -491,21 +505,21 @@ LARS-CV	0.5810	0.5980	2.09e-06
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table_lars_cv.csv
 
 --- randomforest モデルを実行中 ---
-  Accuracy: 0.5405
-  F1 Score: 0.5243
-  AUC-ROC: 0.5740
-  Average Precision: 0.6070
+  Accuracy: 0.5365
+  F1 Score: 0.5146
+  AUC-ROC: 0.5763
+  Average Precision: 0.6068
 
   --- RandomForest モデルのDeLong検定を実行中 ---
   単体指標の最高ROC: pre_avgidf (AUC = 0.5505)
-  回帰モデルのROC: AUC = 0.5740
+  回帰モデルのROC: AUC = 0.5763
 
   DeLongの検定結果:
-    モデルA (RandomForest): AUC = 0.5740
+    モデルA (RandomForest): AUC = 0.5763
     モデルB (単体指標 pre_avgidf): AUC = 0.5505
-    AUC差: 0.0235
-    Z統計量: 1.5066
-    p値: 0.1319
+    AUC差: 0.0257
+    Z統計量: 1.6494
+    p値: 0.0991
     有意差: なし (α=0.05)
 
   === 各指標とモデルの比較表 ===
@@ -516,7 +530,7 @@ AvgICTF	0.5433	0.5742	-
 MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
-RandomForest	0.5740	0.6070	0.1319
+RandomForest	0.5763	0.6068	0.0991
 
   - DeLongの検定結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/delong_test_randomforest.csv
   - 比較表を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comparison_table_randomforest.csv
@@ -532,14 +546,14 @@ AvgIDF	0.5505	0.5815	-
 MaxIDF	0.5374	0.5745	-
 MaxSCQ	0.5409	0.5737	-
 Simplified Clarity	0.5374	0.5703	-
-L1 Logistic Regression	0.5956	0.6088	3.79e-06
-L2 Logistic Regression	0.5810	0.5980	2.09e-06
-E-Net	0.5964	0.6108	2.41e-05
+L1 Logistic Regression	0.5966	0.6107	1.50e-05
+L2 Logistic Regression	0.5962	0.6105	2.19e-05
+E-Net	0.5963	0.6106	1.93e-05
 No Penalty Logistic Regression	0.5964	0.6108	2.47e-05
 BOLASSO	0.5956	0.6088	3.79e-06
 LARS-Traps	0.5810	0.5980	2.09e-06
 LARS-CV	0.5810	0.5980	2.09e-06
-Random Forest	0.5740	0.6070	0.1319
+Random Forest	0.5763	0.6068	0.0991
 
   - 統合比較表（DeLong検定）を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/LASSO/outputs/AmbigNQ/pre/ictf_idf_maxidf_scq_scs/delong/comprehensive_comparison_table.csv
 

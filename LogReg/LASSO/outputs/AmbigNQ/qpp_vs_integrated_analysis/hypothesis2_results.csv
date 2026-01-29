@@ -1,0 +1,4 @@
+qa_range,qa_low,qa_high,n_samples,integrated_spearman_rho,integrated_spearman_p,integrated_significant,best_qpp_metric,best_qpp_spearman_rho,best_qpp_spearman_p,best_qpp_significant,improvement,integrated_better
+2-3 QA pairs,2,3,397,,,False,,,,False,,False
+3-4 QA pairs,3,4,188,,,False,,,,False,,False
+4+ QA pairs,4,100,587,0.005254298711345711,0.8989157754803478,False,nqc,-0.13911935203334394,0.0007252281275666111,True,-0.13911935203334394,False

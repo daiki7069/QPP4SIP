@@ -1,0 +1,2 @@
+integrated_all_significant,integrated_all_spearman_rho,integrated_all_spearman_p,qpp_significant_count,qpp_total_count,qpp_significant_ratio,integrated_subgroups_significant,integrated_subgroups_total,integrated_subgroups_ratio,qpp_subgroups_significant,qpp_subgroups_total,qpp_subgroups_ratio,integrated_better
+False,0.01595147270888089,0.5853804932960774,4,10,0.4,0,3,0.0,1,1,1.0,False

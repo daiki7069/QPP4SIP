@@ -1,0 +1,23 @@
+================================================================================
+AmbigNQで学習したモデルをINSCITで評価
+================================================================================
+
+モデルタイプ: elasticnet
+特徴量: ['nqc', 'clarity', 'wig', 'smv', 'n_sigma_50']
+検索手法: dpr
+
+評価結果:
+  Accuracy: 0.6155
+  F1 Score: 0.2186
+  AUC-ROC: 0.5199
+  Average Precision: 0.1773
+
+分類レポート:
+                   precision    recall  f1-score   support
+
+Non-Clarification       0.83      0.67      0.75       419
+    Clarification       0.16      0.33      0.22        83
+
+         accuracy                           0.62       502
+        macro avg       0.50      0.50      0.48       502
+     weighted avg       0.72      0.62      0.66       502

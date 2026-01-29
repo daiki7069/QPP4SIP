@@ -1,14 +1,21 @@
 """
 可視化関連のモジュール
 """
+import warnings
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sklearn.metrics import roc_curve, precision_recall_curve, roc_auc_score, average_precision_score, f1_score
 import matplotlib.cm as cm
+from matplotlib.lines import Line2D
+from matplotlib.text import Text
+from matplotlib.legend_handler import HandlerLine2D, HandlerBase
+from matplotlib import font_manager
+from matplotlib.transforms import Bbox
+from matplotlib.offsetbox import VPacker, HPacker, AnchoredOffsetbox
 
 
 def format_feature_name(feature_name: str) -> str:
@@ -1378,6 +1385,266 @@ def plot_overconfidence_analysis(
     output_path = output_dir / 'overconfidence_analysis.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"  - Overconfidence Analysis可視化を保存: {output_path}")
+    plt.close()
+
+
+# 凡例セクション用: results.csv の列名を Pre / Post / PLM に分類
+_LEGEND_PRE_METRICS = {'AvgICTF', 'AvgIDF', 'MaxIDF', 'MaxSCQ', 'SClarity'}
+_LEGEND_POST_METRICS = {'Clarity', 'NQC', 'SMV', 'WIG', 'nSigma'}
+_LEGEND_PLM_METRICS = {'BERT', 'RoBERTa'}
+
+# 島ごとの色系統（Pre=青系, Post=緑系, PLM=Teal/紫系）
+_PALETTE_PRE = ['#1e3a8a', '#2563eb', '#3b82f6', '#60a5fa', '#93c5fd']
+_PALETTE_POST = ['#14532d', '#166534', '#22c55e', '#4ade80', '#86efac']
+_PALETTE_PLM = ['#0f766e', '#0d9488', '#14b8a6', '#5eead4']
+
+
+class _SpacerLine2D(Line2D):
+    """凡例でセクション間の行間用（空行）。"""
+    pass
+
+
+class _SectionTitleLine2D(Line2D):
+    """凡例のセクション見出し用。テキストを handle 内に描画して左づめにする。"""
+    def __init__(self, title_text: str, **kwargs):
+        super().__init__([0], [0], color='none', marker='', markersize=0, linestyle='', **kwargs)
+        self._section_title = title_text
+
+
+class _HandlerSpacer(HandlerBase):
+    """セクション間の行間用。何も描かず1行分の余白を確保。"""
+    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+        return [Line2D([0, 0], [0, 0], color='none', transform=trans)]
+
+
+class _HandlerSectionTitle(HandlerBase):
+    """セクション見出しを handle 内にテキストで描画（色付き線の位置から左づめ）。"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def adjust_drawing_area(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize):
+        title = getattr(orig_handle, '_section_title', '')
+        if title:
+            # テキスト幅分だけ handle を広く要求（おおよそ fontsize * 文字数 * 0.5）
+            width = max(width, fontsize * len(title) * 0.52)
+        return (xdescent, ydescent, width, height)
+
+    def create_artists(self, legend, orig_handle, xdescent, ydescent, width, height, fontsize, trans):
+        title = getattr(orig_handle, '_section_title', '')
+        if not title:
+            return [Line2D([0, 0], [0, 0], color='none', transform=trans)]
+        y_center = (height - ydescent) / 2
+        t = Text(0, y_center, title, fontsize=fontsize, verticalalignment='center',
+                 horizontalalignment='left', transform=trans)
+        return [t]
+
+
+# 凡例での単体指標の表示名（results.csv の列名 → 表示用）
+_LEGEND_SINGLE_METRIC_DISPLAY = {'nSigma': 'n(σ%)'}
+
+
+def _single_metric_display_name(col: str) -> str:
+    """凡例用の単体指標表示名。nSigma → n(σ%) など。"""
+    return _LEGEND_SINGLE_METRIC_DISPLAY.get(col, col)
+
+
+def _single_metric_section(col: str) -> str:
+    """単体指標の列名から凡例セクションを返す: 'pre' | 'post' | 'plm'。"""
+    if col in _LEGEND_PRE_METRICS:
+        return 'pre'
+    if col in _LEGEND_POST_METRICS:
+        return 'post'
+    if col in _LEGEND_PLM_METRICS:
+        return 'plm'
+    return 'post'  # 未定義は Post に寄せる
+
+
+def _legend_spacer() -> _SpacerLine2D:
+    """凡例でセクション間の行間（空行）用。"""
+    return _SpacerLine2D([0], [0], color='none', marker='', markersize=0, linestyle='')
+
+
+def _legend_section_title_handle(title_text: str) -> _SectionTitleLine2D:
+    """凡例のセクション見出し用。handle 内に title_text を左づめで描画。"""
+    return _SectionTitleLine2D(title_text)
+
+
+def plot_roc_curves_regularization_and_single_metrics(
+    y_test: np.ndarray,
+    regularization_probas: dict,
+    single_metrics_df: pd.DataFrame,
+    output_path: Path,
+    axis_fontsize: int = 22,
+    legend_fontsize: int = 20,
+    legend_fraction: float = 0.4,
+    square: bool = False,
+) -> None:
+    """
+    正則化4種（No penalty, L1, L2, ElasticNet）と個別指標のROC曲線を1枚に描画。
+    凡例は「提案モデル / Pre-retrieval QPP / Post-retrieval QPP / PLM」でセクション分けし、仕切り線と見出しを付与。
+
+    Args:
+        y_test: 真のラベル (1次元配列)
+        regularization_probas: {'No penalty': array, 'L1': array, 'L2': array, 'ElasticNet': array}
+        single_metrics_df: 列が各単体指標のスコア（列名が凡例に使われる）
+        output_path: 保存先ファイルパス
+        axis_fontsize: 縦・横軸のフォントサイズ
+        legend_fontsize: 凡例のフォントサイズ
+        legend_fraction: 未使用（凡例オーバーレイのため）
+        square: True のとき図を正方形（figsize=(10,10), aspect='equal'）で描画
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if square:
+        fig, ax = plt.subplots(figsize=(10, 10))
+        ax.set_aspect('equal')
+    else:
+        fig, ax = plt.subplots(figsize=(13.2, 10))
+    ax.set_xlim([0.0, 1.0])
+    ax.set_ylim([0.0, 1.05])
+    ax.set_xlabel('False Positive Rate', fontsize=axis_fontsize)
+    ax.set_ylabel('True Positive Rate', fontsize=axis_fontsize)
+    ax.tick_params(axis='both', labelsize=axis_fontsize)
+    ax.grid(True, alpha=0.3)
+
+    # 区別ごとに凡例を分ける（セクションごとに別ボックス）
+    reg_order = ['No penalty', 'L1', 'L2', 'ElasticNet']
+    reg_colors = ['#8B0000', '#C41E3A', '#DC143C', '#F08080']
+    proposed_handles: List[Line2D] = []
+    proposed_labels: List[str] = []
+    for i, name in enumerate(reg_order):
+        if name not in regularization_probas:
+            continue
+        proba = np.asarray(regularization_probas[name])
+        fpr, tpr, _ = roc_curve(y_test, proba)
+        auc = roc_auc_score(y_test, proba)
+        (line,) = ax.plot(fpr, tpr, linewidth=2.5, color=reg_colors[i], alpha=0.95)
+        proposed_handles.append(line)
+        proposed_labels.append(f'{name} (AUC={auc:.4f})')
+    (line_random,) = ax.plot([0, 1], [0, 1], 'k--', linewidth=1)
+
+    # 単体指標を Pre / Post / PLM に分類してプロット（島ごとに色系統を揃える）
+    section_palettes = {'pre': _PALETTE_PRE, 'post': _PALETTE_POST, 'plm': _PALETTE_PLM}
+    section_count: dict = {'pre': 0, 'post': 0, 'plm': 0}
+    single_entries: List[Tuple[Line2D, str, str]] = []
+    for col in single_metrics_df.columns:
+        sec = _single_metric_section(col)
+        pal = section_palettes[sec]
+        color = pal[section_count[sec] % len(pal)]
+        section_count[sec] += 1
+        scores = single_metrics_df[col].values.astype(float)
+        auc = roc_auc_score(y_test, scores)
+        if auc < 0.5:
+            scores = 1.0 - scores
+            auc = roc_auc_score(y_test, scores)
+        fpr, tpr, _ = roc_curve(y_test, scores)
+        (line,) = ax.plot(fpr, tpr, linewidth=1.5, alpha=0.85, color=color)
+        display_name = _single_metric_display_name(col)
+        single_entries.append((line, f'{display_name} (AUC={auc:.4f})', sec))
+
+    section_titles = {'pre': 'Pre-retrieval QPP', 'post': 'Post-retrieval QPP', 'plm': 'PLM'}
+    section_order = ['pre', 'post', 'plm']
+    # セクションごとに (title, handles, labels) を収集（中身があるものだけ）
+    legend_blocks: List[Tuple[str, List, List[str]]] = []
+    legend_blocks.append(('Proposed model', proposed_handles, proposed_labels))
+    for sec in section_order:
+        entries = [(h, lbl) for h, lbl, s in single_entries if s == sec]
+        if not entries:
+            continue
+        h_list = [e[0] for e in entries]
+        l_list = [e[1] for e in entries]
+        legend_blocks.append((section_titles[sec], h_list, l_list))
+    legend_blocks.append(('Random', [line_random], ['Random (AUC=0.5000)']))
+
+    def _make_legend_box(title: str, handles: list, labels: list):
+        leg = ax.legend(
+            handles,
+            labels,
+            loc='lower right',
+            fontsize=legend_fontsize,
+            title_fontsize=18,
+            ncol=1,
+            title=title,
+            frameon=True,
+            fancybox=True,
+            framealpha=0.7,
+            borderaxespad=0.25,
+            borderpad=0.2,
+        )
+        leg.get_frame().set_boxstyle('round', pad=0.25)
+        box = leg._legend_box
+        leg.remove()
+        return box
+
+    def _add_anchored_legend(anchor_loc: str, child_box, frameon: bool = True):
+        ob = AnchoredOffsetbox(
+            loc=anchor_loc,
+            child=child_box,
+            pad=0.5,
+            borderpad=0.5,
+            frameon=frameon,
+        )
+        if frameon:
+            ob.patch.set_facecolor('white')
+            ob.patch.set_alpha(0.7)
+            ob.patch.set_edgecolor('gray')
+            ob.patch.set_boxstyle('round,pad=0.25,rounding_size=0.4')
+        ax.add_artist(ob)
+
+    n_blocks = len(legend_blocks)
+    # ブロック数が多く縦に収まらない場合、Proposed model だけ別アイランド（別枠）にし、残りも別アイランドで右島の左端に触れるよう配置
+    split_layout = n_blocks >= 4
+    if split_layout:
+        proposed_title, proposed_handles, proposed_labels = legend_blocks[0]
+        rest_blocks = legend_blocks[1:]
+        box_proposed = _make_legend_box(proposed_title, proposed_handles, proposed_labels)
+        vp_proposed = VPacker(children=[box_proposed], align='left', sep=2)
+        boxes_rest = [_make_legend_box(t, h, l) for t, h, l in rest_blocks]
+        vp_rest = VPacker(children=boxes_rest, align='left', sep=2)
+        # 右側の島（Pre, Post, PLM, Random）を先に右下に配置
+        anchored_rest = AnchoredOffsetbox(
+            loc='lower right',
+            child=vp_rest,
+            pad=0.5,
+            borderpad=0.5,
+            frameon=True,
+        )
+        anchored_rest.patch.set_facecolor('white')
+        anchored_rest.patch.set_alpha(0.7)
+        anchored_rest.patch.set_edgecolor('gray')
+        anchored_rest.patch.set_boxstyle('round,pad=0.25,rounding_size=0.4')
+        ax.add_artist(anchored_rest)
+        fig.canvas.draw()
+        # Proposed model を別アイランドとして、右島の左端に触れる位置に配置
+        try:
+            inv = ax.transAxes.inverted()
+            bbox_rest = anchored_rest.get_window_extent(renderer=fig.canvas.get_renderer()).transformed(inv)
+            x_anchor = float(bbox_rest.x0)
+        except Exception:
+            x_anchor = 0.5
+        anchored_proposed = AnchoredOffsetbox(
+            loc='lower right',
+            child=vp_proposed,
+            pad=0.5,
+            borderpad=0.5,
+            frameon=True,
+            bbox_to_anchor=(x_anchor, 0.02),
+            bbox_transform=ax.transAxes,
+        )
+        anchored_proposed.patch.set_facecolor('white')
+        anchored_proposed.patch.set_alpha(0.7)
+        anchored_proposed.patch.set_edgecolor('gray')
+        anchored_proposed.patch.set_boxstyle('round,pad=0.25,rounding_size=0.4')
+        ax.add_artist(anchored_proposed)
+    else:
+        legend_boxes = [_make_legend_box(t, h, l) for t, h, l in legend_blocks]
+        vp = VPacker(children=legend_boxes, align='left', sep=2)
+        _add_anchored_legend('lower right', vp)
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', UserWarning)  # 日本語グリフ欠落警告を抑制
+        plt.tight_layout()
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
 
 

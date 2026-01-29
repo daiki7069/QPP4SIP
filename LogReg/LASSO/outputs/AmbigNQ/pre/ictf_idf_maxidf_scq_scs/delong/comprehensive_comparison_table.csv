@@ -4,11 +4,11 @@ AvgIDF,0.5505,0.5815,-
 MaxIDF,0.5374,0.5745,-
 MaxSCQ,0.5409,0.5737,-
 Simplified Clarity,0.5374,0.5703,-
-L1 Logistic Regression,0.5956,0.6088,3.79e-06
-L2 Logistic Regression,0.5810,0.5980,2.09e-06
-E-Net,0.5964,0.6108,2.41e-05
+L1 Logistic Regression,0.5966,0.6107,1.50e-05
+L2 Logistic Regression,0.5962,0.6105,2.19e-05
+E-Net,0.5963,0.6106,1.93e-05
 No Penalty Logistic Regression,0.5964,0.6108,2.47e-05
 BOLASSO,0.5956,0.6088,3.79e-06
 LARS-Traps,0.5810,0.5980,2.09e-06
 LARS-CV,0.5810,0.5980,2.09e-06
-Random Forest,0.5740,0.6070,0.1319
+Random Forest,0.5763,0.6068,0.0991

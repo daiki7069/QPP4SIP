@@ -1,7 +1,7 @@
 feature,coefficient
-roberta_logit_clarification,3.849578581875046
-n_sigma_50,0.7910273551936184
-clarity,0.7121947467756737
-wig,-0.537144990366775
 nqc,0.0
+clarity,0.0
+wig,0.0
 smv,0.0
+n_sigma_50,0.0
+roberta_logit_clarification,0.0

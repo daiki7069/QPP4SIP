@@ -1,0 +1,2 @@
+n_samples,integrated_separation,integrated_overlap,best_qpp_metric,best_qpp_separation,best_qpp_overlap,separation_improvement,overlap_improvement,integrated_better_separation,integrated_better_overlap
+1172,0.017058281016507137,0.8769467129321323,wig,0.00826527073460373,0.9407720257497693,0.008793010281903407,0.06382531281763693,True,True

@@ -84,7 +84,8 @@ def normalize_features(
     X_test: pd.DataFrame,
     use_combined_normalization: bool = False,
     use_separate_normalization: bool = False,
-    use_minmax_normalization: bool = False
+    use_minmax_normalization: bool = False,
+    return_scalers: bool = False
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     各特徴量を個別に正規化（z-score正規化または[0,1]正規化）
@@ -95,9 +96,10 @@ def normalize_features(
         use_combined_normalization: Trueの場合、訓練データとテストデータを結合してから正規化（リーク前提）
         use_separate_normalization: Trueの場合、訓練データとテストデータをそれぞれ個別に正規化
         use_minmax_normalization: Trueの場合、[0,1]正規化（Min-Max正規化）を使用。Falseの場合はz-score正規化
+        return_scalers: Trueの場合、scalerの辞書も返す
     
     Returns:
-        (X_train_norm, X_test_norm)
+        (X_train_norm, X_test_norm) または (X_train_norm, X_test_norm, scalers)
     """
     # 使用するスケーラーを選択
     if use_minmax_normalization:
@@ -123,6 +125,8 @@ def normalize_features(
             X_test_norm[column] = scaler_test.fit_transform(X_test[[column]]).flatten()
             scalers_test[column] = scaler_test
         
+        if return_scalers:
+            return X_train_norm, X_test_norm, {'train': scalers_train, 'test': scalers_test}
         return X_train_norm, X_test_norm
     elif use_combined_normalization:
         # リーク前提：訓練データとテストデータを結合してから正規化
@@ -140,6 +144,8 @@ def normalize_features(
         X_train_norm = X_combined_norm.iloc[:n_train].reset_index(drop=True)
         X_test_norm = X_combined_norm.iloc[n_train:].reset_index(drop=True)
         
+        if return_scalers:
+            return X_train_norm, X_test_norm, scalers
         return X_train_norm, X_test_norm
     else:
         # 通常の方法：訓練データの統計量でテストデータも正規化
@@ -153,5 +159,7 @@ def normalize_features(
             X_test_norm[column] = scaler.transform(X_test[[column]]).flatten()
             scalers[column] = scaler
         
+        if return_scalers:
+            return X_train_norm, X_test_norm, scalers
         return X_train_norm, X_test_norm
 

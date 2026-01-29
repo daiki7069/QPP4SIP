@@ -1,6 +1,6 @@
 feature,coefficient
-n_sigma_50,1.5041998237473972
-wig,-1.1364110652484056
-clarity,-0.3172805709149127
-nqc,-0.1356519457715558
+nqc,0.0
+clarity,0.0
+wig,0.0
 smv,0.0
+n_sigma_50,0.0

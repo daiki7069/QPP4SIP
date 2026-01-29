@@ -26,7 +26,8 @@ from .visualization import (
     plot_correlation_heatmaps,
     plot_confidence_analysis,
     plot_overconfidence_analysis,
-    plot_multiple_models_comparison
+    plot_multiple_models_comparison,
+    plot_roc_curves_regularization_and_single_metrics,
 )
 from .bootstrap import (
     generate_bootstrap_samples,
@@ -77,6 +78,7 @@ __all__ = [
     'plot_confidence_analysis',
     'plot_overconfidence_analysis',
     'plot_multiple_models_comparison',
+    'plot_roc_curves_regularization_and_single_metrics',
     # models
     'NonNegativeLogisticRegression',
     'BOLASSOModel',

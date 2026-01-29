@@ -9,11 +9,11 @@ MaxSCQ,0.5409,0.5737,-
 Simplified Clarity,0.5374,0.5703,-
 SMV,0.4447,0.4956,-
 WIG,0.4583,0.5097,-
-L1 Logistic Regression,0.5922,0.6054,1.75e-05
-L2 Logistic Regression,0.5734,0.5877,0.0009
-E-Net,0.5861,0.5989,0.0011
+L1 Logistic Regression,0.5862,0.5993,0.0011
+L2 Logistic Regression,0.5859,0.5986,0.0011
+E-Net,0.5860,0.5989,0.0011
 No Penalty Logistic Regression,0.5860,0.5990,0.0012
 BOLASSO,0.5922,0.6054,1.75e-05
 LARS-Traps,0.5734,0.5877,0.0009
 LARS-CV,0.5734,0.5877,0.0009
-Random Forest,0.5673,0.5941,0.2503
+Random Forest,0.5621,0.5924,0.4352

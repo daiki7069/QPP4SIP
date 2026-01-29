@@ -10,4 +10,4 @@ MaxIDF,0.5374,0.5745,-
 MaxSCQ,0.5409,0.5737,-
 Simplified Clarity,0.5374,0.5703,-
 BERT,0.6987,0.7145,-
-RandomForest,0.6158,0.6279,7.55e-11
+RandomForest,0.5904,0.6076,8.88e-16

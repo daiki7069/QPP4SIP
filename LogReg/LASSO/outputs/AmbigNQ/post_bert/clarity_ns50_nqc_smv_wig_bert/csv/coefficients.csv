@@ -1,7 +1,7 @@
 feature,coefficient
-bert_logit_clarification,3.1582535326772
-clarity,0.9211644821847562
-n_sigma_50,0.5941556141488014
-wig,-0.3792036522588043
 nqc,0.0
+clarity,0.0
+wig,0.0
 smv,0.0
+n_sigma_50,0.0
+bert_logit_clarification,0.0

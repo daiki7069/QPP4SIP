@@ -1,6 +1,6 @@
 feature,coefficient
-pre_avgidf,-10.182970710795573
-pre_simplified_clarity,9.461793809825021
-pre_maxscq,-0.40720971431837555
-pre_maxidf,0.2181359695528648
+pre_avgidf,0.0
 pre_avgictf,0.0
+pre_maxidf,0.0
+pre_maxscq,0.0
+pre_simplified_clarity,0.0

@@ -10,4 +10,4 @@ MaxIDF,0.5374,0.5745,-
 MaxSCQ,0.5409,0.5737,-
 Simplified Clarity,0.5374,0.5703,-
 RoBERTa,0.7179,0.7320,-
-ElasticNet,0.7156,0.7300,0.3212
+ElasticNet,0.7147,0.7295,0.2175

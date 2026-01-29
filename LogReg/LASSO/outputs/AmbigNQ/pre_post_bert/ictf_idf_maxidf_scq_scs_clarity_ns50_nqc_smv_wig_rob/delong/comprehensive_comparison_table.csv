@@ -10,11 +10,11 @@ Simplified Clarity,0.5374,0.5703,-
 RoBERTa,0.7179,0.7320,-
 SMV,0.5368,0.5570,-
 WIG,0.5535,0.5766,-
-L1 Logistic Regression,0.7151,0.7271,0.2818
-L2 Logistic Regression,0.7145,0.7249,0.2215
+L1 Logistic Regression,0.7153,0.7273,0.3531
+L2 Logistic Regression,0.7153,0.7264,0.3630
 E-Net,0.7154,0.7270,0.3568
 No Penalty Logistic Regression,0.7158,0.7273,0.4919
 BOLASSO,0.7151,0.7271,0.2818
 LARS-Traps,0.7145,0.7249,0.2215
 LARS-CV,0.7146,0.7250,0.2363
-Random Forest,0.6404,0.6611,5.77e-15
+Random Forest,0.6409,0.6613,5.66e-14

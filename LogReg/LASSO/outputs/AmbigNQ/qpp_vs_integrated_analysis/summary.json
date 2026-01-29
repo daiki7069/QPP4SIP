@@ -1,0 +1,119 @@
+{
+  "total_entries": 2002,
+  "filtered_entries": 1172,
+  "qa_pairs_distribution": {
+    "0 QA pair": 830,
+    "4+ QA pairs": 587,
+    "2 QA pairs": 397,
+    "3 QA pairs": 188
+  },
+  "filtered_qa_pairs_distribution": {
+    "4+ QA pairs": 587,
+    "2 QA pairs": 397,
+    "3 QA pairs": 188
+  },
+  "correlations": [
+    {
+      "Score": "clarity",
+      "Pearson_r": 0.0026467042197347163,
+      "Pearson_p": 0.9278803349691632,
+      "Spearman_rho": 0.01427167484723577,
+      "Spearman_p": 0.6254882564028665,
+      "N": 1172
+    },
+    {
+      "Score": "wig",
+      "Pearson_r": -0.008694367812544623,
+      "Pearson_p": 0.7662105979621486,
+      "Spearman_rho": -0.07806593849171876,
+      "Spearman_p": 0.007500237883513851,
+      "N": 1172
+    },
+    {
+      "Score": "nqc",
+      "Pearson_r": -0.037715867850655116,
+      "Pearson_p": 0.19695879993478863,
+      "Spearman_rho": -0.09986334950723817,
+      "Spearman_p": 0.0006177847923535587,
+      "N": 1172
+    },
+    {
+      "Score": "smv",
+      "Pearson_r": -0.0007629462380754553,
+      "Pearson_p": 0.9791845923095512,
+      "Spearman_rho": -0.08569205847754331,
+      "Spearman_p": 0.003325871216629608,
+      "N": 1172
+    },
+    {
+      "Score": "n_sigma_50",
+      "Pearson_r": -0.023725441730668748,
+      "Pearson_p": 0.4170924830013759,
+      "Spearman_rho": -0.07243895564258737,
+      "Spearman_p": 0.013118964249001086,
+      "N": 1172
+    },
+    {
+      "Score": "avgidf",
+      "Pearson_r": -0.013791127916770288,
+      "Pearson_p": 0.6371760623312808,
+      "Spearman_rho": -0.02645561679298976,
+      "Spearman_p": 0.36552559325093126,
+      "N": 1172
+    },
+    {
+      "Score": "avgictf",
+      "Pearson_r": -0.009300954742004257,
+      "Pearson_p": 0.7504238681013244,
+      "Spearman_rho": -0.021071124269288283,
+      "Spearman_p": 0.47111296665308877,
+      "N": 1172
+    },
+    {
+      "Score": "maxidf",
+      "Pearson_r": -0.026754748199300068,
+      "Pearson_p": 0.3601278606782667,
+      "Spearman_rho": -0.02660244716403452,
+      "Spearman_p": 0.3628698110912072,
+      "N": 1172
+    },
+    {
+      "Score": "maxscq",
+      "Pearson_r": -0.028089335761341913,
+      "Pearson_p": 0.3366590714524668,
+      "Spearman_rho": -0.025632870932457644,
+      "Spearman_p": 0.3806301510418568,
+      "N": 1172
+    },
+    {
+      "Score": "simplified_clarity",
+      "Pearson_r": -0.002629967914663849,
+      "Pearson_p": 0.9283351494754283,
+      "Spearman_rho": -0.014200359504027116,
+      "Spearman_p": 0.6272169442236939,
+      "N": 1172
+    },
+    {
+      "Score": "QPP Integrated",
+      "Pearson_r": 0.012884491162386706,
+      "Pearson_p": 0.6594725283338156,
+      "Spearman_rho": 0.01595147270888089,
+      "Spearman_p": 0.5853804932960774,
+      "N": 1172
+    }
+  ],
+  "threshold_percentile": 75.0,
+  "qpp_metrics": [
+    "clarity",
+    "wig",
+    "nqc",
+    "smv",
+    "n_sigma_50",
+    "avgidf",
+    "avgictf",
+    "maxidf",
+    "maxscq",
+    "simplified_clarity"
+  ],
+  "note": "Analysis compares individual QPP metrics (10 types) vs QPP integrated model"
+}
