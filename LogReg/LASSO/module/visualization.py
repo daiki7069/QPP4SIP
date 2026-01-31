@@ -1478,6 +1478,8 @@ def plot_roc_curves_regularization_and_single_metrics(
     legend_fontsize: int = 20,
     legend_fraction: float = 0.4,
     square: bool = False,
+    legend_outside: bool = False,
+    use_short_labels: bool = False,
 ) -> None:
     """
     正則化4種（No penalty, L1, L2, ElasticNet）と個別指標のROC曲線を1枚に描画。
@@ -1492,15 +1494,22 @@ def plot_roc_curves_regularization_and_single_metrics(
         legend_fontsize: 凡例のフォントサイズ
         legend_fraction: 未使用（凡例オーバーレイのため）
         square: True のとき図を正方形（figsize=(10,10), aspect='equal'）で描画
+        legend_outside: True のとき凡例をグラフの外（右側）に配置し、図を小さくする
+        use_short_labels: True のとき凡例ラベルを (xxx) のみに（AUC= を付けない）
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    if legend_outside:
+        # やや横長・縦幅を圧縮
+        figsize = (9, 6.5) if square else (11, 8)
+    else:
+        figsize = (10, 10) if square else (13.2, 10)
     if square:
-        fig, ax = plt.subplots(figsize=(10, 10))
+        fig, ax = plt.subplots(figsize=figsize)
         ax.set_aspect('equal')
     else:
-        fig, ax = plt.subplots(figsize=(13.2, 10))
+        fig, ax = plt.subplots(figsize=figsize)
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.05])
     ax.set_xlabel('False Positive Rate', fontsize=axis_fontsize)
@@ -1508,6 +1517,7 @@ def plot_roc_curves_regularization_and_single_metrics(
     ax.tick_params(axis='both', labelsize=axis_fontsize)
     ax.grid(True, alpha=0.3)
 
+    label_fmt = '({:.4f})' if use_short_labels else '(AUC={:.4f})'
     # 区別ごとに凡例を分ける（セクションごとに別ボックス）
     reg_order = ['No penalty', 'L1', 'L2', 'ElasticNet']
     reg_colors = ['#8B0000', '#C41E3A', '#DC143C', '#F08080']
@@ -1521,7 +1531,7 @@ def plot_roc_curves_regularization_and_single_metrics(
         auc = roc_auc_score(y_test, proba)
         (line,) = ax.plot(fpr, tpr, linewidth=2.5, color=reg_colors[i], alpha=0.95)
         proposed_handles.append(line)
-        proposed_labels.append(f'{name} (AUC={auc:.4f})')
+        proposed_labels.append(f'{name} {label_fmt.format(auc)}')
     (line_random,) = ax.plot([0, 1], [0, 1], 'k--', linewidth=1)
 
     # 単体指標を Pre / Post / PLM に分類してプロット（島ごとに色系統を揃える）
@@ -1541,7 +1551,7 @@ def plot_roc_curves_regularization_and_single_metrics(
         fpr, tpr, _ = roc_curve(y_test, scores)
         (line,) = ax.plot(fpr, tpr, linewidth=1.5, alpha=0.85, color=color)
         display_name = _single_metric_display_name(col)
-        single_entries.append((line, f'{display_name} (AUC={auc:.4f})', sec))
+        single_entries.append((line, f'{display_name} {label_fmt.format(auc)}', sec))
 
     section_titles = {'pre': 'Pre-retrieval QPP', 'post': 'Post-retrieval QPP', 'plm': 'PLM'}
     section_order = ['pre', 'post', 'plm']
@@ -1555,7 +1565,7 @@ def plot_roc_curves_regularization_and_single_metrics(
         h_list = [e[0] for e in entries]
         l_list = [e[1] for e in entries]
         legend_blocks.append((section_titles[sec], h_list, l_list))
-    legend_blocks.append(('Random', [line_random], ['Random (AUC=0.5000)']))
+    legend_blocks.append(('Random', [line_random], [f'Random {label_fmt.format(0.5)}']))
 
     def _make_legend_box(title: str, handles: list, labels: list):
         leg = ax.legend(
@@ -1577,20 +1587,22 @@ def plot_roc_curves_regularization_and_single_metrics(
         leg.remove()
         return box
 
-    def _add_anchored_legend(anchor_loc: str, child_box, frameon: bool = True):
-        ob = AnchoredOffsetbox(
-            loc=anchor_loc,
-            child=child_box,
-            pad=0.5,
-            borderpad=0.5,
-            frameon=frameon,
-        )
+    def _add_anchored_legend(anchor_loc: str, child_box, frameon: bool = True, bbox_to_anchor=None, bbox_transform=None):
+        kwargs = dict(loc=anchor_loc, child=child_box, pad=0.5, borderpad=0.5, frameon=frameon)
+        if bbox_to_anchor is not None and bbox_transform is not None:
+            kwargs['bbox_to_anchor'] = bbox_to_anchor
+            kwargs['bbox_transform'] = bbox_transform
+        ob = AnchoredOffsetbox(**kwargs)
         if frameon:
             ob.patch.set_facecolor('white')
             ob.patch.set_alpha(0.7)
             ob.patch.set_edgecolor('gray')
             ob.patch.set_boxstyle('round,pad=0.25,rounding_size=0.4')
         ax.add_artist(ob)
+
+    leg_anchor = 'lower left' if legend_outside else 'lower right'
+    leg_bbox = (1.02, 0.02) if legend_outside else None
+    leg_transform = ax.transAxes if legend_outside else None
 
     n_blocks = len(legend_blocks)
     # ブロック数が多く縦に収まらない場合、Proposed model だけ別アイランド（別枠）にし、残りも別アイランドで右島の左端に触れるよう配置
@@ -1602,14 +1614,12 @@ def plot_roc_curves_regularization_and_single_metrics(
         vp_proposed = VPacker(children=[box_proposed], align='left', sep=2)
         boxes_rest = [_make_legend_box(t, h, l) for t, h, l in rest_blocks]
         vp_rest = VPacker(children=boxes_rest, align='left', sep=2)
-        # 右側の島（Pre, Post, PLM, Random）を先に右下に配置
-        anchored_rest = AnchoredOffsetbox(
-            loc='lower right',
-            child=vp_rest,
-            pad=0.5,
-            borderpad=0.5,
-            frameon=True,
-        )
+        # 右側の島（Pre, Post, PLM, Random）を先に配置（外なら右端、内なら右下）
+        rest_kw = dict(loc=leg_anchor, child=vp_rest, pad=0.5, borderpad=0.5, frameon=True)
+        if legend_outside:
+            rest_kw['bbox_to_anchor'] = (1.02, 0.02)
+            rest_kw['bbox_transform'] = ax.transAxes
+        anchored_rest = AnchoredOffsetbox(**rest_kw)
         anchored_rest.patch.set_facecolor('white')
         anchored_rest.patch.set_alpha(0.7)
         anchored_rest.patch.set_edgecolor('gray')
@@ -1640,7 +1650,7 @@ def plot_roc_curves_regularization_and_single_metrics(
     else:
         legend_boxes = [_make_legend_box(t, h, l) for t, h, l in legend_blocks]
         vp = VPacker(children=legend_boxes, align='left', sep=2)
-        _add_anchored_legend('lower right', vp)
+        _add_anchored_legend(leg_anchor, vp, bbox_to_anchor=leg_bbox, bbox_transform=leg_transform)
     with warnings.catch_warnings():
         warnings.simplefilter('ignore', UserWarning)  # 日本語グリフ欠落警告を抑制
         plt.tight_layout()
