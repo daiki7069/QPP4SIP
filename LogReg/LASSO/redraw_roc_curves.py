@@ -82,14 +82,14 @@ def load_and_plot(scenario_name: str, scenario_dir: Path, output_dir: Path) -> N
     )
     print(f"  [OK] {scenario_name}: 保存先 {output_path}")
 
-    # 別バージョン: 軸ラベル20pt・凡例をグラフ外・ラベルは (xxx) 形式・グラフは小さめ
+    # 別バージョン: 軸ラベル24pt・凡例をグラフ外・ラベルは (xxx) 形式・グラフは小さめ
     outside_path = output_dir / f"{scenario_name}_outside.png"
     plot_roc_curves_regularization_and_single_metrics(
         y_test=y_test,
         regularization_probas=regularization_probas,
         single_metrics_df=single_metrics_df,
         output_path=outside_path,
-        axis_fontsize=20,
+        axis_fontsize=24,
         legend_fontsize=20,
         legend_fraction=0.4,
         square=False,
