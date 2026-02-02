@@ -1,0 +1,21 @@
+=== MoE 動的ゲーティング統合 ===
+データセット: AmbigNQ
+ゲーティング方式: mlp
+特徴量: ['nqc', 'clarity', 'wig', 'smv', 'n_sigma_50', 'pre_avgidf', 'pre_avgictf', 'pre_maxidf', 'pre_maxscq', 'pre_simplified_clarity']
+正規化:  z-score
+CV: False fold= N/A
+Train: AUC=0.5751 AP=0.5389 Acc=0.5614 F1=0.5158
+Test:  AUC=0.5439 AP=0.5643 Acc=0.5405 F1=0.5776
+
+Test classification_report:
+              precision    recall  f1-score   support
+
+           0       0.51      0.49      0.50       932
+           1       0.57      0.59      0.58      1070
+
+    accuracy                           0.54      2002
+   macro avg       0.54      0.54      0.54      2002
+weighted avg       0.54      0.54      0.54      2002
+
+
+結果を保存: /home/daiki_shibata/pj/QPP4SIP/LogReg/MoE/outputs/AmbigNQ/run_all_20260202_135638/pre_post/ictf_idf_maxidf_scq_scs_clarity_ns50_nqc_smv_wig_mlp_h32/results.txt
