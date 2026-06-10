@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600" viewBox="0 0 1200 600" role="img" aria-labelledby="title desc">
+  <title id="title">AUC-ROC summary for clarification need prediction</title>
+  <desc id="desc">A bar chart summarizing AUC-ROC results: best single QPP WIG 0.5535, integrated Pre QPP 0.5964, BERT 0.6987, RoBERTa 0.7179, and Pre/Post/RoBERTa 0.7158.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#eff6ff"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.15"/>
+    </filter>
+    <style>
+      .jp { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; }
+      .title { font-size: 34px; font-weight: 800; fill: #0f172a; }
+      .subtitle { font-size: 17px; fill: #475569; }
+      .axis { font-size: 14px; fill: #64748b; }
+      .label { font-size: 17px; font-weight: 700; fill: #0f172a; }
+      .value { font-size: 17px; font-weight: 800; fill: #0f172a; }
+      .note { font-size: 15px; fill: #334155; }
+      .small { font-size: 13px; fill: #64748b; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="600" fill="url(#bg)"/>
+  <circle cx="1000" cy="95" r="170" fill="#3b82f6" opacity="0.08"/>
+  <circle cx="140" cy="520" r="180" fill="#10b981" opacity="0.10"/>
+
+  <text x="64" y="70" class="jp title">AUC-ROC summary</text>
+  <text x="64" y="103" class="jp subtitle">AmbigNQ / DPR top-100 / Clarification Need Prediction</text>
+
+  <g transform="translate(78,145)">
+    <rect x="0" y="0" width="810" height="360" rx="26" fill="#ffffff" stroke="#dbeafe" filter="url(#shadow)"/>
+    <line x1="145" y1="295" x2="755" y2="295" stroke="#cbd5e1" stroke-width="1.5"/>
+    <line x1="145" y1="235" x2="755" y2="235" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="145" y1="175" x2="755" y2="175" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="145" y1="115" x2="755" y2="115" stroke="#e2e8f0" stroke-width="1"/>
+    <line x1="145" y1="55" x2="755" y2="55" stroke="#e2e8f0" stroke-width="1"/>
+
+    <text x="104" y="300" class="jp axis">0.50</text>
+    <text x="104" y="240" class="jp axis">0.55</text>
+    <text x="104" y="180" class="jp axis">0.60</text>
+    <text x="104" y="120" class="jp axis">0.65</text>
+    <text x="104" y="60" class="jp axis">0.70</text>
+    <text x="99" y="23" class="jp axis">0.75</text>
+    <line x1="145" y1="295" x2="145" y2="35" stroke="#94a3b8" stroke-width="1.5"/>
+
+    <rect x="175" y="231" width="72" height="64" rx="8" fill="#7dd3fc"/>
+    <text x="172" y="323" class="jp axis">WIG</text>
+    <text x="168" y="345" class="jp axis">single QPP</text>
+    <text x="171" y="219" class="jp value">0.5535</text>
+
+    <rect x="300" y="180" width="72" height="115" rx="8" fill="#34d399"/>
+    <text x="298" y="323" class="jp axis">Pre</text>
+    <text x="278" y="345" class="jp axis">QPP only</text>
+    <text x="296" y="168" class="jp value">0.5964†</text>
+
+    <rect x="425" y="57" width="72" height="238" rx="8" fill="#a78bfa"/>
+    <text x="431" y="323" class="jp axis">BERT</text>
+    <text x="420" y="345" class="jp axis">single PLM</text>
+    <text x="421" y="45" class="jp value">0.6987</text>
+
+    <rect x="550" y="34" width="72" height="261" rx="8" fill="#8b5cf6"/>
+    <text x="545" y="323" class="jp axis">RoBERTa</text>
+    <text x="545" y="345" class="jp axis">single PLM</text>
+    <text x="546" y="22" class="jp value">0.7179</text>
+
+    <rect x="675" y="37" width="72" height="258" rx="8" fill="#60a5fa"/>
+    <text x="655" y="323" class="jp axis">Pre/Post</text>
+    <text x="645" y="345" class="jp axis">+ RoBERTa</text>
+    <text x="671" y="25" class="jp value">0.7158</text>
+
+    <rect x="240" y="141" width="195" height="34" rx="17" fill="#ecfdf5" stroke="#34d399"/>
+    <text x="259" y="164" class="jp small">QPP-only integration improves</text>
+
+    <path d="M620 42 C640 60, 650 58, 666 51" stroke="#64748b" stroke-width="2" fill="none"/>
+    <text x="625" y="78" class="jp small">QPP + PLM did</text>
+    <text x="625" y="96" class="jp small">not beat RoBERTa alone</text>
+  </g>
+
+  <g transform="translate(928,158)" filter="url(#shadow)">
+    <rect x="0" y="0" width="218" height="350" rx="26" fill="#0f172a"/>
+    <text x="26" y="46" class="jp label" style="fill:#ffffff">Takeaways</text>
+    <circle cx="31" cy="86" r="6" fill="#34d399"/>
+    <text x="48" y="91" class="jp note" style="fill:#e2e8f0">Pre-QPP integration</text>
+    <text x="48" y="113" class="jp note" style="fill:#e2e8f0">beats single QPP</text>
+    <circle cx="31" cy="158" r="6" fill="#f59e0b"/>
+    <text x="48" y="163" class="jp note" style="fill:#e2e8f0">Post-QPP integration</text>
+    <text x="48" y="185" class="jp note" style="fill:#e2e8f0">did not improve</text>
+    <circle cx="31" cy="230" r="6" fill="#60a5fa"/>
+    <text x="48" y="235" class="jp note" style="fill:#e2e8f0">Fine-tuned PLMs are</text>
+    <text x="48" y="257" class="jp note" style="fill:#e2e8f0">strong baselines</text>
+    <text x="26" y="312" class="jp small" style="fill:#94a3b8">† Holm-adjusted significant</text>
+  </g>
+</svg>

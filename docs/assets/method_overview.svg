@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640" role="img" aria-labelledby="title desc">
+  <title id="title">Clarification Need Prediction overview</title>
+  <desc id="desc">A research overview showing ambiguous user query, semantic features, query performance prediction, min-max normalization, logistic regression, and clarification decision.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#09111f"/>
+      <stop offset="0.54" stop-color="#0f223f"/>
+      <stop offset="1" stop-color="#102b24"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.22"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#61a5ff"/>
+    </marker>
+    <marker id="arrowGreen" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#3ddc97"/>
+    </marker>
+    <style>
+      .jp { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; }
+      .title { font-size: 38px; font-weight: 800; fill: #f8fafc; letter-spacing: .2px; }
+      .subtitle { font-size: 19px; fill: #b7c7dd; }
+      .small { font-size: 15px; fill: #c7d2fe; }
+      .label { font-size: 18px; font-weight: 700; fill: #f8fafc; }
+      .body { font-size: 15px; fill: #d9e4f2; }
+      .muted { font-size: 13px; fill: #93a4bb; }
+      .pillText { font-size: 14px; fill: #09111f; font-weight: 800; }
+      .card { fill: rgba(255,255,255,0.06); stroke: rgba(255,255,255,0.18); stroke-width: 1.4; }
+      .cardBlue { fill: rgba(48,111,255,0.13); stroke: #61a5ff; stroke-width: 1.6; }
+      .cardGreen { fill: rgba(61,220,151,0.13); stroke: #3ddc97; stroke-width: 1.6; }
+      .cardRed { fill: rgba(255,113,113,0.11); stroke: #ff8585; stroke-width: 1.6; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="640" fill="url(#bg)"/>
+  <circle cx="1055" cy="105" r="170" fill="#3ddc97" opacity="0.08"/>
+  <circle cx="160" cy="540" r="190" fill="#61a5ff" opacity="0.10"/>
+
+  <text x="60" y="72" class="jp title">QPP4SIP</text>
+  <text x="60" y="105" class="jp subtitle">Should the system answer now, or ask a clarifying question first?</text>
+  <text x="60" y="132" class="jp small">Clarification Need Prediction via Semantic Features + Query Performance Prediction</text>
+
+  <g filter="url(#shadow)">
+    <rect x="60" y="185" width="235" height="165" rx="24" class="card"/>
+    <rect x="82" y="205" width="95" height="28" rx="14" fill="#facc15"/>
+    <text x="100" y="224" class="jp pillText">User query</text>
+    <text x="86" y="265" class="jp label">Ambiguous input</text>
+    <text x="86" y="298" class="jp body">What was Jordan's career?</text>
+    <text x="86" y="328" class="jp muted">Multiple plausible intents may exist</text>
+  </g>
+
+  <path d="M300 268 C345 268, 360 230, 405 230" stroke="#61a5ff" stroke-width="3" fill="none" marker-end="url(#arrowBlue)"/>
+  <path d="M300 268 C350 300, 360 385, 405 385" stroke="#3ddc97" stroke-width="3" fill="none" marker-end="url(#arrowGreen)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="410" y="170" width="285" height="132" rx="22" class="cardBlue"/>
+    <text x="436" y="208" class="jp label">Semantic Features</text>
+    <text x="436" y="238" class="jp body">Fine-tuned BERT / RoBERTa</text>
+    <text x="436" y="266" class="jp muted">Scores linguistic ambiguity from the query</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="410" y="325" width="285" height="160" rx="22" class="cardGreen"/>
+    <text x="436" y="362" class="jp label">QPP Features</text>
+    <text x="436" y="394" class="jp body">Pre-retrieval: AvgIDF, MaxSCQ, SCS...</text>
+    <text x="436" y="422" class="jp body">Post-retrieval: WIG, NQC, SMV...</text>
+    <text x="436" y="452" class="jp muted">Estimates retrieval difficulty from collection/results</text>
+  </g>
+
+  <path d="M700 235 C742 245, 758 268, 790 294" stroke="#61a5ff" stroke-width="3" fill="none" marker-end="url(#arrowBlue)"/>
+  <path d="M700 405 C746 392, 770 360, 790 330" stroke="#3ddc97" stroke-width="3" fill="none" marker-end="url(#arrowGreen)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="790" y="250" width="185" height="63" rx="18" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.22)" stroke-width="1.4"/>
+    <text x="822" y="287" class="jp label">Min-Max scaling</text>
+    <rect x="790" y="343" width="185" height="72" rx="18" fill="rgba(255,255,255,0.10)" stroke="rgba(255,255,255,0.22)" stroke-width="1.4"/>
+    <text x="826" y="378" class="jp label">Logistic</text>
+    <text x="850" y="402" class="jp label">regression</text>
+  </g>
+  <path d="M882 315 L882 340" stroke="#f8fafc" stroke-width="3" marker-end="url(#arrowBlue)"/>
+
+  <path d="M980 375 C1015 375, 1025 340, 1054 322" stroke="#3ddc97" stroke-width="3" fill="none" marker-end="url(#arrowGreen)"/>
+  <path d="M980 375 C1015 408, 1025 468, 1054 490" stroke="#61a5ff" stroke-width="3" fill="none" marker-end="url(#arrowBlue)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="1020" y="240" width="135" height="122" rx="22" class="cardGreen"/>
+    <text x="1045" y="282" class="jp label">Ask</text>
+    <text x="1045" y="309" class="jp body">Clarification</text>
+    <text x="1045" y="337" class="jp muted">Ask before answering</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1020" y="432" width="135" height="122" rx="22" class="cardBlue"/>
+    <text x="1045" y="474" class="jp label">Answer</text>
+    <text x="1045" y="501" class="jp body">Direct answer</text>
+    <text x="1045" y="529" class="jp muted">When ambiguity is low</text>
+  </g>
+
+  <rect x="60" y="535" width="880" height="52" rx="18" fill="rgba(250,204,21,0.10)" stroke="rgba(250,204,21,0.36)"/>
+  <text x="86" y="568" class="jp body">Hypothesis: can semantic ambiguity from PLMs complement retrieval effectiveness from QPP?</text>
+</svg>
