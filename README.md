@@ -24,10 +24,9 @@
 
 ## 対象論文
 
-この README は、以下の論文・卒業論文の内容をもとに整理しています。
+この README は、以下の DEIM 2026 投稿稿の内容をもとに整理しています。
 
 - 柴田大暉, 酒井哲也. **意味的特徴およびクエリ性能予測の統合に基づく対話型検索における明確化必要性予測**. DEIM 2026 投稿稿.
-- 柴田大暉. **Clarification Need Prediction in Conversational Search via Integrated Semantic Features and Query Performance Prediction**. 早稲田大学基幹理工学部情報理工学科 卒業論文, 2025 年度.
 
 ## 提案手法の概要
 
