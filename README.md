@@ -1,103 +1,216 @@
 # QPP4SIP
 
-**対話型検索における明確化必要性予測（Clarification Need Prediction）を、意味的特徴と Query Performance Prediction（QPP）の統合として検証する研究リポジトリです。**
+Code for the DEIM 2026 paper:
 
-<p align="center">
-  <img src="docs/assets/method_overview.svg" alt="QPP4SIP research overview" width="100%" />
-</p>
+> 柴田大暉, 酒井哲也. **意味的特徴およびクエリ性能予測の統合に基づく対話型検索における明確化必要性予測**. DEIM 2026.  
+> Paper: https://pub-files.atlas.jp/fs/public/deim2026/ver_29/abstract/ja/4F-02.pdf
 
-## 何を扱う研究か
+This repository contains the experimental code for clarification need prediction in conversational search. The main pipeline computes Query Performance Prediction (QPP) features, obtains BERT/RoBERTa prediction scores, and combines them with logistic regression.
 
-対話型検索や LLM ベースの検索応答では、ユーザーの入力が曖昧なままでもシステムがもっともらしい解釈を仮定して回答してしまうことがあります。これは過度な推測やハルシネーションにつながるため、システムには「今すぐ回答する」だけでなく、「先にユーザーへ明確化質問をする」判断が必要です。
+## Repository layout
 
-この判断を二値分類タスクとして扱うのが **Clarification Need Prediction（CNP）** です。本研究では、次の 2 種類の情報を統合することで CNP の性能が改善するかを検証しています。
-
-| 観点 | 何を捉えるか | 本研究での扱い |
+| Path | Description | Paper mapping |
 | --- | --- | --- |
-| 意味的特徴 | クエリそのものの言語的・意味的な曖昧性 | Fine-tuned BERT / RoBERTa の出力スコア |
-| QPP | 検索システムから見た検索困難性・検索有効性 | Pre-retrieval / Post-retrieval QPP 指標 |
-| 統合モデル | 異なるスコアの相補性 | Min-Max 正規化後、ロジスティック回帰で統合 |
+| `dataset/` | Input data and retrieval results. | AmbigNQ / DPR top-100 data used in Section 4 |
+| `QPP/pre_retrieval/` | Pre-retrieval QPP feature extraction. | Table 1: AvgICTF, AvgIDF, MaxIDF, MaxSCQ, SCS |
+| `QPP/post_retrieval/` | Post-retrieval QPP feature extraction. | Table 1: Clarity, NQC, SMV, WIG, n(σ%) |
+| `SIP/FT-PLM/` | Fine-tuning and evaluation of PLM-based clarification predictors. | Table 1: BERT, RoBERTa |
+| `LogReg/LASSO/` | Logistic-regression integration and statistical evaluation. | Table 2: Pre, Post, Pre/Post, Pre/Post/BERT, Pre/Post/RoBERTa |
+| `LogReg/LASSO/config.py` | Feature list used by the integration script. | Defines the DEIM feature set |
 
-研究上の問いは単純です。
+## Setup
 
-> **PLM が捉える「クエリの意味的曖昧性」と、QPP が捉える「検索有効性」は、明確化質問の要否判定で相補的に働くのか？**
+The experiments were run as a collection of Python scripts. A minimal setup is:
 
-## 対象論文
+```bash
+git clone https://github.com/d-shibata7069/QPP4SIP.git
+cd QPP4SIP
 
-この README は、以下の DEIM 2026 投稿稿の内容をもとに整理しています。
+python -m venv .venv
+source .venv/bin/activate
 
-- 柴田大暉, 酒井哲也. **意味的特徴およびクエリ性能予測の統合に基づく対話型検索における明確化必要性予測**. DEIM 2026 投稿稿.
+pip install -r QPP/requirements.txt
+pip install -r SIP/FT-PLM/requirements.txt
+```
 
-## 提案手法の概要
+Several scripts currently assume the project root is `/home/daiki_shibata/pj/QPP4SIP`. When running in another environment, either place the repository there or update the `BASE_DIR` / default path definitions in the corresponding scripts.
 
-入力クエリに対して、PLM と QPP から複数のスコアを得ます。各スコアは値域や分布が異なるため、Min-Max 正規化で 0 から 1 の範囲にそろえます。その後、ロジスティック回帰で統合し、明確化が必要である確率を推定します。
+## Data layout
 
-$$
-P(y = 1 \mid x) = \frac{1}{1 + \exp \left( - \left( \beta_0 + \sum_{j=1}^{m} \beta_j x_j \right) \right)}
-$$
+Place AmbigNQ and retrieval outputs under `dataset/AmbigNQ/`:
 
-ここで、$y=1$ は「明確化が必要」、$y=0$ は「明確化不要」を表します。QPP 指標間には相関があるため、通常のロジスティック回帰に加えて L1 正則化、L2 正則化、ElasticNet も比較しています。
+```text
+dataset/AmbigNQ/
+├── train.json
+├── dev.json
+├── dpr_train.json
+└── dpr_dev.json
+```
 
-### 使用した特徴量
+For BM25 experiments, the post-retrieval scripts expect the same pattern with `bm25_train.json` and `bm25_dev.json`. The DEIM paper results use DPR top-100 retrieval.
 
-| 種別 | 指標・モデル |
+PLM scores are consumed by `LogReg/LASSO/main.py` from the output directory of `SIP/FT-PLM/`. The default experiment names are defined in `LogReg/LASSO/config.py`:
+
+```text
+SIP/FT-PLM/output/AmbigNQ/
+├── AmbigNQ_bert-base_lr2e-05_bs16_kfold5/
+│   ├── train_with_predictions.json
+│   └── dev_with_predictions.json
+└── AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5/
+    ├── train_with_predictions.json
+    └── dev_with_predictions.json
+```
+
+## Reproducing the DEIM experiments
+
+Run commands from the repository root unless otherwise noted.
+
+### 1. Compute Pre-retrieval QPP features
+
+This corresponds to the Pre-retrieval QPP rows in Table 1 and to the `Pre` component in Table 2.
+
+```bash
+python QPP/pre_retrieval/main.py \
+  --dataset AmbigNQ \
+  --metric all \
+  --split all
+```
+
+Expected outputs:
+
+```text
+QPP/pre_retrieval/outputs/AmbigNQ/train_*.csv
+QPP/pre_retrieval/outputs/AmbigNQ/dev_*.csv
+```
+
+### 2. Compute Post-retrieval QPP features
+
+This corresponds to the Post-retrieval QPP rows in Table 1 and to the `Post` component in Table 2.
+
+The paper uses the following post-retrieval features: `clarity`, `nqc`, `smv`, `wig`, and `n_sigma_50`.
+
+```bash
+for metric in clarity nqc smv wig n_sigma_50; do
+  python QPP/post_retrieval/main.py \
+    --dataset AmbigNQ \
+    --retrieval_method dpr \
+    --metric "$metric" \
+    --split all \
+    --top_k 100
+done
+```
+
+Expected outputs:
+
+```text
+QPP/post_retrieval/outputs/AmbigNQ/dpr/train_*.csv
+QPP/post_retrieval/outputs/AmbigNQ/dpr/dev_*.csv
+```
+
+### 3. Fine-tune PLM baselines
+
+This corresponds to the BERT and RoBERTa rows in Table 1. The generated logits are also used as features in Table 2.
+
+BERT:
+
+```bash
+python SIP/FT-PLM/main.py \
+  --dataset AmbigNQ \
+  --mode train \
+  --model_name bert-base-uncased \
+  --learning_rate 2e-5 \
+  --batch_size 16 \
+  --k_fold 5 \
+  --output_dir SIP/FT-PLM/output
+```
+
+RoBERTa:
+
+```bash
+python SIP/FT-PLM/main.py \
+  --dataset AmbigNQ \
+  --mode train \
+  --model_name roberta-base \
+  --learning_rate 2e-5 \
+  --batch_size 16 \
+  --k_fold 5 \
+  --early_stopping \
+  --output_dir SIP/FT-PLM/output
+```
+
+Then evaluate to write `*_with_predictions.json` files:
+
+```bash
+python SIP/FT-PLM/main.py \
+  --dataset AmbigNQ \
+  --mode evaluate \
+  --model_path SIP/FT-PLM/output/AmbigNQ/AmbigNQ_bert-base_lr2e-05_bs16_kfold5 \
+  --output_dir SIP/FT-PLM/output
+
+python SIP/FT-PLM/main.py \
+  --dataset AmbigNQ \
+  --mode evaluate \
+  --model_path SIP/FT-PLM/output/AmbigNQ/AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5 \
+  --output_dir SIP/FT-PLM/output
+```
+
+### 4. Run logistic-regression integration
+
+This corresponds to Table 2. The `--feature-types` argument selects the experimental condition.
+
+| Paper condition | Command option |
 | --- | --- |
-| Pre-retrieval QPP | AvgICTF, AvgIDF, MaxIDF, MaxSCQ, Simplified Clarity Score |
-| Post-retrieval QPP | Clarity, WIG, NQC, SMV, n(σ%) |
-| Fine-tuned PLM | BERT, RoBERTa |
-| 統合モデル | Logistic Regression, L1, L2, ElasticNet |
+| `(1) Pre` | `--feature-types pre` |
+| `(2) Post` | `--feature-types post` |
+| `(3) Pre/Post` | `--feature-types pre post` |
+| `(4) Pre/Post/BERT` | `--feature-types pre post bert` |
+| `(5) Pre/Post/RoBERTa` | `--feature-types pre post roberta` |
 
-## 実験設定
+Example:
 
-| 項目 | 設定 |
-| --- | --- |
-| タスク | 明確化必要性予測（CNP） |
-| データセット | AmbigNQ |
-| ラベル | QA pair が 1 件なら `明確化不要`、2 件以上なら `明確化が必要` |
-| 検索対象 | Wikipedia passage collection |
-| 検索手法 | DPR による上位 100 件取得 |
-| 評価指標 | AUC-ROC |
-| 有意差検定 | DeLong 検定 + Holm 補正 |
+```bash
+python LogReg/LASSO/main.py \
+  --dataset AmbigNQ \
+  --retrieval-method dpr \
+  --use-minmax-normalization \
+  --no-cv \
+  --delong-test \
+  --feature-types pre post roberta
+```
 
-## 主な結果
+To run the major combinations used during the experiments:
 
-<p align="center">
-  <img src="docs/assets/auc_summary.svg" alt="AUC-ROC summary" width="100%" />
-</p>
+```bash
+cd LogReg/LASSO
+bash script/run_all_feature_combinations.sh
+```
 
-| 比較対象 | AUC-ROC | 読み取り |
-| --- | ---: | --- |
-| Best single QPP: WIG | 0.5535 | QPP 単体では識別力は限定的 |
-| Pre-retrieval QPP 統合 | **0.5964†** | QPP のみでは統合により有意な改善が見られた |
-| BERT 単体 | 0.6987 | Fine-tuned PLM は QPP より大きく高性能 |
-| RoBERTa 単体 | **0.7179** | 実験中の最良単体モデル |
-| Pre/Post/RoBERTa 統合 | 0.7158 | QPP を加えても RoBERTa 単体を上回らなかった |
+Outputs are written under:
 
-† Holm 補正後、説明変数に用いた Pre-retrieval QPP 指標に対して有意差あり。
+```text
+LogReg/LASSO/outputs/AmbigNQ/
+```
 
-### 結論として分かったこと
+## Main results
 
-1. **QPP だけを見ると、Pre-retrieval QPP の統合は有効でした。** それぞれの指標は弱いものの、複数の語彙統計量を組み合わせることで単体指標を上回りました。
-2. **Post-retrieval QPP の統合は改善しませんでした。** 検索結果スコア分布を使う指標であっても、明確化必要性を直接捉えるには十分ではありませんでした。
-3. **Fine-tuned PLM は強いベースラインでした。** BERT / RoBERTa は QPP を大きく上回り、単純に QPP スコアを追加しても性能は改善しませんでした。
-4. **検索有効性と明確化必要性は同じではありません。** QPP は検索がうまくいきそうかを推定する指標であり、ユーザー意図が明確かどうかとはずれる場合があります。
+| Condition | AUC-ROC |
+| --- | ---: |
+| Best single QPP: WIG | 0.5535 |
+| Pre | 0.5964 |
+| Post | 0.5150 |
+| Pre/Post | 0.5853 |
+| BERT | 0.6987 |
+| RoBERTa | 0.7179 |
+| Pre/Post/BERT | 0.6909 |
+| Pre/Post/RoBERTa | 0.7158 |
 
-## このリポジトリの読み方
+## Citation
 
-この README は論文の概要を中心にしています。実装を追う場合は、研究上の役割ごとに以下を見ると全体像を把握しやすくなります。
-
-| パス | 研究上の役割 |
-| --- | --- |
-| `QPP/` | Pre-retrieval / Post-retrieval QPP 指標の算出 |
-| `SIP/FT-PLM/` | BERT / RoBERTa などの PLM fine-tuning とスコア出力 |
-| `LogReg/LASSO/` | QPP・PLM スコアの統合、正則化付きロジスティック回帰、統計的評価 |
-| `LogReg/MoE/` | クエリごとの動的統合を見据えた追加実験 |
-| `dataset/` | AmbigNQ / INSCIT などの実験データ配置 |
-
-## 今後の方向性
-
-本研究の結果から、単純な数値結合だけでは PLM と QPP の相補性を十分に引き出せないことが分かりました。次の発展として、ラベルに依存しない統合、クエリ特性に応じて重みを変える動的統合、明確化質問の必要性予測から実際の質問生成までを接続する設計が重要になります。
-
-## Keywords
-
-Conversational Search / Clarification Need Prediction / Query Performance Prediction / BERT / RoBERTa / Logistic Regression / AmbigNQ
+```bibtex
+@inproceedings{shibata2026qpp4sip,
+  title = {意味的特徴およびクエリ性能予測の統合に基づく対話型検索における明確化必要性予測},
+  author = {柴田, 大暉 and 酒井, 哲也},
+  booktitle = {DEIM Forum 2026},
+  year = {2026}
+}
+```
