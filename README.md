@@ -1,26 +1,26 @@
 # QPP4SIP
 
-Code for the DEIM 2026 paper:
+DEIM 2026 論文の実験コードです。
 
 > 柴田大暉, 酒井哲也. **意味的特徴およびクエリ性能予測の統合に基づく対話型検索における明確化必要性予測**. DEIM 2026.  
-> Paper: https://pub-files.atlas.jp/fs/public/deim2026/ver_29/abstract/ja/4F-02.pdf
+> 論文 PDF: https://pub-files.atlas.jp/fs/public/deim2026/ver_29/abstract/ja/4F-02.pdf
 
-This repository contains the experimental code for clarification need prediction in conversational search. The main pipeline computes Query Performance Prediction (QPP) features, obtains BERT/RoBERTa prediction scores, and combines them with logistic regression.
+本リポジトリは、対話型検索における明確化必要性予測（Clarification Need Prediction; CNP）の実験用コードをまとめたものです。Query Performance Prediction（QPP）特徴量の算出、BERT / RoBERTa による予測スコアの出力、およびロジスティック回帰による特徴量統合を行います。
 
-## Repository layout
+## リポジトリ構成
 
-| Path | Description | Paper mapping |
+| パス | 内容 | 論文中の対応 |
 | --- | --- | --- |
-| `dataset/` | Input data and retrieval results. | AmbigNQ / DPR top-100 data used in Section 4 |
-| `QPP/pre_retrieval/` | Pre-retrieval QPP feature extraction. | Table 1: AvgICTF, AvgIDF, MaxIDF, MaxSCQ, SCS |
-| `QPP/post_retrieval/` | Post-retrieval QPP feature extraction. | Table 1: Clarity, NQC, SMV, WIG, n(σ%) |
-| `SIP/FT-PLM/` | Fine-tuning and evaluation of PLM-based clarification predictors. | Table 1: BERT, RoBERTa |
-| `LogReg/LASSO/` | Logistic-regression integration and statistical evaluation. | Table 2: Pre, Post, Pre/Post, Pre/Post/BERT, Pre/Post/RoBERTa |
-| `LogReg/LASSO/config.py` | Feature list used by the integration script. | Defines the DEIM feature set |
+| `dataset/` | 入力データと検索結果を配置するディレクトリ | 4 節の AmbigNQ / DPR top-100 データ |
+| `QPP/pre_retrieval/` | Pre-retrieval QPP 特徴量の算出 | 表 1: AvgICTF, AvgIDF, MaxIDF, MaxSCQ, SCS |
+| `QPP/post_retrieval/` | Post-retrieval QPP 特徴量の算出 | 表 1: Clarity, NQC, SMV, WIG, n(σ%) |
+| `SIP/FT-PLM/` | PLM ベースの明確化必要性予測モデルの fine-tuning / evaluation | 表 1: BERT, RoBERTa |
+| `LogReg/LASSO/` | ロジスティック回帰による特徴量統合と統計的評価 | 表 2: Pre, Post, Pre/Post, Pre/Post/BERT, Pre/Post/RoBERTa |
+| `LogReg/LASSO/config.py` | 統合実験で使う特徴量リストの設定 | DEIM 実験で用いた特徴量セット |
 
-## Setup
+## セットアップ
 
-The experiments were run as a collection of Python scripts. A minimal setup is:
+実験は Python スクリプト群として実行します。最小構成は以下です。
 
 ```bash
 git clone https://github.com/d-shibata7069/QPP4SIP.git
@@ -33,11 +33,11 @@ pip install -r QPP/requirements.txt
 pip install -r SIP/FT-PLM/requirements.txt
 ```
 
-Several scripts currently assume the project root is `/home/daiki_shibata/pj/QPP4SIP`. When running in another environment, either place the repository there or update the `BASE_DIR` / default path definitions in the corresponding scripts.
+一部のスクリプトは、プロジェクトルートを `/home/daiki_shibata/pj/QPP4SIP` と仮定しています。別の環境で実行する場合は、この場所にリポジトリを配置するか、各スクリプトの `BASE_DIR` / default path を実行環境に合わせて変更してください。
 
-## Data layout
+## データ配置
 
-Place AmbigNQ and retrieval outputs under `dataset/AmbigNQ/`:
+AmbigNQ と検索結果を `dataset/AmbigNQ/` 以下に配置します。
 
 ```text
 dataset/AmbigNQ/
@@ -47,9 +47,9 @@ dataset/AmbigNQ/
 └── dpr_dev.json
 ```
 
-For BM25 experiments, the post-retrieval scripts expect the same pattern with `bm25_train.json` and `bm25_dev.json`. The DEIM paper results use DPR top-100 retrieval.
+BM25 実験を行う場合、Post-retrieval QPP のスクリプトは同じ形式で `bm25_train.json` と `bm25_dev.json` を参照します。DEIM 論文の主結果は DPR top-100 に基づきます。
 
-PLM scores are consumed by `LogReg/LASSO/main.py` from the output directory of `SIP/FT-PLM/`. The default experiment names are defined in `LogReg/LASSO/config.py`:
+PLM スコアは、`SIP/FT-PLM/` の出力を `LogReg/LASSO/main.py` が読み込みます。デフォルトで参照する実験名は `LogReg/LASSO/config.py` で定義されています。
 
 ```text
 SIP/FT-PLM/output/AmbigNQ/
@@ -61,13 +61,13 @@ SIP/FT-PLM/output/AmbigNQ/
     └── dev_with_predictions.json
 ```
 
-## Reproducing the DEIM experiments
+## DEIM 実験の再現
 
-Run commands from the repository root unless otherwise noted.
+特に記載がない限り、コマンドはリポジトリルートから実行します。
 
-### 1. Compute Pre-retrieval QPP features
+### 1. Pre-retrieval QPP 特徴量の算出
 
-This corresponds to the Pre-retrieval QPP rows in Table 1 and to the `Pre` component in Table 2.
+論文の表 1 における Pre-retrieval QPP、および表 2 の `Pre` 条件に対応します。
 
 ```bash
 python QPP/pre_retrieval/main.py \
@@ -76,18 +76,18 @@ python QPP/pre_retrieval/main.py \
   --split all
 ```
 
-Expected outputs:
+出力先:
 
 ```text
 QPP/pre_retrieval/outputs/AmbigNQ/train_*.csv
 QPP/pre_retrieval/outputs/AmbigNQ/dev_*.csv
 ```
 
-### 2. Compute Post-retrieval QPP features
+### 2. Post-retrieval QPP 特徴量の算出
 
-This corresponds to the Post-retrieval QPP rows in Table 1 and to the `Post` component in Table 2.
+論文の表 1 における Post-retrieval QPP、および表 2 の `Post` 条件に対応します。
 
-The paper uses the following post-retrieval features: `clarity`, `nqc`, `smv`, `wig`, and `n_sigma_50`.
+DEIM 論文で使用した Post-retrieval QPP 特徴量は、`clarity`, `nqc`, `smv`, `wig`, `n_sigma_50` です。
 
 ```bash
 for metric in clarity nqc smv wig n_sigma_50; do
@@ -100,16 +100,16 @@ for metric in clarity nqc smv wig n_sigma_50; do
 done
 ```
 
-Expected outputs:
+出力先:
 
 ```text
 QPP/post_retrieval/outputs/AmbigNQ/dpr/train_*.csv
 QPP/post_retrieval/outputs/AmbigNQ/dpr/dev_*.csv
 ```
 
-### 3. Fine-tune PLM baselines
+### 3. PLM ベースラインの fine-tuning
 
-This corresponds to the BERT and RoBERTa rows in Table 1. The generated logits are also used as features in Table 2.
+論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。
 
 BERT:
 
@@ -138,7 +138,7 @@ python SIP/FT-PLM/main.py \
   --output_dir SIP/FT-PLM/output
 ```
 
-Then evaluate to write `*_with_predictions.json` files:
+その後、`*_with_predictions.json` を生成します。
 
 ```bash
 python SIP/FT-PLM/main.py \
@@ -154,11 +154,11 @@ python SIP/FT-PLM/main.py \
   --output_dir SIP/FT-PLM/output
 ```
 
-### 4. Run logistic-regression integration
+### 4. ロジスティック回帰による特徴量統合
 
-This corresponds to Table 2. The `--feature-types` argument selects the experimental condition.
+論文の表 2 に対応します。`--feature-types` で実験条件を指定します。
 
-| Paper condition | Command option |
+| 論文中の条件 | コマンドオプション |
 | --- | --- |
 | `(1) Pre` | `--feature-types pre` |
 | `(2) Post` | `--feature-types post` |
@@ -166,7 +166,7 @@ This corresponds to Table 2. The `--feature-types` argument selects the experime
 | `(4) Pre/Post/BERT` | `--feature-types pre post bert` |
 | `(5) Pre/Post/RoBERTa` | `--feature-types pre post roberta` |
 
-Example:
+例:
 
 ```bash
 python LogReg/LASSO/main.py \
@@ -178,22 +178,22 @@ python LogReg/LASSO/main.py \
   --feature-types pre post roberta
 ```
 
-To run the major combinations used during the experiments:
+主要な特徴量組み合わせをまとめて実行する場合:
 
 ```bash
 cd LogReg/LASSO
 bash script/run_all_feature_combinations.sh
 ```
 
-Outputs are written under:
+出力先:
 
 ```text
 LogReg/LASSO/outputs/AmbigNQ/
 ```
 
-## Main results
+## 主な結果
 
-| Condition | AUC-ROC |
+| 条件 | AUC-ROC |
 | --- | ---: |
 | Best single QPP: WIG | 0.5535 |
 | Pre | 0.5964 |
@@ -204,7 +204,7 @@ LogReg/LASSO/outputs/AmbigNQ/
 | Pre/Post/BERT | 0.6909 |
 | Pre/Post/RoBERTa | 0.7158 |
 
-## Citation
+## 引用
 
 ```bibtex
 @inproceedings{shibata2026qpp4sip,
