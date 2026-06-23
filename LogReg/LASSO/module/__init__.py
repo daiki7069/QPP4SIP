@@ -43,6 +43,7 @@ from .models import (
     BOLASSOModel,
     LARSTrapsModel,
     LARSCVModel,
+    RandomForestCVModel,
     create_model,
     get_coefficients
 )
@@ -84,6 +85,7 @@ __all__ = [
     'BOLASSOModel',
     'LARSTrapsModel',
     'LARSCVModel',
+    'RandomForestCVModel',
     'create_model',
     'get_coefficients',
     # feature_selection

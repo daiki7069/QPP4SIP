@@ -15,6 +15,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score, classification_report, roc_curve, precision_recall_curve, average_precision_score
 from typing import Dict, List, Tuple, Any
 
+LASSO_DIR = Path(__file__).resolve().parents[1] / 'LASSO'
+sys.path.insert(0, str(LASSO_DIR))
+from module.data_loader import extract_base_scores as extract_shared_base_scores
+from module.models import RandomForestCVModel
+
 
 # パス設定（main関数内で動的に設定）
 BASE_DIR = Path("/home/daiki_shibata/pj/QPP4SIP")
@@ -53,21 +58,12 @@ def extract_labels(json_data: List[List[Dict[str, Any]]]) -> Dict[Tuple[str, int
     return labels
 
 
-def extract_base_scores(json_data: List[List[Dict[str, Any]]]) -> Dict[Tuple[str, int], float]:
-    """ベースモデルのlogit_clarificationを抽出"""
-    scores = {}
-    for conversation in json_data:
-        for turn in conversation:
-            # conv_idとturn_idを文字列/整数に統一
-            conv_id = str(turn['conv_id'])
-            turn_id = int(turn['turn_id'])
-            key = (conv_id, turn_id)
-            
-            logit = turn.get('logit_clarification')
-            if logit is not None:
-                scores[key] = float(logit)
-    
-    return scores
+def extract_base_scores(
+    json_data: List[List[Dict[str, Any]]],
+    score_mode: str = 'logit_difference',
+) -> Dict[Tuple[str, int], float]:
+    """共有ローダーを使ってPLMスコアを抽出する。"""
+    return extract_shared_base_scores(json_data, score_mode=score_mode)
 
 
 def find_common_nsp_top_k(nsp_output_dir: Path, splits: List[str] = None) -> int:
@@ -459,7 +455,15 @@ def main():
     parser.add_argument(
         "--use-base-score",
         action="store_true",
-        help="ベーススコア（logit_clarification）も特徴量として使用する（デフォルト: False、QPPスコアのみ使用）"
+        help="PLMスコアも特徴量として使用する（デフォルト: False、QPPスコアのみ使用）"
+    )
+
+    parser.add_argument(
+        "--plm-score-mode",
+        type=str,
+        default="logit_difference",
+        choices=["logit_difference", "positive_logit"],
+        help="PLMスコア方式（デフォルト: logit_difference=正例logit-負例logit。positive_logitで従来方式）"
     )
     
     parser.add_argument(
@@ -473,14 +477,44 @@ def main():
         "--n-estimators",
         type=int,
         default=100,
-        help="決定木の数（デフォルト: 100）"
+        help="固定RFで使用する決定木数（--no-rf-search時のみ、デフォルト: 100）"
     )
     
     parser.add_argument(
         "--max-depth",
         type=int,
         default=None,
-        help="決定木の最大深度（デフォルト: None、制限なし）"
+        help="固定RFで使用する最大深度（--no-rf-search時のみ、デフォルト: None）"
+    )
+
+    parser.add_argument(
+        "--no-rf-search",
+        action="store_false",
+        dest="use_rf_search",
+        default=True,
+        help="RandomForestのハイパーパラメータ探索を無効化し、従来の固定設定を使用"
+    )
+
+    parser.add_argument(
+        "--rf-search-iterations",
+        type=int,
+        default=32,
+        help="RandomizedSearchCVの試行数（デフォルト: 32）"
+    )
+
+    parser.add_argument(
+        "--rf-cv-folds",
+        type=int,
+        default=5,
+        help="RandomForestハイパーパラメータ探索の層化CV fold数（デフォルト: 5）"
+    )
+
+    parser.add_argument(
+        "--rf-scoring",
+        type=str,
+        default="roc_auc",
+        choices=["roc_auc", "average_precision", "f1", "accuracy"],
+        help="RandomForestハイパーパラメータ探索の評価指標（デフォルト: roc_auc）"
     )
     
     parser.add_argument(
@@ -543,8 +577,13 @@ def main():
     
     print_and_save("=== Random Forestによるclarification分類 ===\n")
     print_and_save(f"データセット: {args.dataset}")
-    print_and_save(f"使用する特徴量: {'ベーススコア + QPPスコア（post + nsp）' if use_base_score else 'QPPスコア（post + nsp）'}")
-    print_and_save(f"モデルパラメータ: n_estimators={args.n_estimators}, max_depth={args.max_depth}, random_state={args.random_state}\n")
+    print_and_save(f"使用する特徴量: {'PLMスコア + QPPスコア（post + nsp）' if use_base_score else 'QPPスコア（post + nsp）'}")
+    if use_base_score:
+        print_and_save(f"PLMスコア方式: {args.plm_score_mode}")
+    if args.use_rf_search:
+        print_and_save(f"RandomForest探索: RandomizedSearchCV (iterations={args.rf_search_iterations}, cv={args.rf_cv_folds}, scoring={args.rf_scoring}, random_state={args.random_state})\n")
+    else:
+        print_and_save(f"RandomForest固定設定: n_estimators={args.n_estimators}, max_depth={args.max_depth}, random_state={args.random_state}\n")
     
     # 1. データ読み込み
     print_and_save("1. データ読み込み中...")
@@ -562,7 +601,7 @@ def main():
     # ベーススコアの読み込み（使用する場合のみ）
     if use_base_score:
         train_pred_data = load_json_data(train_pred_json_path)
-        train_base_scores = extract_base_scores(train_pred_data)
+        train_base_scores = extract_base_scores(train_pred_data, score_mode=args.plm_score_mode)
         print_and_save(f"  - ベーススコア: {len(train_base_scores)} サンプル")
     else:
         train_base_scores = {}  # 空の辞書を渡す（使用しない）
@@ -580,7 +619,7 @@ def main():
     # ベーススコアの読み込み（使用する場合のみ）
     if use_base_score:
         dev_pred_data = load_json_data(dev_pred_json_path)
-        dev_base_scores = extract_base_scores(dev_pred_data)
+        dev_base_scores = extract_base_scores(dev_pred_data, score_mode=args.plm_score_mode)
         print_and_save(f"  - ベーススコア: {len(dev_base_scores)} サンプル")
     else:
         dev_base_scores = {}  # 空の辞書を渡す（使用しない）
@@ -638,15 +677,25 @@ def main():
     
     # 4. モデル学習
     print_and_save("\n4. モデル学習中...")
-    model = RandomForestClassifier(
-        n_estimators=args.n_estimators,
-        max_depth=args.max_depth,
-        random_state=args.random_state,
-        class_weight='balanced',
-        n_jobs=-1  # 並列処理を有効化
-    )
-    
-    model.fit(X_train_norm, y_train)
+    if args.use_rf_search:
+        model = RandomForestCVModel(
+            cv=args.rf_cv_folds,
+            scoring=args.rf_scoring,
+            random_state=args.random_state,
+            class_weight='balanced',
+            n_jobs=-1,
+            n_iter=args.rf_search_iterations,
+        )
+        model.fit(X_train_norm, y_train, print_and_save_func=print_and_save)
+    else:
+        model = RandomForestClassifier(
+            n_estimators=args.n_estimators,
+            max_depth=args.max_depth,
+            random_state=args.random_state,
+            class_weight='balanced',
+            n_jobs=-1
+        )
+        model.fit(X_train_norm, y_train)
     print_and_save("  - 学習完了")
     
     # 特徴量の重要度を表示
