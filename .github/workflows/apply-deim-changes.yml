@@ -1,0 +1,42 @@
+name: Apply DEIM implementation changes
+
+on:
+  push:
+    branches:
+      - deim-score-rf-tuning
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: deim-score-rf-tuning
+          fetch-depth: 0
+
+      - name: Apply focused source changes
+        run: python .github/apply_deim_changes.py
+
+      - name: Validate Python syntax
+        run: |
+          python -m py_compile \
+            LogReg/LASSO/module/data_loader.py \
+            LogReg/LASSO/module/models.py \
+            LogReg/LASSO/module/__init__.py \
+            LogReg/RandomForest/main.py
+
+      - name: Commit source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            LogReg/LASSO/module/data_loader.py \
+            LogReg/LASSO/module/models.py \
+            LogReg/LASSO/module/__init__.py \
+            LogReg/RandomForest/main.py
+          git commit -m "feat: use logit differences and tune random forest"
+          git push origin HEAD:deim-score-rf-tuning
