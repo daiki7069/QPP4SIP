@@ -5,7 +5,7 @@ DEIM 2026 論文の実験コードです。
 > 柴田大暉, 酒井哲也. **意味的特徴およびクエリ性能予測の統合に基づく対話型検索における明確化必要性予測**. DEIM 2026.  
 > 論文 PDF: https://pub-files.atlas.jp/fs/public/deim2026/ver_29/abstract/ja/4F-02.pdf
 
-本リポジトリは、対話型検索における明確化必要性予測（Clarification Need Prediction; CNP）の実験用コードをまとめたものです。Query Performance Prediction（QPP）特徴量の算出、BERT / RoBERTa による予測スコアの出力、およびロジスティック回帰による特徴量統合を行います。
+本リポジトリは、対話型検索における明確化必要性予測（Clarification Need Prediction; CNP）の実験用コードをまとめたものです。Query Performance Prediction（QPP）特徴量の算出、BERT / RoBERTa による予測スコアの出力、およびロジスティック回帰や RandomForest による特徴量統合を行います。
 
 ## リポジトリ構成
 
@@ -17,6 +17,7 @@ DEIM 2026 論文の実験コードです。
 | `SIP/FT-PLM/` | PLM ベースの明確化必要性予測モデルの fine-tuning / evaluation | 表 1: BERT, RoBERTa |
 | `LogReg/LASSO/` | ロジスティック回帰による特徴量統合と統計的評価 | 表 2: Pre, Post, Pre/Post, Pre/Post/BERT, Pre/Post/RoBERTa |
 | `LogReg/LASSO/config.py` | 統合実験で使う特徴量リストの設定 | DEIM 実験で用いた特徴量セット |
+| `LogReg/RandomForest/` | RandomForest による特徴量統合とハイパーパラメータ探索 | 追加比較実験 |
 
 ## セットアップ
 
@@ -49,7 +50,7 @@ dataset/AmbigNQ/
 
 BM25 実験を行う場合、Post-retrieval QPP のスクリプトは同じ形式で `bm25_train.json` と `bm25_dev.json` を参照します。DEIM 論文の主結果は DPR top-100 に基づきます。
 
-PLM スコアは、`SIP/FT-PLM/` の出力を `LogReg/LASSO/main.py` が読み込みます。デフォルトで参照する実験名は `LogReg/LASSO/config.py` で定義されています。
+PLM スコアは、`SIP/FT-PLM/` の出力を `LogReg/LASSO/main.py` または `LogReg/RandomForest/main.py` が読み込みます。既定のスコアは、正例側と負例側の logit 差 `logit_clarification - logit_not_clarification` です。デフォルトで参照する実験名は `LogReg/LASSO/config.py` で定義されています。
 
 ```text
 SIP/FT-PLM/output/AmbigNQ/
@@ -109,7 +110,7 @@ QPP/post_retrieval/outputs/AmbigNQ/dpr/dev_*.csv
 
 ### 3. PLM ベースラインの fine-tuning
 
-論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。
+論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される正例側・負例側の logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。
 
 BERT:
 
@@ -178,6 +179,18 @@ python LogReg/LASSO/main.py \
   --feature-types pre post roberta
 ```
 
+PLM 特徴量の既定値は `logit_clarification - logit_not_clarification` です。従来の正例側 logit のみを使う場合は、環境変数を指定します。
+
+```bash
+QPP4SIP_PLM_SCORE_MODE=positive_logit \
+python LogReg/LASSO/main.py \
+  --dataset AmbigNQ \
+  --retrieval-method dpr \
+  --use-minmax-normalization \
+  --no-cv \
+  --feature-types pre post roberta
+```
+
 主要な特徴量組み合わせをまとめて実行する場合:
 
 ```bash
@@ -190,6 +203,38 @@ bash script/run_all_feature_combinations.sh
 ```text
 LogReg/LASSO/outputs/AmbigNQ/
 ```
+
+### 5. RandomForest による特徴量統合
+
+RandomForest は、既定で訓練データ内の層化 5-fold CV と `RandomizedSearchCV` を用いてハイパーパラメータを選択します。探索指標の既定値は AUC-ROC です。探索対象は、木の数、最大深度、分割・葉の最小サンプル数、使用特徴量数、およびクラス重みです。選択されたパラメータ、平均 CV スコア、対応する訓練スコアは `results.txt` に記録されます。
+
+```bash
+python LogReg/RandomForest/main.py \
+  --dataset AmbigNQ \
+  --use-base-score
+```
+
+従来の正例側 logit のみを使う場合:
+
+```bash
+python LogReg/RandomForest/main.py \
+  --dataset AmbigNQ \
+  --use-base-score \
+  --plm-score-mode positive_logit
+```
+
+探索回数、CV fold 数、評価指標は変更できます。
+
+```bash
+python LogReg/RandomForest/main.py \
+  --dataset AmbigNQ \
+  --use-base-score \
+  --rf-search-iterations 64 \
+  --rf-cv-folds 5 \
+  --rf-scoring roc_auc
+```
+
+従来の固定 RandomForest を再現する場合は `--no-rf-search` を指定し、`--n-estimators` と `--max-depth` を使用します。
 
 ## 主な結果
 
