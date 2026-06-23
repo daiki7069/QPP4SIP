@@ -1,4 +1,4 @@
-name: Apply DEIM implementation changes
+name: Clean temporary patch files
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  apply:
+  cleanup:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
@@ -18,25 +18,12 @@ jobs:
           ref: deim-score-rf-tuning
           fetch-depth: 0
 
-      - name: Apply focused source changes
-        run: python .github/apply_deim_changes.py
-
-      - name: Validate Python syntax
+      - name: Remove temporary files
         run: |
-          python -m py_compile \
-            LogReg/LASSO/module/data_loader.py \
-            LogReg/LASSO/module/models.py \
-            LogReg/LASSO/module/__init__.py \
-            LogReg/RandomForest/main.py
-
-      - name: Commit source changes
-        run: |
+          rm .github/apply_deim_changes.py
+          rm .github/workflows/apply-deim-changes.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            LogReg/LASSO/module/data_loader.py \
-            LogReg/LASSO/module/models.py \
-            LogReg/LASSO/module/__init__.py \
-            LogReg/RandomForest/main.py
-          git commit -m "feat: use logit differences and tune random forest"
+          git add -A
+          git commit -m "chore: remove temporary patch files"
           git push origin HEAD:deim-score-rf-tuning
