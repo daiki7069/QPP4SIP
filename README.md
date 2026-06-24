@@ -193,6 +193,26 @@ bash script/run_all_feature_combinations.sh
 LogReg/LASSO/outputs/AmbigNQ/
 ```
 
+### 5. GitHub Actionsでのモデル比較
+
+`.github/workflows/deim-model-matrix.yml` はPLMを再学習せず、既存の予測JSONを入力として次の20条件を実行します。
+
+- 特徴量: `Pre/Post`, `BERT`, `RoBERTa`, `Pre/Post/BERT`, `Pre/Post/RoBERTa`
+- モデル: `RandomForest`, `L1`, `L2`, `ElasticNet`
+
+GitHub Actionsの **DEIM model matrix** を手動実行し、4ファイルを含むZIPのHTTPS URLを `prediction_bundle_url` に指定します。ZIP内の階層は任意ですが、次の実験ディレクトリ名とファイル名が必要です。
+
+```text
+AmbigNQ_bert-base_lr2e-05_bs16_kfold5/
+├── train_with_predictions.json
+└── dev_with_predictions.json
+AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5/
+├── train_with_predictions.json
+└── dev_with_predictions.json
+```
+
+`prediction_bundle_sha256` を指定すると、展開前にZIPのチェックサムを検証します。各JSONについて、正例・負例logitの存在とサンプル数を確認した後にモデル比較を開始します。最終artifact `deim-complete-model-comparison` には、全条件の比較表、ROC-AUC/AP/F1/Accuracy、最適パラメータ、予測CSV、係数または特徴量重要度、ROC/PR曲線が含まれます。
+
 ## 主な結果
 
 | 条件 | AUC-ROC |
