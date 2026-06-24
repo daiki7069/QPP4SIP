@@ -1,0 +1,100 @@
+text = path.read_text()
+argument = textwrap.indent(textwrap.dedent('''
+        parser.add_argument(
+            "--plm-score-mode",
+            type=str,
+            choices=["logit_diff", "positive_logit"],
+            default="logit_diff",
+            help="PLMスコア方式（logit_diff: 正例logit-負例logit, positive_logit: 従来の正例logitのみ）"
+        )
+
+'''), '    ')
+text = replace_once(
+    text,
+    "    parser.add_argument(\n        \"--save-model\",\n",
+    argument + "    parser.add_argument(\n        \"--save-model\",\n",
+    "PLM score argument",
+)
+text = replace_once(
+    text,
+    "    print_and_save(f\"使用する特徴量タイプ: {', '.join(args.feature_types)}\")\n",
+    "    print_and_save(f\"使用する特徴量タイプ: {', '.join(args.feature_types)}\")\n    print_and_save(f\"PLMスコア方式: {args.plm_score_mode}\")\n",
+    "PLM score logging",
+)
+if text.count("use_transfer=use_transfer)") != 2:
+    raise RuntimeError("Expected two standard load_base_scores calls")
+text = text.replace(
+    "use_transfer=use_transfer)",
+    "use_transfer=use_transfer, score_mode=args.plm_score_mode)",
+)
+text = replace_once(
+    text,
+    "use_full_train_model_for_dev=True)",
+    "use_full_train_model_for_dev=True, score_mode=args.plm_score_mode)",
+    "graph load_base_scores call",
+)
+condition = "current_model_type in ['bolasso', 'lars_traps', 'lars_cv']"
+if text.count(condition) != 3:
+    raise RuntimeError(
+        f"Expected three model fit conditions, found {text.count(condition)}"
+    )
+text = text.replace(
+    condition,
+    "current_model_type in ['bolasso', 'lars_traps', 'lars_cv', 'randomforest']",
+)
+
+ensemble_pattern = re.compile(
+    r"        # 可視化のために、モデルオブジェクトを作成.*?"
+    r"        model = EnsembleModel\(mean_coefs, intercept_mean\)\n",
+    re.DOTALL,
+)
+ensemble_replacement = textwrap.indent(textwrap.dedent('''
+        # 可視化用のアンサンブルモデルを作成
+        if current_model_type == 'randomforest':
+            class EnsembleModel:
+                def __init__(self, models):
+                    self.models = models
+
+                def predict_proba(self, X):
+                    return np.mean(
+                        [model.predict_proba(X) for model in self.models], axis=0
+                    )
+
+            model = EnsembleModel(fold_models)
+        else:
+            class EnsembleModel:
+                def __init__(self, mean_coefs, intercept_mean):
+                    self.coef_ = mean_coefs.reshape(1, -1)
+                    self.intercept_ = intercept_mean
+
+                def predict_proba(self, X):
+                    if isinstance(X, pd.DataFrame):
+                        X_array = X.values
+                    else:
+                        X_array = X
+                    z = X_array @ self.coef_[0] + self.intercept_
+                    proba_positive = expit(z)
+                    proba_negative = 1 - proba_positive
+                    return np.column_stack([proba_negative, proba_positive])
+
+            intercept_mean = np.mean(
+                [model.intercept_ for model in fold_models]
+            )
+            model = EnsembleModel(mean_coefs, intercept_mean)
+'''), '        ')
+text, count = ensemble_pattern.subn(ensemble_replacement, text, count=1)
+if count != 1:
+    raise RuntimeError(f"Ensemble block: expected 1 match, found {count}")
+path.write_text(text)
+
+# Documentation.
+path = Path("README.md")
+text = path.read_text()
+text = replace_once(
+    text,
+    "論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。\n",
+    "論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。`*_with_predictions.json` には正例・負例両方のlogitが保存されるため、logit差の利用に再学習・再推論は不要です。\n",
+    "README PLM output note",
+)
+text = replace_once(
+    text,
