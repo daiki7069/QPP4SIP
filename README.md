@@ -109,7 +109,7 @@ QPP/post_retrieval/outputs/AmbigNQ/dpr/dev_*.csv
 
 ### 3. PLM ベースラインの fine-tuning
 
-論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。
+論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。`*_with_predictions.json` には正例・負例両方のlogitが保存されるため、logit差の利用に再学習・再推論は不要です。
 
 BERT:
 
@@ -156,7 +156,7 @@ python SIP/FT-PLM/main.py \
 
 ### 4. ロジスティック回帰による特徴量統合
 
-論文の表 2 に対応します。`--feature-types` で実験条件を指定します。
+論文の表 2 に対応します。`--feature-types` で実験条件を指定します。PLM特徴量はデフォルトで `logit_clarification - logit_not_clarification` を使用します。従来の正例logitのみを使う場合は `--plm-score-mode positive_logit` を指定します。
 
 | 論文中の条件 | コマンドオプション |
 | --- | --- |
@@ -177,6 +177,8 @@ python LogReg/LASSO/main.py \
   --delong-test \
   --feature-types pre post roberta
 ```
+
+`--model-type randomforest` では、層化交差検証によるハイパーパラメータ探索を行い、`n_estimators`, `max_depth`, `min_samples_split`, `min_samples_leaf`, `max_features` をAUC-ROCで選択します。
 
 主要な特徴量組み合わせをまとめて実行する場合:
 

@@ -508,6 +508,79 @@ class LARSCVModel:
             return X[:, [i for i, name in enumerate(feature_names) if name in self.selected_features_]]
 
 
+class RandomForestCVModel:
+    """層化CVでハイパーパラメータを選択するRandomForest。"""
+
+    def __init__(self, cv=5, random_state=42, class_weight='balanced',
+                 scoring='roc_auc', n_jobs=-1, param_grid=None):
+        self.cv = cv
+        self.random_state = random_state
+        self.class_weight = class_weight
+        self.scoring = scoring
+        self.n_jobs = n_jobs
+        self.param_grid = param_grid or {
+            'n_estimators': [200, 500],
+            'max_depth': [3, 5, 10],
+            'min_samples_split': [2, 10],
+            'min_samples_leaf': [1, 4],
+            'max_features': ['sqrt', 0.5],
+        }
+        self.model_ = None
+        self.best_params_ = None
+        self.best_score_ = None
+
+    def fit(self, X, y, print_and_save_func=None):
+        class_counts = Counter(y)
+        if len(class_counts) < 2:
+            raise ValueError('RandomForest tuning requires two classes')
+        n_splits = min(self.cv, min(class_counts.values()))
+        if n_splits < 2:
+            raise ValueError(
+                'RandomForest tuning requires at least two samples per class'
+            )
+
+        search = GridSearchCV(
+            RandomForestClassifier(
+                random_state=self.random_state,
+                class_weight=self.class_weight,
+                n_jobs=1,
+            ),
+            self.param_grid,
+            cv=StratifiedKFold(
+                n_splits=n_splits,
+                shuffle=True,
+                random_state=self.random_state,
+            ),
+            scoring=self.scoring,
+            n_jobs=self.n_jobs,
+            refit=True,
+        )
+        search.fit(X, y)
+        self.model_ = search.best_estimator_
+        self.best_params_ = search.best_params_
+        self.best_score_ = search.best_score_
+
+        message = (
+            f"RandomForest best params: {self.best_params_} "
+            f"({self.scoring}={self.best_score_:.4f})"
+        )
+        (print_and_save_func or print)(message)
+        return self
+
+    def predict(self, X):
+        return self.model_.predict(X)
+
+    def predict_proba(self, X):
+        return self.model_.predict_proba(X)
+
+    @property
+    def feature_importances_(self):
+        return self.model_.feature_importances_
+
+    @property
+    def classes_(self):
+        return self.model_.classes_
+
 def create_model(model_type, max_iter=1000, random_state=42, class_weight='balanced', tol=1e-8, 
                  non_negative=False, n_bootstrap=100, selection_threshold=0.5, n_random_traps=10, cv=5,
                  use_l1_cv=False, use_l2_cv=False, use_elasticnet_cv=False, C_range=None, l1_ratio_range=None, scoring='roc_auc', n_jobs=-1):
@@ -599,14 +672,12 @@ def create_model(model_type, max_iter=1000, random_state=42, class_weight='balan
                 tol=tol
             )
     elif model_type == 'randomforest':
-        return RandomForestClassifier(
-            n_estimators=100,
-            max_depth=None,
-            min_samples_split=2,
-            min_samples_leaf=1,
+        return RandomForestCVModel(
+            cv=cv,
             random_state=random_state,
-            class_weight='balanced',
-            n_jobs=-1
+            class_weight=class_weight,
+            scoring=scoring,
+            n_jobs=n_jobs,
         )
     elif model_type == 'none':
         # ペナルティなしロジスティック回帰
