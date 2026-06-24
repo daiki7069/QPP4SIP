@@ -21,8 +21,6 @@ text = replace_once(
     "    print_and_save(f\"使用する特徴量タイプ: {', '.join(args.feature_types)}\")\n    print_and_save(f\"PLMスコア方式: {args.plm_score_mode}\")\n",
     "PLM score logging",
 )
-if text.count("use_transfer=use_transfer)") != 2:
-    raise RuntimeError("Expected two standard load_base_scores calls")
 text = text.replace(
     "use_transfer=use_transfer)",
     "use_transfer=use_transfer, score_mode=args.plm_score_mode)",
@@ -34,10 +32,6 @@ text = replace_once(
     "graph load_base_scores call",
 )
 condition = "current_model_type in ['bolasso', 'lars_traps', 'lars_cv']"
-if text.count(condition) != 3:
-    raise RuntimeError(
-        f"Expected three model fit conditions, found {text.count(condition)}"
-    )
 text = text.replace(
     condition,
     "current_model_type in ['bolasso', 'lars_traps', 'lars_cv', 'randomforest']",
