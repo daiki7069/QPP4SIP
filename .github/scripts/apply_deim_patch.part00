@@ -1,0 +1,99 @@
+import re
+import textwrap
+from pathlib import Path
+
+
+def replace_once(text, old, new, label):
+    count = text.count(old)
+    if count != 1:
+        raise RuntimeError(f"{label}: expected 1 match, found {count}")
+    return text.replace(old, new, 1)
+
+
+# PLM feature score selection.
+path = Path("LogReg/LASSO/module/data_loader.py")
+text = path.read_text()
+text = replace_once(text, "import json\n", "import json\nimport os\n", "os import")
+
+extract_pattern = re.compile(
+    r"def extract_base_scores\(json_data: List\[List\[Dict\[str, Any\]\]\]\) -> Dict\[Tuple\[str, int\], float\]:\n"
+    r".*?\n    return scores\n",
+    re.DOTALL,
+)
+extract_replacement = textwrap.dedent('''
+    def _resolve_plm_score_mode(score_mode: str = None) -> str:
+        score_mode = score_mode or os.getenv('DEIM_PLM_SCORE_MODE', 'logit_diff')
+        if score_mode not in ('logit_diff', 'positive_logit'):
+            raise ValueError(
+                "score_mode must be 'logit_diff' or 'positive_logit'"
+            )
+        return score_mode
+
+
+    def _extract_plm_score(turn: Dict[str, Any], score_mode: str):
+        positive_logit = turn.get('logit_clarification')
+        if positive_logit is None:
+            return None
+        if score_mode == 'positive_logit':
+            return float(positive_logit)
+
+        negative_logit = turn.get('logit_not_clarification')
+        if negative_logit is None:
+            raise ValueError(
+                "logit_not_clarification is required for logit_diff mode"
+            )
+        return float(positive_logit) - float(negative_logit)
+
+
+    def extract_base_scores(json_data: List[List[Dict[str, Any]]], score_mode: str = None) -> Dict[Tuple[str, int], float]:
+        """ベースモデルのPLMスコアを抽出する。"""
+        score_mode = _resolve_plm_score_mode(score_mode)
+        scores = {}
+        for conversation in json_data:
+            for turn in conversation:
+                conv_id = str(turn['conv_id'])
+                turn_id = int(turn['turn_id'])
+                score = _extract_plm_score(turn, score_mode)
+                if score is not None:
+                    scores[(conv_id, turn_id)] = score
+
+        return scores
+''').lstrip()
+text, count = extract_pattern.subn(extract_replacement, text, count=1)
+if count != 1:
+    raise RuntimeError(f"extract_base_scores: expected 1 match, found {count}")
+
+start = text.index("def load_base_scores(")
+end = text.index("\ndef load_base_probabilities(", start)
+function = text[start:end]
+function = replace_once(
+    function,
+    "use_full_train_model_for_dev: bool = False) ->",
+    "use_full_train_model_for_dev: bool = False, score_mode: str = None) ->",
+    "load_base_scores signature",
+)
+function = replace_once(
+    function,
+    "    base_scores = {}\n",
+    "    score_mode = _resolve_plm_score_mode(score_mode)\n    base_scores = {}\n",
+    "load_base_scores mode initialization",
+)
+function = replace_once(
+    function,
+    "                logit = turn.get('logit_clarification')\n                if logit is not None:\n                    scores[key] = float(logit)\n",
+    "                score = _extract_plm_score(turn, score_mode)\n                if score is not None:\n                    scores[key] = score\n",
+    "load_base_scores extraction",
+)
+function = replace_once(
+    function,
+    "        print(f\"Loaded {len(scores)} {feature_name} scores for {split} (experiment: {exp_name})\")\n",
+    "        print(f\"Loaded {len(scores)} {feature_name} scores for {split} (experiment: {exp_name}, score_mode: {score_mode})\")\n",
+    "load_base_scores logging",
+)
+text = text[:start] + function + text[end:]
+path.write_text(text)
+
+# RandomForest nested hyperparameter search.
+path = Path("LogReg/LASSO/module/models.py")
+text = path.read_text()
+class_definition = textwrap.dedent('''
