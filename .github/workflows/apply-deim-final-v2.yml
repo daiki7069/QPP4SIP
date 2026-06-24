@@ -27,8 +27,21 @@ jobs:
               .github/scripts/apply_deim_patch.part03 \
               > /tmp/apply_deim_patch.py
           python -m py_compile /tmp/apply_deim_patch.py
-          python /tmp/apply_deim_patch.py
+          set +e
+          python /tmp/apply_deim_patch.py > /tmp/apply-deim.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/apply-deim.log
+          if [ "$status" -ne 0 ]; then exit "$status"; fi
           rm -f .github/scripts/apply_deim_patch.part*
+
+      - name: Upload patch failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apply-deim-failure-log
+          path: /tmp/apply-deim.log
+          if-no-files-found: ignore
 
       - name: Install test dependencies
         run: |
