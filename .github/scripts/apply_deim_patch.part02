@@ -25,11 +25,9 @@ text = text.replace(
     "use_transfer=use_transfer)",
     "use_transfer=use_transfer, score_mode=args.plm_score_mode)",
 )
-text = replace_once(
-    text,
+text = text.replace(
     "use_full_train_model_for_dev=True)",
     "use_full_train_model_for_dev=True, score_mode=args.plm_score_mode)",
-    "graph load_base_scores call",
 )
 condition = "current_model_type in ['bolasso', 'lars_traps', 'lars_cv']"
 text = text.replace(
