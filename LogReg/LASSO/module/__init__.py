@@ -46,6 +46,12 @@ from .models import (
     create_model,
     get_coefficients
 )
+from .deim_overrides import (
+    RandomForestCVModel,
+    create_model,
+    extract_base_scores,
+    load_base_scores,
+)
 from .feature_selection import (
     bootstrap_sample,
     bolasso_feature_selection,
@@ -84,6 +90,7 @@ __all__ = [
     'BOLASSOModel',
     'LARSTrapsModel',
     'LARSCVModel',
+    'RandomForestCVModel',
     'create_model',
     'get_coefficients',
     # feature_selection
@@ -91,4 +98,3 @@ __all__ = [
     'bolasso_feature_selection',
     'lars_traps_feature_selection',
 ]
-
