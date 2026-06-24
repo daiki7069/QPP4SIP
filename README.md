@@ -214,3 +214,22 @@ LogReg/LASSO/outputs/AmbigNQ/
   year = {2026}
 }
 ```
+
+<!-- deim-score-and-rf-search -->
+### PLMスコアとRandomForestのハイパーパラメータ探索
+
+`LogReg/LASSO`でPLM出力を統合する際は、正例と負例の相対的な確信度を使うため、デフォルトで次のlogit差をスコアとして使用します。
+
+```text
+logit_clarification - logit_not_clarification
+```
+
+後段処理との互換性を保つため、特徴量名（`bert_logit_clarification`など）は変更していません。従来どおり正例側のlogitだけを使う場合は、環境変数でスコア方式を指定します。
+
+```bash
+DEIM_PLM_SCORE_MODE=positive_logit python LogReg/LASSO/main.py [既存の引数]
+```
+
+Python APIでは`load_base_scores(..., score_mode="positive_logit")`でも指定できます。指定可能な値は`logit_diff`（デフォルト）と`positive_logit`です。
+
+`--model-type randomforest`では、固定パラメータではなく層化5-fold CVによる`GridSearchCV`を実行します。探索対象は`n_estimators`、`max_depth`、`min_samples_split`、`min_samples_leaf`、`max_features`です。外側の交差検証を使用する場合も、探索は各foldの学習データ内だけで行われます。
