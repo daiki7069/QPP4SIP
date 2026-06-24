@@ -5,15 +5,10 @@ on:
     branches: [develop]
     paths:
       - "LogReg/LASSO/**"
+      - "SIP/FT-PLM/**"
       - "README.md"
       - ".github/workflows/deim-experiments.yml"
   workflow_dispatch:
-    inputs:
-      run_plm_training:
-        description: "Run full BERT/RoBERTa fine-tuning (CPU-intensive)"
-        required: false
-        default: false
-        type: boolean
 
 jobs:
   test:
@@ -34,13 +29,124 @@ jobs:
             LogReg/LASSO/main.py \
             LogReg/LASSO/module/data_loader.py \
             LogReg/LASSO/module/models.py \
-            LogReg/LASSO/run_random_forest_experiment.py
+            LogReg/LASSO/run_integrated_experiment.py
           pytest -q LogReg/LASSO/tests/test_plm_scoring_and_random_forest.py
 
-  random-forest:
+  plm-training:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - key: bert
+            model_name: bert-base-uncased
+            experiment: AmbigNQ_bert-base_lr2e-05_bs8_kfold5
+            early_stopping: false
+          - key: roberta
+            model_name: roberta-base
+            experiment: AmbigNQ_roberta-base_lr2e-05_bs8_earlystop_kfold5
+            early_stopping: true
+    env:
+      TOKENIZERS_PARALLELISM: "false"
+      WANDB_DISABLED: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install PLM dependencies
+        run: |
+          pip install -r SIP/FT-PLM/requirements.txt
+          pip install tensorboard
+      - name: Prepare expected project path
+        run: |
+          sudo mkdir -p /home/daiki_shibata/pj
+          sudo ln -s "$GITHUB_WORKSPACE" /home/daiki_shibata/pj/QPP4SIP
+          mkdir -p artifacts/plm-logs
+      - name: Fine-tune ${{ matrix.key }} with 5-fold OOF prediction
+        run: |
+          set -o pipefail
+          EXTRA_ARGS=""
+          if [ "${{ matrix.early_stopping }}" = "true" ]; then
+            EXTRA_ARGS="--early_stopping"
+          fi
+          python SIP/FT-PLM/main.py \
+            --dataset AmbigNQ \
+            --mode train \
+            --model_name "${{ matrix.model_name }}" \
+            --learning_rate 2e-5 \
+            --batch_size 8 \
+            --max_length 128 \
+            --num_epochs 1 \
+            --k_fold 5 \
+            --output_dir artifacts/plm-training \
+            $EXTRA_ARGS \
+            2>&1 | tee artifacts/plm-logs/training.log
+      - name: Evaluate ${{ matrix.key }} fold ensemble on dev
+        run: |
+          set -o pipefail
+          python SIP/FT-PLM/main.py \
+            --dataset AmbigNQ \
+            --mode evaluate \
+            --model_path "artifacts/plm-training/AmbigNQ/${{ matrix.experiment }}" \
+            --output_dir "artifacts/plm-eval/${{ matrix.key }}" \
+            --batch_size 8 \
+            --max_length 128 \
+            --save_predictions \
+            2>&1 | tee artifacts/plm-logs/evaluation.log
+      - name: Collect PLM predictions and metrics
+        run: |
+          COMPACT="artifacts/plm-predictions/${{ matrix.experiment }}"
+          mkdir -p "$COMPACT"
+          cp "artifacts/plm-training/AmbigNQ/${{ matrix.experiment }}/train_with_predictions.json" "$COMPACT/"
+          cp "artifacts/plm-training/AmbigNQ/${{ matrix.experiment }}/oof_predictions.txt" "$COMPACT/"
+          cp "artifacts/plm-eval/${{ matrix.key }}/AmbigNQ/dev_with_predictions.json" "$COMPACT/"
+          cp "artifacts/plm-eval/${{ matrix.key }}/AmbigNQ/evaluation_results.txt" "$COMPACT/"
+          cp "artifacts/plm-eval/${{ matrix.key }}/AmbigNQ/predictions.txt" "$COMPACT/"
+          cp "artifacts/plm-eval/${{ matrix.key }}/AmbigNQ/roc_curve.png" "$COMPACT/"
+          cp "artifacts/plm-eval/${{ matrix.key }}/AmbigNQ/pr_curve.png" "$COMPACT/"
+          cp artifacts/plm-logs/*.log "$COMPACT/"
+          cat > "$COMPACT/gha_training_profile.json" <<EOF
+          {
+            "model": "${{ matrix.model_name }}",
+            "folds": 5,
+            "epochs": 1,
+            "max_length": 128,
+            "batch_size": 8,
+            "learning_rate": 0.00002,
+            "note": "CPU-feasible GitHub Actions profile; not the full 20-epoch paper reproduction"
+          }
+          EOF
+      - name: Upload ${{ matrix.key }} predictions and metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: "plm-${{ matrix.key }}-predictions"
+          path: artifacts/plm-predictions
+          if-no-files-found: error
+          retention-days: 30
+
+  integrated-models:
+    needs: [test, plm-training]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        feature_set:
+          - pre_post
+          - bert
+          - roberta
+          - pre_post_bert
+          - pre_post_roberta
+        model:
+          - randomforest
+          - l1
+          - l2
+          - elasticnet
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -49,70 +155,100 @@ jobs:
           cache: pip
       - name: Install experiment dependencies
         run: pip install numpy pandas scipy scikit-learn matplotlib seaborn
-      - name: Train and evaluate tuned RandomForest
+      - name: Download BERT and RoBERTa prediction artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: plm-*-predictions
+          path: SIP/FT-PLM/output/AmbigNQ
+          merge-multiple: true
+      - name: Run ${{ matrix.model }} on ${{ matrix.feature_set }}
         run: |
-          python LogReg/LASSO/run_random_forest_experiment.py \
+          OUTPUT="artifacts/integrated/${{ matrix.feature_set }}/${{ matrix.model }}"
+          mkdir -p "$OUTPUT"
+          set -o pipefail
+          python LogReg/LASSO/run_integrated_experiment.py \
             --dataset AmbigNQ \
             --retrieval-method dpr \
-            --feature-types pre post \
-            --output-dir artifacts/deim-random-forest
-      - name: Upload all RandomForest results
+            --feature-set "${{ matrix.feature_set }}" \
+            --model "${{ matrix.model }}" \
+            --plm-score-mode logit_diff \
+            --output-dir "$OUTPUT" \
+            2>&1 | tee "$OUTPUT/run.log"
+      - name: Upload condition results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: deim-random-forest-results
-          path: artifacts/deim-random-forest
+          name: "deim-result-${{ matrix.feature_set }}-${{ matrix.model }}"
+          path: artifacts/integrated
           if-no-files-found: error
           retention-days: 30
 
-  plm-training:
-    if: github.event_name == 'workflow_dispatch' && inputs.run_plm_training
+  summary:
+    needs: integrated-models
     runs-on: ubuntu-latest
-    timeout-minutes: 360
-    strategy:
-      fail-fast: false
-      matrix:
-        model: [bert-base-uncased, roberta-base]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4
         with:
-          python-version: "3.11"
-          cache: pip
-      - name: Install PLM dependencies
-        run: pip install -r SIP/FT-PLM/requirements.txt
-      - name: Fine-tune PLM
+          pattern: deim-result-*
+          path: artifacts/all-results
+          merge-multiple: true
+      - name: Build comparison table
         run: |
-          EXTRA_ARGS=""
-          if [ "${{ matrix.model }}" = "roberta-base" ]; then
-            EXTRA_ARGS="--early_stopping"
-          fi
-          python SIP/FT-PLM/main.py \
-            --dataset AmbigNQ \
-            --mode train \
-            --model_name "${{ matrix.model }}" \
-            --learning_rate 2e-5 \
-            --batch_size 16 \
-            --k_fold 5 \
-            --output_dir SIP/FT-PLM/output \
-            $EXTRA_ARGS
-      - name: Evaluate PLM ensemble
-        run: |
-          if [ "${{ matrix.model }}" = "roberta-base" ]; then
-            EXPERIMENT="AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5"
-          else
-            EXPERIMENT="AmbigNQ_bert-base_lr2e-05_bs16_kfold5"
-          fi
-          python SIP/FT-PLM/main.py \
-            --dataset AmbigNQ \
-            --mode evaluate \
-            --model_path "SIP/FT-PLM/output/AmbigNQ/$EXPERIMENT" \
-            --output_dir SIP/FT-PLM/output
-      - name: Upload all PLM outputs
-        if: always()
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/all-results")
+          rows = []
+          for path in sorted(root.rglob("results.json")):
+              result = json.loads(path.read_text())
+              rows.append({
+                  "feature_set": result["feature_set"],
+                  "model": result["model"],
+                  "dev_roc_auc": result["dev_metrics"]["roc_auc"],
+                  "dev_average_precision": result["dev_metrics"]["average_precision"],
+                  "dev_f1": result["dev_metrics"]["f1"],
+                  "dev_accuracy": result["dev_metrics"]["accuracy"],
+                  "train_roc_auc": result["train_metrics"]["roc_auc"],
+                  "best_cv_score": result.get("search", {}).get("best_score", ""),
+                  "best_params": json.dumps(
+                      result.get("search", {}).get("best_params", {}),
+                      ensure_ascii=False,
+                      sort_keys=True,
+                  ),
+              })
+
+          rows.sort(key=lambda row: row["dev_roc_auc"], reverse=True)
+          summary_dir = Path("artifacts/summary")
+          summary_dir.mkdir(parents=True, exist_ok=True)
+          fields = list(rows[0])
+          with (summary_dir / "comparison.csv").open("w", newline="") as f:
+              writer = csv.DictWriter(f, fieldnames=fields)
+              writer.writeheader()
+              writer.writerows(rows)
+
+          lines = [
+              "# DEIM experiment comparison",
+              "",
+              "| Feature set | Model | Dev ROC-AUC | Dev AP | Dev F1 | Accuracy |",
+              "|---|---|---:|---:|---:|---:|",
+          ]
+          for row in rows:
+              lines.append(
+                  f"| {row['feature_set']} | {row['model']} | "
+                  f"{row['dev_roc_auc']:.4f} | {row['dev_average_precision']:.4f} | "
+                  f"{row['dev_f1']:.4f} | {row['dev_accuracy']:.4f} |"
+              )
+          (summary_dir / "comparison.md").write_text("\n".join(lines) + "\n")
+          print("\n".join(lines))
+          PY
+      - name: Upload complete comparison
         uses: actions/upload-artifact@v4
         with:
-          name: "plm-${{ matrix.model }}-outputs"
-          path: SIP/FT-PLM/output/AmbigNQ
+          name: deim-complete-comparison
+          path: |
+            artifacts/summary
+            artifacts/all-results
           if-no-files-found: error
           retention-days: 30
