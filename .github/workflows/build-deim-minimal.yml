@@ -1,0 +1,408 @@
+name: Build minimal DEIM patch
+
+on:
+  push:
+    branches:
+      - tmp/deim-minimal-clean
+    paths:
+      - .github/workflows/build-deim-minimal.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-test:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tmp/deim-minimal-clean
+          fetch-depth: 0
+
+      - name: Apply focused code changes
+        run: |
+          cat > /tmp/patch.py <<'PY'
+          from pathlib import Path
+
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"{label}: expected one match, found {count}")
+              return text.replace(old, new, 1)
+
+
+          data_loader_path = Path("LogReg/LASSO/module/data_loader.py")
+          data_loader = data_loader_path.read_text()
+          old_extract = '''def extract_base_scores(json_data: List[List[Dict[str, Any]]]) -> Dict[Tuple[str, int], float]:
+              """ベースモデルのlogit_clarificationを抽出"""
+              scores = {}
+              for conversation in json_data:
+                  for turn in conversation:
+                      # conv_idとturn_idを文字列/整数に統一
+                      conv_id = str(turn['conv_id'])
+                      turn_id = int(turn['turn_id'])
+                      key = (conv_id, turn_id)
+                      
+                      logit = turn.get('logit_clarification')
+                      if logit is not None:
+                          scores[key] = float(logit)
+              
+              return scores
+          '''
+          new_extract = '''PLM_SCORE_MODES = ('logit_diff', 'positive_logit')
+
+
+          def _extract_plm_score(turn: Dict[str, Any], score_mode: str):
+              """PLM出力から統合に使うスコアを抽出する。"""
+              if score_mode not in PLM_SCORE_MODES:
+                  raise ValueError(
+                      f"Unknown PLM score mode: {score_mode}. "
+                      f"Choose one of {', '.join(PLM_SCORE_MODES)}."
+                  )
+              positive_logit = turn.get('logit_clarification')
+              if positive_logit is None:
+                  return None
+              if score_mode == 'positive_logit':
+                  return float(positive_logit)
+
+              negative_logit = turn.get('logit_not_clarification')
+              if negative_logit is None:
+                  raise ValueError(
+                      "logit_not_clarification is required for logit_diff mode."
+                  )
+              return float(positive_logit) - float(negative_logit)
+
+
+          def extract_base_scores(json_data: List[List[Dict[str, Any]]], score_mode: str = 'logit_diff') -> Dict[Tuple[str, int], float]:
+              """ベースモデルのPLMスコアを抽出する。"""
+              scores = {}
+              for conversation in json_data:
+                  for turn in conversation:
+                      # conv_idとturn_idを文字列/整数に統一
+                      conv_id = str(turn['conv_id'])
+                      turn_id = int(turn['turn_id'])
+                      key = (conv_id, turn_id)
+
+                      score = _extract_plm_score(turn, score_mode)
+                      if score is not None:
+                          scores[key] = score
+
+              return scores
+          '''
+          data_loader = replace_once(
+              data_loader, old_extract, new_extract, "extract_base_scores"
+          )
+          old_signature = "def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False, use_full_train_model_for_dev: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:"
+          new_signature = "def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False, use_full_train_model_for_dev: bool = False, score_mode: str = 'logit_diff') -> Dict[str, Dict[Tuple[str, int], float]]:"
+          data_loader = replace_once(
+              data_loader, old_signature, new_signature, "load_base_scores signature"
+          )
+          data_loader = replace_once(
+              data_loader,
+              "        use_full_train_model_for_dev: devデータの場合、train全体でFTしたモデルを使用するか（デフォルト: False）\n                                      Trueの場合、_kfold5を削除した実験名を参照\n",
+              "        use_full_train_model_for_dev: devデータの場合、train全体でFTしたモデルを使用するか（デフォルト: False）\n                                      Trueの場合、_kfold5を削除した実験名を参照\n        score_mode: PLMスコア方式（logit_diff または positive_logit）\n",
+              "load_base_scores docstring",
+          )
+          data_loader = replace_once(
+              data_loader,
+              "                logit = turn.get('logit_clarification')\n                if logit is not None:\n                    scores[key] = float(logit)\n",
+              "                score = _extract_plm_score(turn, score_mode)\n                if score is not None:\n                    scores[key] = score\n",
+              "load_base_scores extraction",
+          )
+          data_loader_path.write_text(data_loader)
+
+          models_path = Path("LogReg/LASSO/module/models.py")
+          models = models_path.read_text()
+          old_rf = '''    elif model_type == 'randomforest':
+              return RandomForestClassifier(
+                  n_estimators=100,
+                  max_depth=None,
+                  min_samples_split=2,
+                  min_samples_leaf=1,
+                  random_state=random_state,
+                  class_weight='balanced',
+                  n_jobs=-1
+              )
+          '''
+          new_rf = '''    elif model_type == 'randomforest':
+              base_model = RandomForestClassifier(
+                  random_state=random_state,
+                  class_weight=class_weight,
+                  n_jobs=1
+              )
+              param_grid = {
+                  'n_estimators': [200, 500],
+                  'max_depth': [3, 5, 10],
+                  'min_samples_split': [2, 10],
+                  'min_samples_leaf': [1, 4],
+                  'max_features': ['sqrt', 0.5],
+              }
+              cv_fold = StratifiedKFold(
+                  n_splits=cv, shuffle=True, random_state=random_state
+              )
+              return GridSearchCV(
+                  base_model,
+                  param_grid,
+                  cv=cv_fold,
+                  scoring=scoring,
+                  n_jobs=n_jobs,
+                  refit=True
+              )
+          '''
+          models = replace_once(models, old_rf, new_rf, "RandomForest factory")
+          old_importance = '''    if model_type == 'randomforest':
+              # RandomForestの場合はfeature_importances_を使用
+              if hasattr(model, 'feature_importances_'):
+                  return model.feature_importances_
+              else:
+                  return np.zeros(len(feature_names))
+          '''
+          new_importance = '''    if model_type == 'randomforest':
+              # GridSearchCVの場合は最適モデルのfeature_importances_を使用
+              estimator = getattr(model, 'best_estimator_', model)
+              if hasattr(estimator, 'feature_importances_'):
+                  return estimator.feature_importances_
+              else:
+                  return np.zeros(len(feature_names))
+          '''
+          models = replace_once(
+              models, old_importance, new_importance, "RandomForest importances"
+          )
+          models_path.write_text(models)
+
+          main_path = Path("LogReg/LASSO/main.py")
+          main = main_path.read_text()
+          save_model_marker = '''    parser.add_argument(
+              "--save-model",
+          '''
+          score_argument = '''    parser.add_argument(
+              "--plm-score-mode",
+              type=str,
+              choices=["logit_diff", "positive_logit"],
+              default="logit_diff",
+              help="PLMスコア方式（logit_diff: 正例logit-負例logit, positive_logit: 従来の正例logitのみ。デフォルト: logit_diff）"
+          )
+
+          '''
+          main = replace_once(
+              main,
+              save_model_marker,
+              score_argument + save_model_marker,
+              "PLM score CLI argument",
+          )
+          main = replace_once(
+              main,
+              "    print_and_save(f\"使用する特徴量タイプ: {', '.join(args.feature_types)}\")\n",
+              "    print_and_save(f\"使用する特徴量タイプ: {', '.join(args.feature_types)}\")\n    print_and_save(f\"PLMスコア方式: {args.plm_score_mode}\")\n",
+              "PLM score logging",
+          )
+          score_call_suffix = "use_transfer=use_transfer)"
+          score_call_replacement = "use_transfer=use_transfer, score_mode=args.plm_score_mode)"
+          call_count = main.count(score_call_suffix)
+          if call_count != 3:
+              raise RuntimeError(
+                  f"load_base_scores calls: expected three matches, found {call_count}"
+              )
+          main = main.replace(score_call_suffix, score_call_replacement)
+
+          outer_fit = '''            else:
+                  fold_model.fit(X_fold_train_norm, y_fold_train)
+              
+              # モデルを保存
+          '''
+          outer_fit_new = '''            else:
+                  fold_model.fit(X_fold_train_norm, y_fold_train)
+              if current_model_type == 'randomforest':
+                  print_and_save(f"    最適パラメータ: {fold_model.best_params_}")
+
+              # モデルを保存
+          '''
+          main = replace_once(main, outer_fit, outer_fit_new, "outer CV RF logging")
+          no_cv_fit = '''        else:
+                  model.fit(X_train_norm, y_train)
+              
+              # 収束状況を確認（線形モデルの場合のみ）
+          '''
+          no_cv_fit_new = '''        else:
+                  model.fit(X_train_norm, y_train)
+              if current_model_type == 'randomforest':
+                  print_and_save(f"  - 最適パラメータ: {model.best_params_}")
+
+              # 収束状況を確認（線形モデルの場合のみ）
+          '''
+          main = replace_once(main, no_cv_fit, no_cv_fit_new, "no-CV RF logging")
+
+          old_ensemble = '''        # 可視化のために、モデルオブジェクトを作成（係数の平均を使用）
+              # ただし、実際の予測は既にアンサンブルで行っているので、可視化用にダミーモデルを作成
+              class EnsembleModel:
+                  def __init__(self, mean_coefs, intercept_mean):
+                      self.coef_ = mean_coefs.reshape(1, -1)
+                      self.intercept_ = intercept_mean
+                  
+                  def predict_proba(self, X):
+                      if isinstance(X, pd.DataFrame):
+                          X_array = X.values
+                      else:
+                          X_array = X
+                      z = X_array @ self.coef_[0] + self.intercept_
+                      proba_positive = expit(z)
+                      proba_negative = 1 - proba_positive
+                      return np.column_stack([proba_negative, proba_positive])
+              
+              # 切片の平均も計算
+              if args.non_negative_coefficients:
+                  intercept_mean = np.mean([model.intercept_ for model in fold_models])
+              else:
+                  intercept_mean = np.mean([model.intercept_ for model in fold_models])
+              
+              model = EnsembleModel(mean_coefs, intercept_mean)
+          '''
+          new_ensemble = '''        # 可視化用のアンサンブルモデルを作成
+              if current_model_type == 'randomforest':
+                  class EnsembleModel:
+                      def __init__(self, models):
+                          self.models = models
+
+                      def predict_proba(self, X):
+                          return np.mean(
+                              [model.predict_proba(X) for model in self.models], axis=0
+                          )
+
+                  model = EnsembleModel(fold_models)
+              else:
+                  class EnsembleModel:
+                      def __init__(self, mean_coefs, intercept_mean):
+                          self.coef_ = mean_coefs.reshape(1, -1)
+                          self.intercept_ = intercept_mean
+
+                      def predict_proba(self, X):
+                          if isinstance(X, pd.DataFrame):
+                              X_array = X.values
+                          else:
+                              X_array = X
+                          z = X_array @ self.coef_[0] + self.intercept_
+                          proba_positive = expit(z)
+                          proba_negative = 1 - proba_positive
+                          return np.column_stack([proba_negative, proba_positive])
+
+                  intercept_mean = np.mean([model.intercept_ for model in fold_models])
+                  model = EnsembleModel(mean_coefs, intercept_mean)
+          '''
+          main = replace_once(main, old_ensemble, new_ensemble, "CV ensemble model")
+          main_path.write_text(main)
+
+          readme_path = Path("README.md")
+          readme = readme_path.read_text()
+          plm_docs = '''
+          PLMスコアは、デフォルトで正例側と負例側のlogit差
+          `logit_clarification - logit_not_clarification` を使用します。従来の正例側logitのみを使用する場合は、統合実験で `--plm-score-mode positive_logit` を指定してください。
+
+          '''
+          readme = replace_once(
+              readme,
+              "### 4. ロジスティック回帰による特徴量統合\n",
+              plm_docs + "### 4. ロジスティック回帰による特徴量統合\n",
+              "README PLM score documentation",
+          )
+          rf_docs = '''
+          `--model-type randomforest` では、固定パラメータではなく層化交差検証による `GridSearchCV` を実行します。`n_estimators`、`max_depth`、`min_samples_split`、`min_samples_leaf`、`max_features` を探索し、AUC-ROCが最大となる設定を採用します。
+
+          '''
+          readme = replace_once(
+              readme,
+              "主要な特徴量組み合わせをまとめて実行する場合:\n",
+              rf_docs + "主要な特徴量組み合わせをまとめて実行する場合:\n",
+              "README RandomForest documentation",
+          )
+          readme_path.write_text(readme)
+
+          tests_path = Path("LogReg/LASSO/tests/test_deim_score_and_randomforest.py")
+          tests_path.parent.mkdir(parents=True, exist_ok=True)
+          tests_path.write_text('''import numpy as np
+          import pytest
+          from sklearn.model_selection import GridSearchCV
+
+          from module import extract_base_scores
+          from module.models import create_model, get_coefficients
+
+
+          def prediction_data():
+              return [[{
+                  "conv_id": "conv-1",
+                  "turn_id": 0,
+                  "logit_clarification": 2.0,
+                  "logit_not_clarification": 0.5,
+              }]]
+
+
+          def test_plm_score_defaults_to_logit_difference():
+              scores = extract_base_scores(prediction_data())
+              assert scores[("conv-1", 0)] == pytest.approx(1.5)
+
+
+          def test_positive_logit_mode_is_available():
+              scores = extract_base_scores(
+                  prediction_data(), score_mode="positive_logit"
+              )
+              assert scores[("conv-1", 0)] == pytest.approx(2.0)
+
+
+          def test_logit_difference_requires_negative_logit():
+              data = prediction_data()
+              del data[0][0]["logit_not_clarification"]
+              with pytest.raises(ValueError, match="logit_not_clarification"):
+                  extract_base_scores(data)
+
+
+          def test_randomforest_hyperparameters_are_selected_by_cv():
+              X = np.array([[i, i % 3] for i in range(24)])
+              y = np.array([0] * 12 + [1] * 12)
+              model = create_model(
+                  "randomforest", cv=2, n_jobs=1, random_state=0
+              )
+              assert isinstance(model, GridSearchCV)
+              model.param_grid = {
+                  "n_estimators": [10],
+                  "max_depth": [2, 4],
+                  "min_samples_split": [2],
+                  "min_samples_leaf": [1],
+                  "max_features": ["sqrt"],
+              }
+
+              model.fit(X, y)
+
+              assert model.best_params_["max_depth"] in {2, 4}
+              importances = get_coefficients(
+                  model, ["feature_1", "feature_2"], "randomforest"
+              )
+              assert len(importances) == X.shape[1]
+          ''')
+          PY
+          python /tmp/patch.py
+
+      - name: Install focused test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy pandas scipy scikit-learn matplotlib seaborn pytest
+
+      - name: Run focused tests
+        env:
+          PYTHONPATH: LogReg/LASSO
+        run: |
+          python -m py_compile \
+            LogReg/LASSO/main.py \
+            LogReg/LASSO/module/data_loader.py \
+            LogReg/LASSO/module/models.py
+          pytest -q LogReg/LASSO/tests/test_deim_score_and_randomforest.py
+
+      - name: Commit verified patch
+        run: |
+          rm .github/workflows/build-deim-minimal.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Use PLM logit differences and tune RandomForest"
+          git push origin HEAD:tmp/deim-minimal-clean
