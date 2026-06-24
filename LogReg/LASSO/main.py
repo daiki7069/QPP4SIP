@@ -1943,7 +1943,7 @@ def main():
     print_and_save("\n11. Confidence Analysis（確信度分析）を実行中...")
     
     # BERTの予測確率を読み込む
-    dev_base_probs = load_base_probabilities('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, score_mode=args.plm_score_mode)
+    dev_base_probs = load_base_probabilities('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer)
     
     if len(dev_base_probs) > 0:
         # 最初のBERT確率を使用（複数ある場合は最初のもの）
