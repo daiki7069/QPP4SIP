@@ -2,6 +2,7 @@
 データ読み込み関連のモジュール
 """
 import json
+import os
 import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Tuple, Any
@@ -74,20 +75,42 @@ def extract_labels(json_data: List[List[Dict[str, Any]]]) -> Dict[Tuple[str, int
     return labels
 
 
-def extract_base_scores(json_data: List[List[Dict[str, Any]]]) -> Dict[Tuple[str, int], float]:
-    """ベースモデルのlogit_clarificationを抽出"""
+def _resolve_plm_score_mode(score_mode: str = None) -> str:
+    score_mode = score_mode or os.getenv('DEIM_PLM_SCORE_MODE', 'logit_diff')
+    if score_mode not in ('logit_diff', 'positive_logit'):
+        raise ValueError(
+            "score_mode must be 'logit_diff' or 'positive_logit'"
+        )
+    return score_mode
+
+
+def _extract_plm_score(turn: Dict[str, Any], score_mode: str):
+    positive_logit = turn.get('logit_clarification')
+    if positive_logit is None:
+        return None
+    if score_mode == 'positive_logit':
+        return float(positive_logit)
+
+    negative_logit = turn.get('logit_not_clarification')
+    if negative_logit is None:
+        raise ValueError(
+            "logit_not_clarification is required for logit_diff mode"
+        )
+    return float(positive_logit) - float(negative_logit)
+
+
+def extract_base_scores(json_data: List[List[Dict[str, Any]]], score_mode: str = None) -> Dict[Tuple[str, int], float]:
+    """ベースモデルのPLMスコアを抽出する。"""
+    score_mode = _resolve_plm_score_mode(score_mode)
     scores = {}
     for conversation in json_data:
         for turn in conversation:
-            # conv_idとturn_idを文字列/整数に統一
             conv_id = str(turn['conv_id'])
             turn_id = int(turn['turn_id'])
-            key = (conv_id, turn_id)
-            
-            logit = turn.get('logit_clarification')
-            if logit is not None:
-                scores[key] = float(logit)
-    
+            score = _extract_plm_score(turn, score_mode)
+            if score is not None:
+                scores[(conv_id, turn_id)] = score
+
     return scores
 
 
@@ -123,7 +146,7 @@ def find_common_nsp_top_k(nsp_output_dir: Path, splits: List[str] = None) -> int
     return max(common_top_k) if common_top_k else None
 
 
-def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False, use_full_train_model_for_dev: bool = False) -> Dict[str, Dict[Tuple[str, int], float]]:
+def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_names: List[str] = None, use_bert: bool = True, use_roberta: bool = True, use_transfer: bool = False, use_full_train_model_for_dev: bool = False, score_mode: str = None) -> Dict[str, Dict[Tuple[str, int], float]]:
     """
     ベーススコア（logit_clarification）を読み込む
     戻り値: {feature_name: {(conv_id, turn_id): score}}
@@ -142,6 +165,7 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
     Returns:
         ベーススコアの辞書 {prefix_logit_clarification: {key: score}}
     """
+    score_mode = _resolve_plm_score_mode(score_mode)
     base_scores = {}
     
     # base_experiment_namesが指定されていない場合は、configから読み込む
@@ -244,13 +268,13 @@ def load_base_scores(split: str, dataset: str, base_dir: Path, base_experiment_n
                 turn_id = int(turn['turn_id'])
                 key = (conv_id, turn_id)
                 
-                logit = turn.get('logit_clarification')
-                if logit is not None:
-                    scores[key] = float(logit)
+                score = _extract_plm_score(turn, score_mode)
+                if score is not None:
+                    scores[key] = score
         
         feature_name = f"{prefix}logit_clarification" if prefix else "logit_clarification"
         base_scores[feature_name] = scores
-        print(f"Loaded {len(scores)} {feature_name} scores for {split} (experiment: {exp_name})")
+        print(f"Loaded {len(scores)} {feature_name} scores for {split} (experiment: {exp_name}, score_mode: {score_mode})")
     
     return base_scores
 

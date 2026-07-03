@@ -1,0 +1,254 @@
+name: DEIM model matrix
+
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - "LogReg/LASSO/**"
+      - ".github/workflows/deim-model-matrix.yml"
+  workflow_dispatch:
+    inputs:
+      prediction_bundle_url:
+        description: "HTTPS URL of a ZIP containing the four existing PLM prediction JSON files"
+        required: true
+        type: string
+      prediction_bundle_sha256:
+        description: "Optional SHA-256 checksum of the ZIP"
+        required: false
+        type: string
+      plm_score_mode:
+        description: "PLM feature score"
+        required: true
+        default: logit_diff
+        type: choice
+        options:
+          - logit_diff
+          - positive_logit
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install test dependencies
+        run: pip install numpy pandas scipy scikit-learn matplotlib seaborn pytest
+      - name: Compile and test
+        env:
+          PYTHONPATH: LogReg/LASSO
+        run: |
+          python -m py_compile \
+            LogReg/LASSO/main.py \
+            LogReg/LASSO/module/data_loader.py \
+            LogReg/LASSO/module/models.py \
+            LogReg/LASSO/run_model_matrix.py
+          pytest -q LogReg/LASSO/tests/test_plm_scoring_and_random_forest.py
+
+  prepare-predictions:
+    if: github.event_name == 'workflow_dispatch'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and validate prediction bundle
+        env:
+          BUNDLE_URL: ${{ inputs.prediction_bundle_url }}
+          BUNDLE_SHA256: ${{ inputs.prediction_bundle_sha256 }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import shutil
+          import urllib.parse
+          import urllib.request
+          import zipfile
+          from pathlib import Path
+
+          url = os.environ["BUNDLE_URL"]
+          parsed = urllib.parse.urlparse(url)
+          if parsed.scheme != "https":
+              raise SystemExit("prediction_bundle_url must use HTTPS")
+
+          archive = Path("prediction_bundle.zip")
+          request = urllib.request.Request(url, headers={"User-Agent": "QPP4SIP-GHA"})
+          with urllib.request.urlopen(request) as response, archive.open("wb") as output:
+              shutil.copyfileobj(response, output)
+
+          expected_digest = os.environ.get("BUNDLE_SHA256", "").strip().lower()
+          digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+          if expected_digest and digest != expected_digest:
+              raise SystemExit(f"SHA-256 mismatch: expected {expected_digest}, got {digest}")
+          print(f"Prediction bundle SHA-256: {digest}")
+
+          extracted = Path("extracted")
+          extracted.mkdir()
+          with zipfile.ZipFile(archive) as bundle:
+              for member in bundle.infolist():
+                  target = (extracted / member.filename).resolve()
+                  if extracted.resolve() not in target.parents and target != extracted.resolve():
+                      raise SystemExit(f"Unsafe ZIP path: {member.filename}")
+              bundle.extractall(extracted)
+
+          experiments = {
+              "AmbigNQ_bert-base_lr2e-05_bs16_kfold5",
+              "AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5",
+          }
+          output_root = Path("prepared/SIP/FT-PLM/output/AmbigNQ")
+          for experiment in sorted(experiments):
+              for split in ("train", "dev"):
+                  filename = f"{split}_with_predictions.json"
+                  matches = list(extracted.rglob(f"{experiment}/{filename}"))
+                  if len(matches) != 1:
+                      raise SystemExit(
+                          f"Expected exactly one {experiment}/{filename}; found {len(matches)}"
+                      )
+                  with matches[0].open(encoding="utf-8") as stream:
+                      conversations = json.load(stream)
+                  turns = [turn for conversation in conversations for turn in conversation]
+                  if not turns:
+                      raise SystemExit(f"No turns in {matches[0]}")
+                  required = {"conv_id", "turn_id", "logit_clarification", "logit_not_clarification"}
+                  missing = required - set(turns[0])
+                  if missing:
+                      raise SystemExit(f"Missing fields in {matches[0]}: {sorted(missing)}")
+                  destination = output_root / experiment / filename
+                  destination.parent.mkdir(parents=True, exist_ok=True)
+                  shutil.copy2(matches[0], destination)
+                  print(f"Validated {destination}: {len(turns)} turns")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: validated-plm-predictions
+          path: prepared
+          if-no-files-found: error
+          retention-days: 7
+
+  model-matrix:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [test, prepare-predictions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        feature_set:
+          - pre_post
+          - bert
+          - roberta
+          - pre_post_bert
+          - pre_post_roberta
+        model:
+          - randomforest
+          - l1
+          - l2
+          - elasticnet
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/download-artifact@v4
+        with:
+          name: validated-plm-predictions
+          path: .
+      - name: Install experiment dependencies
+        run: pip install numpy pandas scipy scikit-learn matplotlib seaborn
+      - name: Run ${{ matrix.model }} on ${{ matrix.feature_set }}
+        env:
+          PYTHONPATH: LogReg/LASSO
+        run: |
+          OUTPUT="artifacts/results/${{ matrix.feature_set }}/${{ matrix.model }}"
+          mkdir -p "$OUTPUT"
+          set -o pipefail
+          python LogReg/LASSO/run_model_matrix.py \
+            --dataset AmbigNQ \
+            --retrieval-method dpr \
+            --feature-set "${{ matrix.feature_set }}" \
+            --model "${{ matrix.model }}" \
+            --plm-score-mode "${{ inputs.plm_score_mode }}" \
+            --output-dir "$OUTPUT" \
+            2>&1 | tee "$OUTPUT/run.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: "result-${{ matrix.feature_set }}-${{ matrix.model }}"
+          path: artifacts/results
+          if-no-files-found: error
+          retention-days: 30
+
+  summary:
+    if: always() && github.event_name == 'workflow_dispatch'
+    needs: model-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: result-*
+          path: artifacts/results
+          merge-multiple: true
+      - name: Build comparison table
+        run: |
+          python - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          rows = []
+          for path in Path("artifacts/results").rglob("results.json"):
+              result = json.loads(path.read_text(encoding="utf-8"))
+              rows.append({
+                  "feature_set": result["feature_set"],
+                  "model": result["model"],
+                  "dev_roc_auc": result["dev_metrics"]["roc_auc"],
+                  "dev_average_precision": result["dev_metrics"]["average_precision"],
+                  "dev_f1": result["dev_metrics"]["f1"],
+                  "dev_accuracy": result["dev_metrics"]["accuracy"],
+                  "train_roc_auc": result["train_metrics"]["roc_auc"],
+                  "best_cv_score": result.get("search", {}).get("best_score", ""),
+                  "best_params": json.dumps(
+                      result.get("search", {}).get("best_params", {}),
+                      ensure_ascii=False,
+                      sort_keys=True,
+                  ),
+              })
+          if not rows:
+              raise SystemExit("No successful model results were found")
+          rows.sort(key=lambda row: row["dev_roc_auc"], reverse=True)
+          output = Path("artifacts/summary")
+          output.mkdir(parents=True)
+          with (output / "comparison.csv").open("w", newline="", encoding="utf-8") as stream:
+              writer = csv.DictWriter(stream, fieldnames=list(rows[0]))
+              writer.writeheader()
+              writer.writerows(rows)
+          lines = [
+              "# DEIM model comparison",
+              "",
+              "| Feature set | Model | Dev ROC-AUC | Dev AP | Dev F1 | Accuracy |",
+              "|---|---|---:|---:|---:|---:|",
+          ]
+          for row in rows:
+              lines.append(
+                  f"| {row['feature_set']} | {row['model']} | "
+                  f"{row['dev_roc_auc']:.4f} | {row['dev_average_precision']:.4f} | "
+                  f"{row['dev_f1']:.4f} | {row['dev_accuracy']:.4f} |"
+              )
+          (output / "comparison.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print("\n".join(lines))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deim-complete-model-comparison
+          path: |
+            artifacts/summary
+            artifacts/results
+          if-no-files-found: error
+          retention-days: 30

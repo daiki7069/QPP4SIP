@@ -295,6 +295,15 @@ def main():
         help="使用する特徴量タイプを指定（複数指定可能: post, pre, bert, roberta, nsp, transfer）。デフォルト: post, pre, nsp"
     )
     
+
+    parser.add_argument(
+        "--plm-score-mode",
+        type=str,
+        choices=["logit_diff", "positive_logit"],
+        default="logit_diff",
+        help="PLMスコア方式（logit_diff: 正例logit-負例logit, positive_logit: 従来の正例logitのみ）"
+    )
+
     parser.add_argument(
         "--save-model",
         action="store_true",
@@ -348,6 +357,7 @@ def main():
     use_nsp = 'nsp' in args.feature_types
     use_transfer = 'transfer' in args.feature_types
     print_and_save(f"使用する特徴量タイプ: {', '.join(args.feature_types)}")
+    print_and_save(f"PLMスコア方式: {args.plm_score_mode}")
     
     # 後方互換性のため
     use_pre_retrieval = use_pre
@@ -457,7 +467,7 @@ def main():
         print_and_save(f"  - {metric_name}: {len(scores)} サンプル")
     
     # ベーススコアを読み込む（data_loader内のコメントアウトで選択）
-    train_base_scores = load_base_scores('train', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer)
+    train_base_scores = load_base_scores('train', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, score_mode=args.plm_score_mode)
     if train_base_scores:
         train_all_scores.update(train_base_scores)
         for feature_name, scores in train_base_scores.items():
@@ -490,7 +500,7 @@ def main():
         print_and_save(f"  - {metric_name}: {len(scores)} サンプル")
     
     # ベーススコアを読み込む（data_loader内のコメントアウトで選択）
-    dev_base_scores = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer)
+    dev_base_scores = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, score_mode=args.plm_score_mode)
     if dev_base_scores:
         dev_all_scores.update(dev_base_scores)
         for feature_name, scores in dev_base_scores.items():
@@ -629,7 +639,7 @@ def main():
                 n_jobs=-1
             )
             # 特徴量選択モデルまたはCVモデルの場合はprint_and_save_funcを渡す
-            if current_model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+            if current_model_type in ['bolasso', 'lars_traps', 'lars_cv', 'randomforest'] or \
                (current_model_type == 'l1' and args.use_l1_cv) or \
                (current_model_type == 'l2' and args.use_l2_cv) or \
                (current_model_type == 'elasticnet' and args.use_elasticnet_cv):
@@ -748,7 +758,7 @@ def main():
             print_and_save("  ※ 単体vs回帰の比較では、devデータに対してtrain全体でFTしたモデルの予測を使用します")
             
             # devデータのBERT/RoBERTaスコアを再読み込み（train全体でFTしたモデルの予測を使用）
-            dev_base_scores_for_comparison = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True)
+            dev_base_scores_for_comparison = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True, score_mode=args.plm_score_mode)
             if dev_base_scores_for_comparison:
                 print_and_save(f"  - devデータのBERT/RoBERTaスコアを再読み込み（train全体でFTしたモデル）: {list(dev_base_scores_for_comparison.keys())}")
             
@@ -890,7 +900,7 @@ def main():
                     scoring=scoring,
                     n_jobs=-1
                 )
-                if current_model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+                if current_model_type in ['bolasso', 'lars_traps', 'lars_cv', 'randomforest'] or \
                    (current_model_type == 'l1' and args.use_l1_cv) or \
                    (current_model_type == 'l2' and args.use_l2_cv) or \
                    (current_model_type == 'elasticnet' and args.use_elasticnet_cv):
@@ -1136,30 +1146,39 @@ def main():
             else:
                 print_and_save("\n係数が0の特徴量はありません（全ての特徴量が使用されています）")
         
-        # 可視化のために、モデルオブジェクトを作成（係数の平均を使用）
-        # ただし、実際の予測は既にアンサンブルで行っているので、可視化用にダミーモデルを作成
-        class EnsembleModel:
-            def __init__(self, mean_coefs, intercept_mean):
-                self.coef_ = mean_coefs.reshape(1, -1)
-                self.intercept_ = intercept_mean
-            
-            def predict_proba(self, X):
-                if isinstance(X, pd.DataFrame):
-                    X_array = X.values
-                else:
-                    X_array = X
-                z = X_array @ self.coef_[0] + self.intercept_
-                proba_positive = expit(z)
-                proba_negative = 1 - proba_positive
-                return np.column_stack([proba_negative, proba_positive])
-        
-        # 切片の平均も計算
-        if args.non_negative_coefficients:
-            intercept_mean = np.mean([model.intercept_ for model in fold_models])
+
+        # 可視化用のアンサンブルモデルを作成
+        if current_model_type == 'randomforest':
+            class EnsembleModel:
+                def __init__(self, models):
+                    self.models = models
+
+                def predict_proba(self, X):
+                    return np.mean(
+                        [model.predict_proba(X) for model in self.models], axis=0
+                    )
+
+            model = EnsembleModel(fold_models)
         else:
-            intercept_mean = np.mean([model.intercept_ for model in fold_models])
-        
-        model = EnsembleModel(mean_coefs, intercept_mean)
+            class EnsembleModel:
+                def __init__(self, mean_coefs, intercept_mean):
+                    self.coef_ = mean_coefs.reshape(1, -1)
+                    self.intercept_ = intercept_mean
+
+                def predict_proba(self, X):
+                    if isinstance(X, pd.DataFrame):
+                        X_array = X.values
+                    else:
+                        X_array = X
+                    z = X_array @ self.coef_[0] + self.intercept_
+                    proba_positive = expit(z)
+                    proba_negative = 1 - proba_positive
+                    return np.column_stack([proba_negative, proba_positive])
+
+            intercept_mean = np.mean(
+                [model.intercept_ for model in fold_models]
+            )
+            model = EnsembleModel(mean_coefs, intercept_mean)
         
         # 単一指標の曲線用にCV結果の特徴量データを統合
         X_cv_test_norm = pd.concat(all_cv_test_features, axis=0, ignore_index=True)
@@ -1169,7 +1188,7 @@ def main():
         if (use_bert or use_roberta) and show_single:
             print_and_save("\n5.5. グラフ描画用にBERT/RoBERTaスコアをtrain全体でFTしたモデルの予測に置き換え中...")
             # devデータのBERT/RoBERTaスコアを再読み込み（train全体でFTしたモデルの予測を使用）
-            dev_base_scores_for_graph = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True)
+            dev_base_scores_for_graph = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True, score_mode=args.plm_score_mode)
             if dev_base_scores_for_graph:
                 print_and_save(f"  - devデータのBERT/RoBERTaスコアを再読み込み（train全体でFTしたモデル）: {list(dev_base_scores_for_graph.keys())}")
                 # X_combinedからdev部分を抽出（元のdev_all_scoresのインデックスを使用）
@@ -1385,7 +1404,7 @@ def main():
             n_jobs=-1
         )
         # 特徴量選択モデルまたはCVモデルの場合はprint_and_save_funcを渡す
-        if current_model_type in ['bolasso', 'lars_traps', 'lars_cv'] or \
+        if current_model_type in ['bolasso', 'lars_traps', 'lars_cv', 'randomforest'] or \
            (current_model_type == 'l1' and args.use_l1_cv) or \
            (current_model_type == 'l2' and args.use_l2_cv) or \
            (current_model_type == 'elasticnet' and args.use_elasticnet_cv):
@@ -1742,7 +1761,7 @@ def main():
     # グラフ描画用にBERT/RoBERTaスコアをtrain全体でFTしたモデルの予測に置き換え
     if not args.use_cv and (use_bert or use_roberta):
         print_and_save("\n5.5. グラフ描画用にBERT/RoBERTaスコアをtrain全体でFTしたモデルの予測に置き換え中...")
-        dev_base_scores_for_graph = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True)
+        dev_base_scores_for_graph = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True, score_mode=args.plm_score_mode)
         if dev_base_scores_for_graph:
             print_and_save(f"  - devデータのBERT/RoBERTaスコアを再読み込み（train全体でFTしたモデル）: {list(dev_base_scores_for_graph.keys())}")
             # dev_all_scoresを更新（BERT/RoBERTaスコアを置き換え）
@@ -3533,7 +3552,7 @@ def main():
                     else:
                         # --no-cvの場合：trainで学習、testで予測
                         # devデータのBERT/RoBERTaスコアを再読み込み（train全体でFTしたモデルの予測を使用）
-                        dev_base_scores_for_comparison = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True)
+                        dev_base_scores_for_comparison = load_base_scores('dev', args.dataset, BASE_DIR, base_experiment_names=None, use_bert=use_bert, use_roberta=use_roberta, use_transfer=use_transfer, use_full_train_model_for_dev=True, score_mode=args.plm_score_mode)
                         
                         # devデータの特徴量を再構築（train全体でFTしたモデルの予測を含む）
                         dev_all_scores_for_comparison = dev_all_scores.copy()

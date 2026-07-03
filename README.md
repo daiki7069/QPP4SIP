@@ -109,7 +109,7 @@ QPP/post_retrieval/outputs/AmbigNQ/dpr/dev_*.csv
 
 ### 3. PLM ベースラインの fine-tuning
 
-論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。
+論文の表 1 における BERT / RoBERTa 条件に対応します。ここで出力される logits は、表 2 の BERT / RoBERTa 付き統合条件でも特徴量として使用されます。`*_with_predictions.json` には正例・負例両方のlogitが保存されるため、logit差の利用に再学習・再推論は不要です。
 
 BERT:
 
@@ -156,7 +156,7 @@ python SIP/FT-PLM/main.py \
 
 ### 4. ロジスティック回帰による特徴量統合
 
-論文の表 2 に対応します。`--feature-types` で実験条件を指定します。
+論文の表 2 に対応します。`--feature-types` で実験条件を指定します。PLM特徴量はデフォルトで `logit_clarification - logit_not_clarification` を使用します。従来の正例logitのみを使う場合は `--plm-score-mode positive_logit` を指定します。
 
 | 論文中の条件 | コマンドオプション |
 | --- | --- |
@@ -178,6 +178,8 @@ python LogReg/LASSO/main.py \
   --feature-types pre post roberta
 ```
 
+`--model-type randomforest` では、層化交差検証によるハイパーパラメータ探索を行い、`n_estimators`, `max_depth`, `min_samples_split`, `min_samples_leaf`, `max_features` をAUC-ROCで選択します。
+
 主要な特徴量組み合わせをまとめて実行する場合:
 
 ```bash
@@ -190,6 +192,26 @@ bash script/run_all_feature_combinations.sh
 ```text
 LogReg/LASSO/outputs/AmbigNQ/
 ```
+
+### 5. GitHub Actionsでのモデル比較
+
+`.github/workflows/deim-model-matrix.yml` はPLMを再学習せず、既存の予測JSONを入力として次の20条件を実行します。
+
+- 特徴量: `Pre/Post`, `BERT`, `RoBERTa`, `Pre/Post/BERT`, `Pre/Post/RoBERTa`
+- モデル: `RandomForest`, `L1`, `L2`, `ElasticNet`
+
+GitHub Actionsの **DEIM model matrix** を手動実行し、4ファイルを含むZIPのHTTPS URLを `prediction_bundle_url` に指定します。ZIP内の階層は任意ですが、次の実験ディレクトリ名とファイル名が必要です。
+
+```text
+AmbigNQ_bert-base_lr2e-05_bs16_kfold5/
+├── train_with_predictions.json
+└── dev_with_predictions.json
+AmbigNQ_roberta-base_lr2e-05_bs16_earlystop_kfold5/
+├── train_with_predictions.json
+└── dev_with_predictions.json
+```
+
+`prediction_bundle_sha256` を指定すると、展開前にZIPのチェックサムを検証します。各JSONについて、正例・負例logitの存在とサンプル数を確認した後にモデル比較を開始します。最終artifact `deim-complete-model-comparison` には、全条件の比較表、ROC-AUC/AP/F1/Accuracy、最適パラメータ、予測CSV、係数または特徴量重要度、ROC/PR曲線が含まれます。
 
 ## 主な結果
 
